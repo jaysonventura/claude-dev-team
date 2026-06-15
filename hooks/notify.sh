@@ -58,9 +58,18 @@ printf -- "- %s  **%s**  %s%s\n" "$TS" "$TYPE" "$MSG" "$SUFFIX" >> "$STATUS_LOG"
 # 2) State DB event.
 [ -f "$CDT_HOME/bin/cdt-db.sh" ] && . "$CDT_HOME/bin/cdt-db.sh" 2>/dev/null && db_event "$TYPE" "$MSG" "${CLAUDE_SESSION_ID:-}" 2>/dev/null
 
-# 3) Config (preserve explicit overrides like CDT_NOTIFY_LEVEL=all from --test).
+# 3) Config — parse only the known keys instead of `source`-ing the file, so a crafted value in a
+#    hand-edited env file can never execute (the env format is unquoted KEY=VALUE, written by cdt-setup).
+#    Preserve explicit overrides (e.g. CDT_NOTIFY_LEVEL=all from --test) captured before the file is read.
+_env_get() { grep -E "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2-; }
 _LEVEL_OVERRIDE="${CDT_NOTIFY_LEVEL:-}"; _PROVIDER_OVERRIDE="${CDT_NOTIFY_PROVIDER:-}"
-[ -f "$ENV_FILE" ] && . "$ENV_FILE" 2>/dev/null
+if [ -f "$ENV_FILE" ]; then
+  CDT_NOTIFY_PROVIDER="$(_env_get CDT_NOTIFY_PROVIDER)"
+  CDT_NOTIFY_LEVEL="$(_env_get CDT_NOTIFY_LEVEL)"
+  CDT_DISCORD_WEBHOOK_URL="$(_env_get CDT_DISCORD_WEBHOOK_URL)"
+  CDT_TELEGRAM_BOT_TOKEN="$(_env_get CDT_TELEGRAM_BOT_TOKEN)"
+  CDT_TELEGRAM_CHAT_ID="$(_env_get CDT_TELEGRAM_CHAT_ID)"
+fi
 [ -n "$_LEVEL_OVERRIDE" ] && CDT_NOTIFY_LEVEL="$_LEVEL_OVERRIDE"
 [ -n "$_PROVIDER_OVERRIDE" ] && CDT_NOTIFY_PROVIDER="$_PROVIDER_OVERRIDE"
 PROVIDER="${CDT_NOTIFY_PROVIDER:-off}"; LEVEL="${CDT_NOTIFY_LEVEL:-milestones}"
@@ -79,6 +88,10 @@ esac
 export _T="$TYPE" _M="$MSG" _TASK="$TASK" _TIER="$TIER" _DUR="$DURATION" _ITERS="$ITERS" _TOKENS="$TOKENS" _ICON="$ICON" _TS="$TS"
 
 json_escape() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | tr '\n\r' '  '; }
+
+# Reject a secret that contains characters which could break out of the curl `-K -` config line
+# (a stray quote, backslash, or control char). A valid webhook URL / bot token never contains these.
+_safe_curl_value() { case "$1" in ''|*[[:cntrl:]]*|*'"'*|*'\'*) return 1 ;; *) return 0 ;; esac; }
 
 discord_payload() {
   python3 -c '
@@ -115,6 +128,7 @@ print("\n".join(out))'
 
 push_discord() {
   [ -n "$CDT_DISCORD_WEBHOOK_URL" ] || return 0
+  _safe_curl_value "$CDT_DISCORD_WEBHOOK_URL" || return 0
   local payload
   if command -v python3 >/dev/null 2>&1; then payload="$(discord_payload)"
   else payload="{\"content\":\"$(json_escape "$ICON [$TYPE] $MSG")\"}"; fi
@@ -124,6 +138,7 @@ push_discord() {
 
 push_telegram() {
   [ -n "$CDT_TELEGRAM_BOT_TOKEN" ] && [ -n "$CDT_TELEGRAM_CHAT_ID" ] || return 0
+  _safe_curl_value "$CDT_TELEGRAM_BOT_TOKEN" || return 0
   if command -v python3 >/dev/null 2>&1; then
     printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$CDT_TELEGRAM_BOT_TOKEN" | \
       curl -sf -m 10 -K - --data-urlencode "chat_id=${CDT_TELEGRAM_CHAT_ID}" \

@@ -20,6 +20,11 @@ judge the diff against intent and quality.
 - Verify claims against real output — don't trust the report, check it. Use `/code-review` or
   `superpowers:requesting-code-review` conventions if available.
 
+## Anti-hallucination
+You are the verifier — never rubber-stamp. Ground every finding in a real file:line you read or actual
+command output you ran; do not invent issues or assume a test passed because the diff "looks right." If a
+claim in the work-under-review is unverifiable from the code or output, say so rather than approving on faith.
+
 ## REPORT (<=150 words + evidence)
 Verdict: **APPROVE / CHANGES REQUESTED**. Then findings as a list, each: `severity (blocker/major/minor)
 · file:line · issue · fix`. Cite real locations. If APPROVE, say what you verified.

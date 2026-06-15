@@ -49,8 +49,9 @@ fi
 # Auto-install the menu bar app on macOS (once, in the background) unless disabled.
 if [ "$(uname)" = "Darwin" ] && command -v swift >/dev/null 2>&1; then
   AUTO=1
-  [ -f "$CDT_HOME/claude-dev-team.env" ] && . "$CDT_HOME/claude-dev-team.env" 2>/dev/null
-  AUTO="${CDT_MENUBAR_AUTO:-$AUTO}"
+  # Read only the one key we need (don't `source` the env file — a crafted value must never execute).
+  _MB="$(grep -E '^CDT_MENUBAR_AUTO=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+  AUTO="${_MB:-$AUTO}"
   # Install once: guard on a success marker the installer writes (not a legacy plist that the
   # SMAppService path never creates) — otherwise every session/clear/compact would kill+relaunch the app.
   if [ "$AUTO" != "0" ] && [ ! -f "$CDT_HOME/.cdt-menubar-disabled" ] && [ ! -f "$CDT_HOME/.cdt-menubar-installed" ] && [ -x "$BIN/cdt-menubar" ]; then

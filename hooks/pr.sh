@@ -21,6 +21,11 @@ gh auth status >/dev/null 2>&1 || { echo "cdt-pr: gh not authenticated (run: gh 
 case "$cmd" in status|checks|view|diff|comment) : ;; *)
   echo "usage: cdt-pr {status|checks|view|diff|comment} <PR> [owner/repo]"; exit 0 ;; esac
 case "$pr" in ''|*[!0-9]*) echo "cdt-pr: <PR> must be a number"; exit 0 ;; esac
+# status/checks/view parse gh's JSON with python3; fail with a clear message if it's absent
+# (diff/comment don't need it).
+case "$cmd" in status|checks|view)
+  command -v python3 >/dev/null 2>&1 || { echo "cdt-pr: python3 required to parse '$cmd' output (not found)"; exit 0; } ;;
+esac
 
 # Resolve optional owner/repo into a gh args array (avoids word-splitting / SC2086).
 repo_args=()

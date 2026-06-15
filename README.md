@@ -777,7 +777,7 @@ agents/           14 core role agents (incl. product-manager, ui-ux-engineer, te
 skills/           orchestration (brain) + 8 skills (quality, design, debug, technical-writing)
 commands/         ship, triage, bug-council, autopilot, stats, notify-setup, menubar, recall, advise, config, doctor, budget, learn, deps, worktree, auto
 hooks/            hooks.json + scripts (vault/db/recall/advise/pr/config/doctor/learn/budget/statusline/deps/worktree/auto/format/notify/setup/stats/guard) + vault-template
-docs/             architecture.md, examples.md, roadmap.md
+docs/             architecture.md, examples.md, roadmap.md, specs/
 ```
 
 ## Roadmap & contributing

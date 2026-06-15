@@ -27,11 +27,14 @@ def up(k):
     except Exception:
         return None
 wk = up("seven_day"); se = up("five_hour")
-# Cache the usage for cdt-budget / Eco mode.
+# Cache the usage for cdt-budget / Eco mode. Write atomically (temp + replace) so a concurrent
+# statusline render can't read a half-written file.
 if wk is not None or se is not None:
     try:
-        json.dump({"session": se or 0, "weekly": wk or 0, "ts": int(time.time())},
-                  open(os.environ["CACHE"], "w"))
+        cache = os.environ["CACHE"]; tmp = cache + ".%d.tmp" % os.getpid()
+        with open(tmp, "w") as f:
+            json.dump({"session": se or 0, "weekly": wk or 0, "ts": int(time.time())}, f)
+        os.replace(tmp, cache)
     except Exception:
         pass
 parts = [f"CDT {os.environ['MODE']}", model]

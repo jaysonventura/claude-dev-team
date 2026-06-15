@@ -25,8 +25,9 @@ CDT_HOME="$HOME/.claude"
   db_session "${SESSION_ID:-unknown}" "$CWD" "stopped" 2>/dev/null
 
 # Optional mandate reminder — opt in with CDT_STOP_REMINDER=1 (kept off by default for cost).
-[ -f "$CDT_HOME/claude-dev-team.env" ] && . "$CDT_HOME/claude-dev-team.env" 2>/dev/null
-if [ "${CDT_STOP_REMINDER:-0}" = "1" ] && [ ! -f "$REMIND_MARK" ]; then
+# Read just this key (don't `source` the env file — a crafted value must never execute).
+_REMIND="$(grep -E '^CDT_STOP_REMINDER=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+if [ "${_REMIND:-0}" = "1" ] && [ ! -f "$REMIND_MARK" ]; then
   : > "$REMIND_MARK" 2>/dev/null
   printf '{"decision":"block","reason":"%s"}\n' \
     "claude-dev-team: edits were made — run the completion mandate before finishing (simplify, code-review, reuse-audit, dead-code scan, verify with command output, persist a vault learning), then post a SHIP digest via cdt-notify. If already done, you may stop."
