@@ -1,0 +1,20 @@
+# Secrets - never commit real credentials
+*.env
+!*.env.example
+claude-dev-team.env
+
+# Local state / runtime
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Node (if a consumer project nests this)
+node_modules/

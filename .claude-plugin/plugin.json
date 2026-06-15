@@ -1,0 +1,22 @@
+{
+  "name": "claude-dev-team",
+  "description": "An orchestrated software team for Claude Code: triage -> contract -> parallel specialists -> quality gates -> completion mandate. Role-based agents, a gated Bug Council, a bounded Task Loop, SQLite cost analytics, and Discord/Telegram status notifications.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Jayson Ventura",
+    "email": "jgventura03business@gmail.com"
+  },
+  "homepage": "https://github.com/jaysonventura/claude-dev-team",
+  "repository": "https://github.com/jaysonventura/claude-dev-team",
+  "license": "MIT",
+  "keywords": [
+    "orchestration",
+    "multi-agent",
+    "agents",
+    "code-review",
+    "quality-gates",
+    "workflow",
+    "tdd",
+    "cost-analytics"
+  ]
+}
