@@ -11,8 +11,11 @@ you own the plan, the quality bar, and the final verification.
 
 > **Effort & engine guardrail (hard):** operate at the session's configured effort (xhigh). Never
 > escalate to `max`. Dispatch a **bounded** set of subagents via the normal `Agent`/Task tool
-> (≤6–10 even at the highest tier). **Never** invoke the ultracode / Workflow fan-out engine — it is
-> off by design and is the opposite of cost-effective.
+> (≤6–10 even at the highest tier) **by default**. Do **not** invoke the ultracode / Workflow fan-out
+> engine *on your own* — it is off by default and is the opposite of cost-effective.
+> **The one exception** is **BREADTH / Scale mode (STEP 3e):** a dynamic workflow may be summoned, but
+> *only* when the cost governor (`cdt-auto gate scale`) returns ALLOW, or the user has confirmed an ASK —
+> gated, capped, and measured. It is never auto-invoked silently. Effort stays xhigh either way.
 
 ## STEP 1 · TRIAGE (fast, < a few seconds)
 
@@ -38,6 +41,34 @@ Pick a tier:
 
 **Overrides the user may type:** `T0:` = force solo/cheap · `FULL:` = force full-Opus + all gates for
 critical work (raises model + gates only; does not change effort or engine).
+
+## STEP 1.5 · AUTONOMOUS MODE ROUTER (pick the orchestration shape)
+
+After scoring the tier, also read the **work shape** and pick an execution mode — autonomously, but only
+escalating beyond bounded dispatch when the signature demands it. **Default is BOUNDED.** Effort stays
+**xhigh** in every mode (never `max`); judgment runs on **Opus**, never Haiku.
+
+| Mode | Trigger — the "only if needed" | Engine |
+|------|--------------------------------|--------|
+| **BOUNDED** (default) | ordinary work — nearly everything | tiered dispatch (T0–T3) |
+| **DEPTH** | the Task Loop stuck-gate fires (same failure twice), or a genuinely hard / ambiguous / adversarial judgment (diagnosis, risky design call) | agent-team Bug Council (debate) → STEP 3c |
+| **BREADTH** | a *large homogeneous set* (many files / call-sites / endpoints) that bounded dispatch can't cover — repo-wide audit, migration, exhaustive review | dynamic workflow (fan-out) → STEP 3e |
+
+**Cost governor — consult it before EVERY escalation, no exceptions:**
+```
+~/.claude/bin/cdt-auto gate team      # before convening an agent-team
+~/.claude/bin/cdt-auto gate scale     # before summoning a workflow
+```
+It returns a first token of **ALLOW** (proceed), **ASK** (tell the user the mode + projected cost, get a
+yes first), or **DENY** (engine/autonomy off → **stay BOUNDED**). It enforces the autonomy leash
+(`off|assist|auto`), each engine's on/off, and the **weekly-budget ceiling**. In **assist** (the default):
+`gate team` → ALLOW within budget (stuck bugs auto-convene), `gate scale` → ASK (you propose the workflow
+and wait). **Never escalate on DENY; never skip the gate.** The cost is real rate-limit budget on Max —
+the per-agent token telemetry (`/cdt:stats`) records what each escalation spent.
+
+**Fail-soft:** if an engine is unavailable (cdt-doctor flags a missing experimental flag or an old CLI),
+silently fall back to BOUNDED — never block the task. Escalation *speeds* the hard/large cases (parallel
+debate / fan-out) while keeping the common case cheap — that is the whole point of routing.
 
 ## STEP 2 · CONTRACT (write one per dispatched agent)
 
@@ -96,13 +127,22 @@ After build, enforce quality by looping:
 5. **Hard cap:** stop after `CDT_MAX_ITERATIONS` (default 5). Then mark the task `DEFERRED`/`BLOCKER`,
    notify the human, and summarize what's left. Caps protect Max 5x limits.
 
-## STEP 3c · BUG COUNCIL (gated — stuck/complex bugs only)
+## STEP 3c · BUG COUNCIL — DEPTH mode (gated — stuck/complex bugs only)
 
 Do **not** convene on routine bugs. When stuck-loop detection fires or the user runs `/bug-council`,
-dispatch all five diagnostic agents **in parallel (one message)**:
-`root-cause-analyst · code-archaeologist · pattern-matcher · systems-thinker · adversarial-tester`.
-Synthesize their hypotheses into a **single ranked root cause + fix plan**, then dispatch an engineer
-to implement. Post the verdict via `cdt-notify`.
+first run `cdt-auto gate team`:
+
+- **DENY** (teams off / autonomy off) → run the **fallback**: dispatch all five diagnostic agents **in
+  parallel (one message)** — `root-cause-analyst · code-archaeologist · pattern-matcher · systems-thinker
+  · adversarial-tester` — as read-only subagents, then **you** synthesize their separate reports.
+- **ALLOW** → convene them as a real **agent team** (shared task list + mailbox) so the five lenses
+  **debate and challenge each other** before a verdict — not five monologues. Cap at the configured max
+  (default 5), **time-box to 1–2 rounds**, then **dissolve the team** (sustained parallel contexts are the
+  cost). This is the higher-quality path for genuinely hard bugs.
+- **ASK** → tell the user a team would help + the rough cost, and proceed only on a yes; else use fallback.
+
+Either way: synthesize a **single ranked root cause + fix plan**, dispatch an engineer to implement, and
+post the verdict via `cdt-notify`. Judgment agents run **Opus** (hard diagnosis), never Haiku.
 
 ## STEP 3d · PR AUTOPILOT (opt-in — Git/CI loop, bounded & safe)
 
@@ -130,6 +170,26 @@ The loop (only when `--live`):
 6. **On green:** dispatch `code-reviewer` + `security-reviewer` (read-only); write their synthesis to a
    file and post it with `cdt-pr comment <PR> <file>`. **Do not merge** — report it's ready and let the
    user merge. The risk floor applies: the security pass is mandatory before the "ready" verdict.
+
+## STEP 3e · BREADTH mode (dynamic-workflow Scale mode — gated, summoned)
+
+For a **large homogeneous set** bounded dispatch can't cover (audit every route, migrate every call-site,
+review N changed files), run `cdt-auto gate scale` first:
+
+- **DENY** (scale off / autonomy off) → stay BOUNDED; if it's truly too big, tell the user and suggest
+  `cdt-config scale on`.
+- **ASK** (assist mode, the default) → **propose** the workflow to the user with the slice-first estimate
+  and wait for a yes. Do not summon it unprompted.
+- **ALLOW** (auto mode, within budget) → summon a dynamic workflow. **Discipline (non-negotiable):**
+  - **Slice-first** — run on ~5 items, read the per-agent token cost from `/cdt:stats`, extrapolate to the
+    full set; **stop if it would exceed** `CDT_SCALE_TOKEN_CAP`.
+  - Every workflow agent gets a **contract**; mandatory **adversarial-verify + completeness-critic** stages.
+  - **Log what's dropped** — never silently cap to top-N.
+  - Compose with **worktree isolation** (STEP 3 note) for migrations — each agent in its own checkout.
+  - xhigh effort; Opus/Sonnet for judgment, **never Haiku**. Stop at the cap and report real spend.
+
+This is the deliberate, gated exception to "bounded by default" — summoned, capped, measured. The
+everyday default is untouched.
 
 ## STEP 4 · COMPLETION MANDATE (tier-scaled, with a risk floor)
 

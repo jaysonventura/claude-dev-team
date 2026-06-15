@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.20.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.21.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -198,6 +198,7 @@ session; the bare `/command` form won't match).
 | `/cdt:doctor` | health-check the install (hooks, CLIs, DB, gh, notifier, menu bar, deps) |
 | `/cdt:deps [--install]` | check / install system prerequisites (python3, git, curl, sqlite3, gh) |
 | `/cdt:worktree [new\|list\|rm\|...]` | git-worktree isolation for parallel work (interops with `claude --worktree`) |
+| `/cdt:auto [status\|gate\|explain\|off\|assist\|auto]` | the autonomous mode router + cost governor (BOUNDED / DEPTH / BREADTH) |
 | `/cdt:budget` | show usage % + the Eco (conserve-when-low) recommendation |
 | `/cdt:learn <lesson>` | teach the vault a durable lesson (surfaced later by recall) |
 | `/cdt:notify-setup [...]` | configure Discord/Telegram (no manual `.env`) |
@@ -489,7 +490,47 @@ unless you pass `--force`, and `.claude/worktrees/` is auto-added to `.gitignore
 
 > **Opt-in, on purpose.** Worktree setup has real cost — it's for *genuinely large, parallelizable*
 > work. Small tasks (T0–T2) stay bounded and in-place. This is **Phase 1 of the scaling track**
-> ([`docs/roadmap.md`](docs/roadmap.md)); agent-team councils and dynamic-workflow Scale mode follow.
+> ([`docs/roadmap.md`](docs/roadmap.md)); the autonomous controller below drives the rest.
+
+---
+
+## Autonomous orchestration (router + cost governor)
+
+On top of tiered triage, CDT runs an **autonomous mode router**: after scoring a task it reads the *work
+shape* and decides — on its own — whether to stay **BOUNDED** (the cheap default, ~all tasks) or escalate
+to **DEPTH** (an agent-team Bug Council that *debates*) or **BREADTH** (a dynamic workflow that fans out).
+Escalation fires **only on signature** — a stuck bug → a team; a large homogeneous set (audit/migration)
+→ a workflow — and **always at xhigh effort, Opus for judgment, never Haiku, never `max`**.
+
+What keeps "autonomous" and "cost-effective on Max" both true is the **cost governor**. Before *any*
+escalation the orchestrator consults it:
+
+```
+~/.claude/bin/cdt-auto status            # mode, engines, caps, live weekly-budget headroom
+~/.claude/bin/cdt-auto gate team|scale   # -> ALLOW (proceed) | ASK (confirm first) | DENY (stay bounded)
+~/.claude/bin/cdt-auto explain "<task>"  # advisory: which mode the router would pick, and why
+```
+
+The governor enforces the **autonomy leash**, each engine's on/off, and a **weekly-budget ceiling** — and
+**fails safe**: if it can't see your budget (telemetry off) it *asks* rather than self-running. Every
+escalation's real token cost lands in `/cdt:stats`.
+
+| Autonomy mode | Agent-teams (DEPTH) | Workflows (BREADTH) |
+|---|---|---|
+| `off` | — | — (pure bounded, like stock) |
+| **`assist`** (default) | **auto-summons** on stuck bugs (≤5, time-boxed) | **proposes + asks** first |
+| `auto` | auto-summons within budget | self-runs within the budget ceiling, else asks |
+
+```
+cdt-config autonomy off|assist|auto      # the leash (default: assist)
+cdt-config teams on|off                  # enable DEPTH (sets the experimental agent-teams flag)
+cdt-config scale on|off                  # enable BREADTH (needs Claude Code >= 2.1.154)
+```
+
+> **Safe by default.** The engines ship **off** — you opt in per machine. Even enabled, the default path
+> is BOUNDED; expensive modes are *summoned, capped, and measured*, never the default. This is the
+> scaling track's controller ([`docs/roadmap.md`](docs/roadmap.md)) — depth + breadth on demand, with the
+> per-agent token telemetry as the safety instrument.
 
 ---
 
@@ -702,8 +743,8 @@ step 1 you're back to stock Claude Code.
 .claude-plugin/   plugin.json, marketplace.json
 agents/           14 core role agents (incl. product-manager, ui-ux-engineer, technical-writer, Haiku fast-ops) + 5 Bug Council agents (flat)
 skills/           orchestration (brain) + 8 skills (quality, design, debug, technical-writing)
-commands/         ship, triage, bug-council, autopilot, stats, notify-setup, menubar, recall, advise, config, doctor, budget, learn, deps, worktree
-hooks/            hooks.json + scripts (vault/db/recall/advise/pr/config/doctor/learn/budget/statusline/deps/worktree/format/notify/setup/stats/guard) + vault-template
+commands/         ship, triage, bug-council, autopilot, stats, notify-setup, menubar, recall, advise, config, doctor, budget, learn, deps, worktree, auto
+hooks/            hooks.json + scripts (vault/db/recall/advise/pr/config/doctor/learn/budget/statusline/deps/worktree/auto/format/notify/setup/stats/guard) + vault-template
 docs/             architecture.md, examples.md, roadmap.md
 ```
 

@@ -129,6 +129,10 @@ edits can't collide. Lowest risk of the three, and it needs **no policy change**
 
 ## Phase 5 — Agent-Team councils  ·  fit ★★☆  ·  effort: medium  ·  gated / experimental
 
+> ✅ **Shipped (v1.21.0)** as the **DEPTH** mode of the autonomous controller (below). `cdt-config teams
+> on` sets the experimental flag; STEP 3c convenes the council as a debating team (≤5, time-boxed) on
+> `cdt-auto gate team` = ALLOW, else falls back to parallel subagents.
+
 **Goal:** upgrade the Bug Council from *parallel monologues* to a *debate*.
 
 Today the 5 Bug Council agents run as report-only subagents — they can't see or challenge each other, and
@@ -151,6 +155,11 @@ council (adversarial-tester pushing back on root-cause-analyst before a verdict)
   those).
 
 ## Phase 6 — Dynamic-workflow Scale mode  ·  fit ★★☆  ·  effort: medium  ·  opt-in, capped
+
+> ✅ **Shipped (v1.21.0)** as the **BREADTH** mode of the autonomous controller (below). `cdt-config
+> scale on` enables it; STEP 3e summons a workflow only on `cdt-auto gate scale` = ALLOW (auto mode,
+> within budget) or a confirmed ASK (assist) — slice-first, contracted, adversarially verified,
+> token-capped, with "log what's dropped". Governor **fails safe** to ASK when budget is unknown.
 
 **Goal:** a *governed* realization of the old "bounded swarm" idea — for work bounded dispatch can't cover.
 

@@ -8,11 +8,13 @@ P(){ echo "  [ok]   $1"; ok=$((ok+1)); }
 W(){ echo "  [warn] $1 — $2"; warn=$((warn+1)); }
 F(){ echo "  [FAIL] $1 — $2"; bad=$((bad+1)); }
 jval(){ command -v python3 >/dev/null 2>&1 && python3 -c "import json,os;print(json.load(open(os.path.expanduser('~/.claude/settings.json'))).get('$1',''))" 2>/dev/null; }
+jenv(){ command -v python3 >/dev/null 2>&1 && python3 -c "import json,os;print((json.load(open(os.path.expanduser('~/.claude/settings.json'))).get('env') or {}).get('$1',''))" 2>/dev/null; }
+genv(){ grep -E "^$1=" "$ENVF" 2>/dev/null | cut -d= -f2-; }
 
 echo "claude-dev-team — doctor"
 
 missing=""
-for c in cdt-notify cdt-setup cdt-stats cdt-task cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps cdt-worktree; do
+for c in cdt-notify cdt-setup cdt-stats cdt-task cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps cdt-worktree cdt-auto; do
   [ -x "$BIN/$c" ] || missing="$missing $c"
 done
 [ -z "$missing" ] && P "CLIs installed" || W "CLIs missing:$missing" "open a new Claude Code session (the SessionStart hook installs them)"
@@ -31,6 +33,25 @@ if command -v git >/dev/null 2>&1; then
     P "claude --worktree supported"
   fi
 else W "git not found" "worktree isolation + autopilot need git — run: cdt-deps --install"; fi
+
+# Autonomous orchestration: the mode router + cost governor (cdt-auto). Engines are opt-in.
+au="$(genv CDT_AUTONOMY)"; [ -z "$au" ] && au="assist"
+tm="$(genv CDT_TEAMS)"; [ -z "$tm" ] && tm="off"
+sc="$(genv CDT_SCALE)"; [ -z "$sc" ] && sc="off"
+P "autonomy: $au  (teams=$tm · scale=$sc)"
+if [ "$tm" = "on" ]; then
+  [ "$(jenv CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS)" = "1" ] && P "agent-team flag set (DEPTH ready)" \
+    || W "agent-team flag missing" "re-run: cdt-config teams on (sets CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)"
+fi
+if [ "$sc" = "on" ]; then
+  cv="$(command -v claude >/dev/null 2>&1 && claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+  if [ -n "$cv" ]; then
+    [ "$(printf '%s\n2.1.154\n' "$cv" | sort -V | head -1)" = "2.1.154" ] && P "Claude Code $cv (workflow BREADTH ready)" \
+      || W "Claude Code $cv < 2.1.154" "dynamic workflows need 2.1.154+ — update Claude Code"
+  else
+    W "scale on but Claude Code version unknown" "can't verify the 2.1.154+ requirement for workflows"
+  fi
+fi
 
 prov="$(grep -E '^CDT_NOTIFY_PROVIDER=' "$ENVF" 2>/dev/null | cut -d= -f2-)"
 { [ -n "$prov" ] && [ "$prov" != "off" ]; } && P "notifier configured ($prov)" || W "notifier not configured" "optional — run: cdt-setup"

@@ -2,6 +2,28 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.21.0] — 2026-06-15
+### Added — Autonomous Agent Orchestration (scaling track Phases 2 + 3, as one controller)
+- **Autonomous mode router** (in the orchestration skill, STEP 1.5) — after tiering, CDT reads the *work
+  shape* and autonomously picks **BOUNDED** (default), **DEPTH** (agent-team Bug Council that debates), or
+  **BREADTH** (dynamic-workflow fan-out). Escalation fires only on signature (stuck bug → team; large
+  homogeneous set → workflow), always at **xhigh effort, Opus for judgment, never Haiku, never `max`**.
+- **Cost governor — `cdt-auto` (+ `/cdt:auto`)** — `status` / `gate <team|scale>` / `explain "<task>"`.
+  The orchestrator **must** consult `cdt-auto gate` before any escalation; it returns **ALLOW / ASK /
+  DENY** by enforcing the autonomy leash, each engine's on/off, and a **weekly-budget ceiling**. It
+  **fails safe** — unknown or stale budget → ASK, never a silent ALLOW (caught in code review).
+- **Config plane — `cdt-config autonomy <off|assist|auto>` / `teams <on|off>` / `scale <on|off>`.**
+  Default **assist** (auto-summon teams on stuck bugs; propose+ask before a workflow). Engines ship
+  **off**; `teams on` sets `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` (safe nested-`env` merge into
+  settings.json); `scale` needs Claude Code ≥ 2.1.154. `cdt-doctor` reports mode + verifies both engines.
+- **DEPTH/BREADTH execution protocols** (STEP 3c upgraded, STEP 3e new): teams debate via shared task
+  list + mailbox (≤5, time-boxed, then dissolve); workflows are slice-first, contracted, adversarially
+  verified, token-capped, with "log what's dropped". Both **fail soft to BOUNDED** if the engine is
+  unavailable. The top guardrail now carves the gated Scale-mode exception explicitly.
+- Reviewed in Wave 2: **security PASS** (settings.json merge preserves all keys; governor injection-safe),
+  **code review** caught + fixed the fail-open governor and a skill contradiction before ship. e2e §9
+  covers the full ALLOW/ASK/DENY truth table + the fail-safe + the explain classifier.
+
 ## [1.20.0] — 2026-06-15
 ### Added — Scaling track Phase 1: worktree isolation
 - **`cdt-worktree` CLI + `/cdt:worktree` command** — safe git-worktree isolation for parallel work

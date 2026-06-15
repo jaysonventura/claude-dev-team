@@ -71,6 +71,37 @@ except Exception:
 PY
 }
 
+# Merge KEY into settings.json's nested "env" object (empty VAL removes it). Preserves everything else.
+# Used to set CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS for the agent-team DEPTH engine.
+set_env_setting() {
+  command -v python3 >/dev/null 2>&1 || { echo "cdt-config: python3 required to edit settings.json"; return 1; }
+  KEY="$1" VAL="$2" SETTINGS="$SETTINGS" python3 - <<'PY'
+import json, os, sys, tempfile
+p = os.environ["SETTINGS"]; key = os.environ["KEY"]; val = os.environ["VAL"]
+try:
+    d = json.load(open(p)) if os.path.exists(p) else {}
+except Exception:
+    print("cdt-config: settings.json is not valid JSON — not modified"); sys.exit(1)
+if not isinstance(d, dict):
+    print("cdt-config: settings.json is not an object — not modified"); sys.exit(1)
+env = d.get("env")
+if not isinstance(env, dict): env = {}
+if val == "": env.pop(key, None)
+else: env[key] = val
+d["env"] = env
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(p) or ".")
+try:
+    with os.fdopen(fd, "w") as f:
+        json.dump(d, f, indent=2); f.write("\n")
+    os.replace(tmp, p)
+except Exception as e:
+    try: os.unlink(tmp)
+    except OSError: pass
+    print(f"cdt-config: could not write settings.json ({e})"); sys.exit(1)
+print(f"cdt-config: settings.json env.{key} {'removed' if val=='' else '= '+val}  (applies next session)")
+PY
+}
+
 statusline_state() {
   command -v python3 >/dev/null 2>&1 || { echo off; return; }
   SETTINGS="$SETTINGS" python3 -c "import json,os;p=os.environ['SETTINGS'];d=json.load(open(p)) if os.path.exists(p) else {};print('on' if 'cdt-statusline' in ((d.get('statusLine') or {}).get('command') or '') else 'off')" 2>/dev/null
@@ -79,11 +110,14 @@ statusline_state() {
 show() {
   local en eco; en="$(get_env CDT_ENABLED)"; [ -z "$en" ] && en="1"; eco="$(get_env CDT_ECO)"; [ -z "$eco" ] && eco="off"
   local eff mdl; eff="$(get_setting effortLevel)"; mdl="$(get_setting model)"
+  local au tm sc; au="$(get_env CDT_AUTONOMY)"; [ -z "$au" ] && au="assist"; tm="$(get_env CDT_TEAMS)"; [ -z "$tm" ] && tm="off"; sc="$(get_env CDT_SCALE)"; [ -z "$sc" ] && sc="off"
   echo "claude-dev-team config:"
   echo "  status    : $([ "$en" = "0" ] && echo DISABLED || echo enabled)"
   echo "  effort    : ${eff:-(unset)}   (default $DEFAULT_EFFORT)"
   echo "  model     : ${mdl:-(unset → Claude Code default)}   (recommended $DEFAULT_MODEL = Opus 4.8)"
   echo "  eco       : $eco   (default off; auto = conserve when weekly usage is high; on | off | auto)"
+  echo "  autonomy  : $au   (off | assist | auto — autonomous escalation; details: cdt-auto status)"
+  echo "  teams     : $tm   ·  scale : $sc   (DEPTH/BREADTH engines; off by default, opt in to enable)"
   echo "  statusline: $(statusline_state)   (terminal status line)"
   echo "  effort/model apply on the next session (restart Claude Code). Toggle CDT: cdt-config on|off"
 }
@@ -110,6 +144,24 @@ case "${1:-show}" in
     case "$2" in
       on|off|auto) set_env CDT_ECO "$2"; echo "claude-dev-team: eco = $2 (auto conserves when weekly usage is high)." ;;
       *) echo "cdt-config: eco must be one of: on | off | auto" ;;
+    esac ;;
+  autonomy)
+    case "$2" in
+      off|assist|auto) set_env CDT_AUTONOMY "$2"; echo "claude-dev-team: autonomy = $2  (off = bounded only · assist = auto-teams, ask-before-workflows · auto = self-run both within budget). See: cdt-auto status" ;;
+      *) echo "cdt-config: autonomy must be one of: off | assist | auto" ;;
+    esac ;;
+  teams)
+    case "$2" in
+      on)  set_env CDT_TEAMS on;  set_env_setting CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS 1
+           echo "claude-dev-team: agent-team DEPTH mode ON (experimental flag set; restart Claude Code)." ;;
+      off) set_env CDT_TEAMS off; set_env_setting CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS ""
+           echo "claude-dev-team: agent-team DEPTH mode OFF." ;;
+      *) echo "cdt-config: usage: cdt-config teams on|off" ;;
+    esac ;;
+  scale)
+    case "$2" in
+      on|off) set_env CDT_SCALE "$2"; echo "claude-dev-team: dynamic-workflow BREADTH (scale) mode = $2  (needs Claude Code >= 2.1.154)." ;;
+      *) echo "cdt-config: usage: cdt-config scale on|off" ;;
     esac ;;
   statusline)
     case "$2" in
@@ -143,9 +195,11 @@ PY
     esac ;;
   reset)
     set_env CDT_ENABLED 1; set_env CDT_ECO off
+    set_env CDT_AUTONOMY assist; set_env CDT_TEAMS off; set_env CDT_SCALE off
+    set_env_setting CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS ""
     set_setting effortLevel "$DEFAULT_EFFORT"
     set_setting model "$DEFAULT_MODEL"
-    echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off)." ;;
-  *) echo "usage: cdt-config {show|on|off|effort <lvl>|model <m>|eco <on|off|auto>|statusline <on|off>|reset}"; exit 0 ;;
+    echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off, autonomy=assist, engines off)." ;;
+  *) echo "usage: cdt-config {show|on|off|effort <lvl>|model <m>|eco <on|off|auto>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
 esac
 exit 0

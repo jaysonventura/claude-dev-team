@@ -86,6 +86,37 @@ else
   ok "git not present — worktree test skipped (cdt-worktree needs git)"
 fi
 
+echo "== 9. autonomous orchestration (cdt-auto router + cost governor) =="
+NOW="$(date +%s 2>/dev/null || echo 0)"
+fresh() { printf '%s' "{\"weekly\":$1,\"session\":10,\"ts\":$NOW}" > "$HOME/.claude/.cdt-usage.json"; }
+"$BIN/cdt-config" autonomy assist >/dev/null 2>&1
+has "$("$BIN/cdt-auto" status 2>&1)" "assist" "autonomy status reflects mode"
+# gate team: DENY off → ALLOW on+headroom → ASK over ceiling
+"$BIN/cdt-config" teams off >/dev/null 2>&1
+has "$("$BIN/cdt-auto" gate team 2>&1)" "DENY" "gate team DENY when engine off"
+"$BIN/cdt-config" teams on >/dev/null 2>&1
+fresh 20; has "$("$BIN/cdt-auto" gate team 2>&1)" "ALLOW" "gate team ALLOW within budget"
+fresh 90; has "$("$BIN/cdt-auto" gate team 2>&1)" "ASK" "gate team ASK over weekly ceiling"
+# gate scale: DENY off → assist ASK → auto ALLOW/ASK(ceiling)/ASK(unknown, fail-safe)
+"$BIN/cdt-config" scale off >/dev/null 2>&1
+has "$("$BIN/cdt-auto" gate scale 2>&1)" "DENY" "gate scale DENY when engine off"
+"$BIN/cdt-config" scale on >/dev/null 2>&1
+fresh 20; has "$("$BIN/cdt-auto" gate scale 2>&1)" "ASK" "gate scale ASK in assist mode"
+"$BIN/cdt-config" autonomy auto >/dev/null 2>&1
+fresh 20; has "$("$BIN/cdt-auto" gate scale 2>&1)" "ALLOW" "gate scale ALLOW in auto mode within budget"
+fresh 90; has "$("$BIN/cdt-auto" gate scale 2>&1)" "ASK" "gate scale ASK in auto mode over ceiling"
+rm -f "$HOME/.claude/.cdt-usage.json"
+has "$("$BIN/cdt-auto" gate scale 2>&1)" "ASK" "gate scale ASK when budget unknown (fail-safe, not ALLOW)"
+# teams flag landed in settings.json env
+has "$(cat "$HOME/.claude/settings.json" 2>/dev/null)" "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" "agent-team flag written to settings.json"
+# explain classifier — wide → BREADTH, stuck → DEPTH, small → BOUNDED
+has "$("$BIN/cdt-auto" explain "audit every endpoint across the repo" 2>&1)" "BREADTH" "explain routes a wide audit to BREADTH"
+has "$("$BIN/cdt-auto" explain "the test is flaky and I cannot figure out the root cause" 2>&1)" "DEPTH" "explain routes a stuck bug to DEPTH"
+has "$("$BIN/cdt-auto" explain "fix a typo in the readme" 2>&1)" "BOUNDED" "explain routes a small task to BOUNDED"
+# off disables all escalation
+"$BIN/cdt-config" autonomy off >/dev/null 2>&1
+has "$("$BIN/cdt-auto" gate team 2>&1)" "DENY" "gate DENY when autonomy off"
+
 echo
 if [ "$fail" = 0 ]; then echo "E2E PASSED"; else echo "E2E FAILED"; fi
 exit "$fail"
