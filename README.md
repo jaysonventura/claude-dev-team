@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.21.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.21.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -555,21 +555,23 @@ and `usage`. Run `/cdt:stats` (or `cdt-stats today|week|all`) for activity by ti
 counts, and blocker rate. Activity/timing is precise. "Cost" here means **token / rate-limit budget**
 (Claude subscription session + weekly limits, not money); for exact tokens used, see Claude Code's `/cost`.
 
-**Per-agent token telemetry (real, not estimated).** A `SubagentStop` hook sums each dispatched
-subagent's **actual** token usage straight from its transcript (input + output + cache) and stores it on
-the `agent_runs` row — so `/cdt:stats` ranks **which roles cost the most**, and tasks carry a per-tier
-token total. This is grounded in real usage rows, never a guess. Example:
+**Per-agent token telemetry (real, not estimated).** A `SubagentStop` hook reads each dispatched
+subagent's **actual** token usage from its transcript and stores it on the `agent_runs` row — so
+`/cdt:stats` ranks **which roles cost the most**. The headline figure is **cost-relevant tokens**
+(`input + output + cache-creation`); **cache reads are tracked and shown separately** because they're
+heavily discounted and — for a subagent re-reading its cached context every turn — would otherwise be
+~100× larger and swamp the ranking. Grounded in real usage rows, never a guess. Example:
 
 ```
-Agent runs — which roles cost the most (role · runs · tokens):
-  security-reviewer  ×6  4.1M
-  backend-engineer   ×3  2.3M
-  qa-engineer        ×2  610.0k
-Total agent tokens: 7.0M
+Agent runs — which roles cost the most (role · runs · tokens; +cache reads, discounted):
+  security-reviewer  ×6  142.0k  (+8.1M cache)
+  backend-engineer   ×3   98.5k  (+5.2M cache)
+  qa-engineer        ×2   23.0k  (+1.4M cache)
+Total agent tokens: 263.5k  (+ 14.7M cache reads, discounted)
 ```
 
-Use it to tune routing — e.g. if a role dominates spend, reserve `FULL:` / Opus builders for the work
-that truly needs them.
+Use it to tune routing — e.g. if a role dominates the *cost-relevant* spend, reserve `FULL:` / Opus
+builders for the work that truly needs them.
 
 **Adaptive routing (learns from history):** on T2+, the orchestrator also runs
 `cdt-advise "<task>"` — an *advisory* prior derived from how **similar past tasks** went (typical tier,

@@ -39,6 +39,22 @@ echo "== 4. task -> stats =="
 "$BIN/cdt-task" T2 shipped 1 "e2e sandbox task" >/dev/null 2>&1
 has "$("$BIN/cdt-stats" all 2>&1)" "T2" "stats reflects the logged task"
 
+echo "== 4b. per-agent telemetry: cost-relevant tokens vs cache reads split =="
+TR="$SBX/agent-transcript.jsonl"
+cat > "$TR" <<'JSONL'
+{"type":"assistant","message":{"usage":{"input_tokens":1000,"output_tokens":500,"cache_creation_input_tokens":2000,"cache_read_input_tokens":80000}}}
+{"type":"assistant","message":{"usage":{"input_tokens":100,"output_tokens":400,"cache_read_input_tokens":90000}}}
+JSONL
+# fresh tokens = (1000+500+2000)+(100+400) = 4000 ; cache_read = 80000+90000 = 170000
+printf '{"agent_type":"cdt:demo-role","session_id":"s","transcript_path":"%s"}' "$TR" | bash "$REPO/hooks/agent-track.sh"
+ROW="$(CDT_DB="$HOME/.claude/claude-dev-team.db" python3 -c 'import os,sqlite3
+try:
+    c=sqlite3.connect(os.environ["CDT_DB"]); r=c.execute("SELECT tokens,cache_read FROM agent_runs WHERE agent=?",("cdt:demo-role",)).fetchone()
+    print("%s|%s"%(r[0],r[1]) if r else "none")
+except Exception: print("err")' 2>/dev/null)"
+[ "$ROW" = "4000|170000" ] && ok "tokens split fresh=4000 · cache_read=170000 (cache not in the cost figure)" || no "token split wrong (got: $ROW)"
+has "$("$BIN/cdt-stats" all 2>&1)" "cache)" "stats shows cache reads separately"
+
 echo "== 5. statusline -> budget (eco conserves when weekly is high) =="
 SL_JSON='{"model":{"display_name":"Opus"},"effort":{"level":"xhigh"},"rate_limits":{"seven_day":{"used_percentage":90},"five_hour":{"used_percentage":10}}}'
 has "$(printf '%s' "$SL_JSON" | "$BIN/cdt-statusline" 2>&1)" "wk" "statusline renders usage"

@@ -2,6 +2,17 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.21.1] — 2026-06-15
+### Fixed
+- **Per-agent token telemetry no longer inflated by cache reads.** `agent-track.sh` previously summed
+  `input + output + cache_creation + cache_read` into one `tokens` figure — and for a subagent re-reading
+  its cached context every turn, `cache_read` dominated by ~100×, making `/cdt:stats`'s "which roles cost
+  the most" ranking meaningless (agents showed ~1.1B "tokens"). Now `tokens` is the **cost-relevant** sum
+  (`input + output + cache-creation`) and **`cache_read` is a separate column**, shown apart and labeled
+  discounted. The ranking now reflects real cost. New `agent_runs.cache_read` column migrates in place;
+  e2e asserts the split (fresh vs cache). *(Historical pre-fix rows keep their old combined `tokens` until
+  they age out of the today/week windows — the split is forward-looking; counts/roles are unaffected.)*
+
 ## [1.21.0] — 2026-06-15
 ### Added — Autonomous Agent Orchestration (scaling track Phases 2 + 3, as one controller)
 - **Autonomous mode router** (in the orchestration skill, STEP 1.5) — after tiering, CDT reads the *work

@@ -84,7 +84,8 @@ no embedding model or network). See `docs/roadmap.md` Phase 2 for the planned se
 ## State DB schema
 
 `sessions(id,cwd,started,ended,tier,outcome)` · `tasks(session_id,description,tier,status,iterations,
-started,ended,tokens)` · `agent_runs(task_id,agent,model,started,ended,tokens)` ·
-`events(ts,session_id,type,message)` · `usage(session_id,ts,est_tokens,est_cost)`. The `tokens` columns
-hold real per-task / per-agent usage summed from transcripts (added in-place via migration for existing
-DBs); `/cdt:stats` ranks roles by token cost.
+started,ended,tokens)` · `agent_runs(task_id,agent,model,started,ended,tokens,cache_read)` ·
+`events(ts,session_id,type,message)` · `usage(session_id,ts,est_tokens,est_cost)`. The token columns
+hold real usage summed from transcripts (added in-place via migration). On `agent_runs`, **`tokens`** is
+the cost-relevant sum (`input + output + cache-creation`) while **`cache_read`** holds the discounted
+cache reads separately, so `/cdt:stats` ranks roles by real cost instead of cache bulk.
