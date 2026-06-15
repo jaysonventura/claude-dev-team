@@ -16,17 +16,24 @@ final class MenuBarController: NSObject {
         return .labelColor
     }
 
-    // Renders two short lines stacked vertically (top over bottom) into a narrow menu-bar-height image.
-    private func stackedImage(top: String, topColor: NSColor, bottom: String, bottomColor: NSColor) -> NSImage {
-        let font = NSFont.systemFont(ofSize: 9, weight: .semibold)
-        let topStr = NSAttributedString(string: top, attributes: [.font: font, .foregroundColor: topColor])
-        let botStr = NSAttributedString(string: bottom, attributes: [.font: font, .foregroundColor: bottomColor])
+    // Renders "CDT" (left, centered) + two stacked lines (session % over weekly %) into a narrow image.
+    private func stackedImage(brand: String, top: String, topColor: NSColor,
+                              bottom: String, bottomColor: NSColor) -> NSImage {
+        let numFont = NSFont.systemFont(ofSize: 9, weight: .semibold)
+        let brandStr = NSAttributedString(string: brand, attributes: [
+            .font: NSFont.boldSystemFont(ofSize: 9), .foregroundColor: NSColor.secondaryLabelColor])
+        let topStr = NSAttributedString(string: top, attributes: [.font: numFont, .foregroundColor: topColor])
+        let botStr = NSAttributedString(string: bottom, attributes: [.font: numFont, .foregroundColor: bottomColor])
         let h = NSStatusBar.system.thickness                       // menu bar height (~22pt)
-        let w = ceil(max(topStr.size().width, botStr.size().width)) + 2
+        let gap: CGFloat = 3
+        let numW = ceil(max(topStr.size().width, botStr.size().width))
+        let brandW = ceil(brandStr.size().width)
+        let w = brandW + gap + numW + 2
         let image = NSImage(size: NSSize(width: w, height: h))
         image.lockFocus()
-        topStr.draw(at: NSPoint(x: (w - topStr.size().width) / 2, y: h / 2))   // upper half
-        botStr.draw(at: NSPoint(x: (w - botStr.size().width) / 2, y: 0))       // lower half
+        brandStr.draw(at: NSPoint(x: 0, y: (h - brandStr.size().height) / 2))   // CDT, vertically centered
+        topStr.draw(at: NSPoint(x: brandW + gap, y: h / 2))                     // session % (upper)
+        botStr.draw(at: NSPoint(x: brandW + gap, y: 0))                         // weekly % (lower)
         image.unlockFocus()
         image.isTemplate = false   // colored, not a template image
         return image
@@ -38,6 +45,7 @@ final class MenuBarController: NSObject {
         if let sub = snap.subscription {
             statusItem.button?.title = ""
             statusItem.button?.image = stackedImage(
+                brand: "CDT",
                 top: "\(sub.sessionPct)%", topColor: color(for: sub.sessionPct),
                 bottom: "\(sub.weeklyPct)%", bottomColor: color(for: sub.weeklyPct))
         } else {

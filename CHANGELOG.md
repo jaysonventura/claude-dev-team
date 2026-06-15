@@ -2,6 +2,11 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.4.6] — 2026-06-15
+### Changed
+- Menu bar keeps the **CDT** label, with the stacked session %/weekly % beside it (CDT left, percentages
+  stacked right) — branded but still narrow.
+
 ## [1.4.5] — 2026-06-15
 ### Changed
 - Menu bar shows the two percentages **stacked** (session % over weekly %, color-coded) as a compact
