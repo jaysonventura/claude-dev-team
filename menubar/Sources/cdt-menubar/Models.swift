@@ -69,6 +69,13 @@ func formatCountdown(to date: Date, now: Date = Date()) -> String {
     return f.string(from: date)
 }
 
+// Bare role name for display: drop a "plugin:" namespace prefix
+// (e.g. "claude-dev-team:backend-engineer" -> "backend-engineer"; "claude-code-guide" stays as-is).
+func shortRole(_ id: String) -> String {
+    if let last = id.split(separator: ":").last { return String(last) }
+    return id
+}
+
 // Short display name for a model id (e.g. "claude-opus-4-7" -> "Opus").
 func shortModelName(_ id: String) -> String {
     let s = id.lowercased()

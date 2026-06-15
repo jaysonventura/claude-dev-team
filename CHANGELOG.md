@@ -2,6 +2,11 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.4.8] — 2026-06-15
+### Fixed
+- Agent-run labels no longer truncate to `claude-dev-team:ba` — the menu bar and `cdt-stats` now strip
+  the `claude-dev-team:` namespace prefix and show the bare role (`backend-engineer`, `qa-engineer`, …).
+
 ## [1.4.7] — 2026-06-15
 ### Added
 - Menu bar dropdown's **claude-dev-team (7d)** panel now shows **sessions logged** (your chats), so the

@@ -37,7 +37,7 @@ q "SELECT '  '||COALESCE(tier,'?')||'  '||COUNT(*) FROM tasks WHERE started >= '
 echo "Avg Task Loop iterations: $(q "SELECT IFNULL(ROUND(AVG(iterations),1),'n/a') FROM tasks WHERE started >= '$SINCE';")"
 echo
 echo "Agent runs (by role):"
-q "SELECT '  '||agent||'  '||COUNT(*) FROM agent_runs WHERE started >= '$SINCE' AND agent NOT IN ('unknown','') GROUP BY agent ORDER BY COUNT(*) DESC;"
+q "SELECT '  '||REPLACE(agent,'claude-dev-team:','')||'  '||COUNT(*) FROM agent_runs WHERE started >= '$SINCE' AND agent NOT IN ('unknown','') GROUP BY agent ORDER BY COUNT(*) DESC;"
 echo
 echo "Token budget (your real 'cost' on Max = session + weekly rate-limit usage, NOT money):"
 echo "  the activity above is what consumes your token budget — more T2/T3 tasks & agent runs = more tokens."
