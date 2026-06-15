@@ -2,6 +2,20 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.10.0] — 2026-06-15
+### Added
+- **Budget-aware Eco mode** (`cdt-budget` + `cdt-config eco`) — before a T2+ dispatch the orchestrator
+  checks your real weekly usage; when high it **conserves** (prefers Sonnet, smallest safe tier, skips
+  optional agents) and says why. Never weakens the risk floor / security review, never uses Haiku for
+  real work. Default `auto`.
+- **Status line** (`cdt-statusline` + `cdt-config statusline on`) — a terminal status line
+  (`CDT on · Opus · xhigh · 41% wk`) that works **cross-platform** (Linux/Windows, no menu bar needed) and
+  caches your usage % so Eco mode can read it.
+- **`/claude-dev-team:doctor`** (`cdt-doctor`) — one-command install health check (hooks, CLIs, DB, gh,
+  notifier, menu bar, companion deps) with a fix hint for anything not green.
+- **`cdt-learn "<lesson>"`** + `/claude-dev-team:learn` — teach the vault a durable lesson on demand
+  (surfaced later by `cdt-recall`).
+
 ## [1.9.0] — 2026-06-15
 ### Added
 - **`cdt-config` + `/claude-dev-team:config`** — a control surface to **enable/disable** the whole

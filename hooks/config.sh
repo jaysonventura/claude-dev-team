@@ -15,6 +15,7 @@
 set +e
 
 CDT_HOME="$HOME/.claude"
+BIN="$CDT_HOME/bin"
 ENV_FILE="${CDT_ENV_FILE:-$CDT_HOME/claude-dev-team.env}"
 SETTINGS="${CDT_SETTINGS:-$CDT_HOME/settings.json}"
 DEFAULT_EFFORT="xhigh"
@@ -70,14 +71,21 @@ except Exception:
 PY
 }
 
+statusline_state() {
+  command -v python3 >/dev/null 2>&1 || { echo off; return; }
+  SETTINGS="$SETTINGS" python3 -c "import json,os;p=os.environ['SETTINGS'];d=json.load(open(p)) if os.path.exists(p) else {};print('on' if 'cdt-statusline' in ((d.get('statusLine') or {}).get('command') or '') else 'off')" 2>/dev/null
+}
+
 show() {
-  local en; en="$(get_env CDT_ENABLED)"; [ -z "$en" ] && en="1"
+  local en eco; en="$(get_env CDT_ENABLED)"; [ -z "$en" ] && en="1"; eco="$(get_env CDT_ECO)"; [ -z "$eco" ] && eco="auto"
   local eff mdl; eff="$(get_setting effortLevel)"; mdl="$(get_setting model)"
   echo "claude-dev-team config:"
-  echo "  status : $([ "$en" = "0" ] && echo DISABLED || echo enabled)"
-  echo "  effort : ${eff:-(unset)}   (default $DEFAULT_EFFORT)"
-  echo "  model  : ${mdl:-(unset → Claude Code default)}   (recommended $DEFAULT_MODEL = Opus 4.8)"
-  echo "  effort/model apply on the next session (restart Claude Code). Toggle: cdt-config on|off"
+  echo "  status    : $([ "$en" = "0" ] && echo DISABLED || echo enabled)"
+  echo "  effort    : ${eff:-(unset)}   (default $DEFAULT_EFFORT)"
+  echo "  model     : ${mdl:-(unset → Claude Code default)}   (recommended $DEFAULT_MODEL = Opus 4.8)"
+  echo "  eco       : $eco   (auto = conserve when weekly usage is high; on | off | auto)"
+  echo "  statusline: $(statusline_state)   (terminal status line)"
+  echo "  effort/model apply on the next session (restart Claude Code). Toggle CDT: cdt-config on|off"
 }
 
 case "${1:-show}" in
@@ -98,11 +106,46 @@ case "${1:-show}" in
     else
       echo "cdt-config: invalid model string"
     fi ;;
+  eco)
+    case "$2" in
+      on|off|auto) set_env CDT_ECO "$2"; echo "claude-dev-team: eco = $2 (auto conserves when weekly usage is high)." ;;
+      *) echo "cdt-config: eco must be one of: on | off | auto" ;;
+    esac ;;
+  statusline)
+    case "$2" in
+      on)
+        CMD="$BIN/cdt-statusline" SETTINGS="$SETTINGS" python3 - <<'PY'
+import json, os, tempfile
+p = os.environ["SETTINGS"]; cmd = os.environ["CMD"]
+try: d = json.load(open(p)) if os.path.exists(p) else {}
+except Exception: print("cdt-config: settings.json invalid — not modified"); raise SystemExit(1)
+d["statusLine"] = {"type": "command", "command": cmd, "padding": 0}
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(p) or ".")
+with os.fdopen(fd, "w") as f: json.dump(d, f, indent=2); f.write("\n")
+os.replace(tmp, p); print("cdt-config: status line ON (restart Claude Code to see it)")
+PY
+        ;;
+      off)
+        SETTINGS="$SETTINGS" python3 - <<'PY'
+import json, os, tempfile
+p = os.environ["SETTINGS"]
+try: d = json.load(open(p)) if os.path.exists(p) else {}
+except Exception: raise SystemExit(0)
+if "statusLine" in d and "cdt-statusline" in ((d["statusLine"] or {}).get("command") or ""):
+    d.pop("statusLine", None)
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(p) or ".")
+    with os.fdopen(fd, "w") as f: json.dump(d, f, indent=2); f.write("\n")
+    os.replace(tmp, p)
+print("cdt-config: status line OFF")
+PY
+        ;;
+      *) echo "cdt-config: usage: cdt-config statusline on|off" ;;
+    esac ;;
   reset)
-    set_env CDT_ENABLED 1
+    set_env CDT_ENABLED 1; set_env CDT_ECO auto
     set_setting effortLevel "$DEFAULT_EFFORT"
     set_setting model "$DEFAULT_MODEL"
-    echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8)." ;;
-  *) echo "usage: cdt-config {show|on|off|effort <low|medium|high|xhigh>|model <m>|reset}"; exit 0 ;;
+    echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=auto)." ;;
+  *) echo "usage: cdt-config {show|on|off|effort <lvl>|model <m>|eco <on|off|auto>|statusline <on|off>|reset}"; exit 0 ;;
 esac
 exit 0
