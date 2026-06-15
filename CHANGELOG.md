@@ -2,6 +2,12 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.3.3] — 2026-06-15
+### Fixed
+- **HTTP 429 from the usage endpoint.** Polling was every 60s (too aggressive for the undocumented
+  endpoint). Now: subscription %s poll every **5 min** with a **15-min backoff on 429**; local token
+  usage still refreshes every 60s. The last good subscription reading stays visible if a refresh fails.
+
 ## [1.3.2] — 2026-06-15
 ### Changed
 - Menu bar strip now shows **`CDT <session%> Session  <weekly%> Weekly`** — percentages prominent +
