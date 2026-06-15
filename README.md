@@ -312,7 +312,7 @@ from `~/.claude/CLAUDE.md` — you're back to stock Claude Code.
 
 ```
 .claude-plugin/   plugin.json, marketplace.json
-agents/           10 core role agents + bug-council/ (5)
+agents/           10 core role agents + 5 Bug Council agents (flat)
 skills/           orchestration (brain) + 7 quality skills
 commands/         ship, triage, bug-council, stats, notify-setup
 hooks/            hooks.json + scripts (vault/db/format/notify/setup/stats/guard) + vault-template
