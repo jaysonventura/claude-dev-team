@@ -1,7 +1,7 @@
 {
   "name": "claude-dev-team",
   "description": "An orchestrated software team for Claude Code: triage -> contract -> parallel specialists -> quality gates -> completion mandate. Role-based agents, a gated Bug Council, a bounded Task Loop, SQLite cost analytics, and Discord/Telegram status notifications.",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "author": {
     "name": "Jayson Ventura",
     "email": "jgventura03business@gmail.com"

@@ -36,6 +36,10 @@ cd menubar
 Output: `menubar/dist/CDT-Usage-<version>.dmg`. Users open it, drag **CDT Usage** to Applications, run it
 — no warnings, re-openable from /Applications.
 
+> **Version source:** `release.sh` reads `<version>` from `../.claude-plugin/plugin.json` (it also fills
+> the app's `Info.plist` `__VERSION__`). Bump `plugin.json` **before** cutting a release, and tag/publish
+> the matching `v<version>` — otherwise the DMG name and the GitHub release tag can drift.
+
 ## Test the bundle without notarizing (works with any cert)
 ```bash
 ./release.sh --bundle-only      # builds + signs the .app; then:  open "dist/CDT Usage.app"

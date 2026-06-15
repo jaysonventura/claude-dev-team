@@ -2,6 +2,16 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.5.1] — 2026-06-15
+### Fixed
+- **`db.sh`** flattens newlines/tabs to spaces in stored values (cleaner rows, no smearing); single-quote
+  escaping kept, backslashes left intact (SQLite `'…'` literals don't process them).
+- **`pkill -f`** in the menu-bar installer now matches the app path literally (dots escaped), so it can't
+  over-match an unrelated process.
+- **Keychain error** now surfaces the `OSStatus` (via `SecCopyErrorMessageString`), distinguishing a real
+  Keychain failure from "not logged in".
+- **`RELEASING.md`** documents that the release version comes from `plugin.json`.
+
 ## [1.5.0] — 2026-06-15
 Production-grade hardening pass (full T3 audit: security, devops, content, native, distribution).
 ### Security

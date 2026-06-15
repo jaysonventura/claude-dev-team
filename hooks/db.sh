@@ -12,8 +12,10 @@ _cdt_sql() {
   sqlite3 "$CDT_DB" "$1" >/dev/null 2>&1 || true
 }
 
-# Escape single quotes for SQL string literals.
-_cdt_esc() { printf "%s" "$1" | sed "s/'/''/g"; }
+# Make a value safe inside a SQLite '...' string literal: double single quotes, and flatten
+# newlines/CR/tabs to spaces so a value can't smear across the stored row or break log rendering.
+# (SQLite does NOT process backslash escapes in '...' literals, so we must not touch '\'.)
+_cdt_esc() { printf "%s" "$1" | tr '\n\r\t' '   ' | sed "s/'/''/g"; }
 
 db_init() {
   _cdt_have_sqlite || return 0

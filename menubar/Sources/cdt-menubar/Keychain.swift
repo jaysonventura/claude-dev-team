@@ -7,8 +7,11 @@ enum KeychainError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notFound:
-            return "Claude Code credentials not found in Keychain — is Claude Code installed and logged in?"
+        case .notFound(let status):
+            // Surface the OSStatus so a genuine Keychain error (e.g. interaction-not-allowed) is
+            // distinguishable from the common "not logged in" (errSecItemNotFound).
+            let reason = (SecCopyErrorMessageString(status, nil) as String?) ?? "OSStatus \(status)"
+            return "Claude Code credentials not readable from Keychain (\(reason)) — is Claude Code installed and logged in?"
         case .noToken:
             return "Could not read the OAuth access token from the Keychain item."
         }

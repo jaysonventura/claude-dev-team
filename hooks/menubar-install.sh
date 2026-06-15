@@ -18,6 +18,7 @@ elif [ -w "/Applications" ]; then APPS="/Applications"
 else APPS="$HOME/Applications"; fi
 APP_BUNDLE="$APPS/CDT Usage.app"
 APP="$APP_BUNDLE/Contents/MacOS/cdt-menubar"
+APP_RE="${APP//./\\.}"   # dots escaped so `pkill -f` treats the path literally (not as regex any-char)
 LABEL="com.jaysonventura.claude-dev-team.menubar"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 
@@ -66,12 +67,12 @@ build() {
 
 start() {
   [ -x "$APP" ] || build || return 1
-  pkill -f "$APP" 2>/dev/null
+  pkill -f "$APP_RE" 2>/dev/null
   open "$APP_BUNDLE" 2>/dev/null && echo "Launched — look for the CDT item in your menu bar." \
     || { nohup "$APP" >/dev/null 2>&1 & echo "Started."; }
 }
 
-stop() { pkill -f "$APP" 2>/dev/null && echo "Stopped." || echo "Not running."; }
+stop() { pkill -f "$APP_RE" 2>/dev/null && echo "Stopped." || echo "Not running."; }
 
 status() { [ -x "$APP" ] || build || return 1; "$APP" --once; }
 
@@ -79,7 +80,7 @@ install_login() {
   [ -x "$APP" ] || build || return 1
   rm -f "$CDT_HOME/.cdt-menubar-disabled" 2>/dev/null
   launchctl unload "$PLIST" 2>/dev/null; rm -f "$PLIST"   # remove any legacy LaunchAgent
-  pkill -f "$APP" 2>/dev/null
+  pkill -f "$APP_RE" 2>/dev/null
   # The app registers itself for launch-at-login via SMAppService (shown as "CDT Usage"), so just launch it.
   open "$APP_BUNDLE" 2>/dev/null && echo "Launched + registered for login as CDT Usage."
   touch "$CDT_HOME/.cdt-menubar-installed" 2>/dev/null   # marker so SessionStart won't reinstall every session
@@ -88,7 +89,7 @@ install_login() {
 uninstall() {
   [ -x "$APP" ] && "$APP" --unregister >/dev/null 2>&1   # remove the login item (SMAppService)
   launchctl unload "$PLIST" 2>/dev/null; rm -f "$PLIST"  # legacy LaunchAgent cleanup
-  pkill -f "$APP" 2>/dev/null
+  pkill -f "$APP_RE" 2>/dev/null
   rm -rf "$APP_BUNDLE"
   rm -f "$BIN/cdt-menubar-app" 2>/dev/null
   rm -f "$CDT_HOME/.cdt-menubar-installed" 2>/dev/null   # clear the install marker so a later install re-runs
