@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.8.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.8.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -151,11 +151,13 @@ flowchart LR
 | **Bug Council** (gated ×5) | inherit | root-cause-analyst · code-archaeologist · pattern-matcher · systems-thinker · adversarial-tester |
 | `fast-ops` | **Haiku** | the cheap "hands" tier — trivial mechanical ops **only** (gather, literal find/replace, rename, template fill); **never** dev/test/review/security |
 
-**Model routing is the core cost lever (3 tiers):** **Opus** reasons & reviews (architect, code &
-security review); **Sonnet** does the bulk typing, testing, and orchestration throughput; **Haiku**
-(`fast-ops`) handles only *trivial mechanical* work and escalates the moment a task needs judgment — so
-the cheap tier can never touch quality-critical work. Run a Sonnet session for routine work; `FULL:` or
-`/model opus` for critical work.
+**Model routing — Opus is the recommended main model.** Quality-critical work runs on a strong model;
+cost-effectiveness comes from **tiering + a trivial-only low tier**, never from downgrading important
+work. **Opus** reasons & reviews (architect, code & security review) and is the right session model for
+quality work; **Sonnet** (inherit) is a capable high-quality tier fine for routine throughput; **Haiku**
+(`fast-ops`) is the **low tier for *trivial mechanical* ops only** — it **never** touches complicated or
+quality-sensitive work (orchestration, development, testing, review, security) and escalates the instant
+a task needs judgment. Run Sonnet for routine work; **Opus** (or `FULL:`) for anything that matters.
 
 ## Skills
 

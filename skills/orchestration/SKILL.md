@@ -152,15 +152,18 @@ Do **not** invent token figures; Claude Code's `/cost` / `/usage` is the authori
 
 ## COST DISCIPLINE (cost-effective by default, high quality always)
 
-- **Model routing (3 tiers):**
-  - **Opus — judgment:** `architect`, `code-reviewer`, `security-reviewer`. Reasons and reviews.
-  - **Sonnet (inherit) — throughput:** all builders, **qa/testing**, diagrams, Bug Council. Does the
-    bulk of the work at high quality.
-  - **Haiku — `fast-ops` only:** the cheap "hands" tier for **trivial, mechanical, fully-specified**
-    operations (file/info gathering; a literal find/replace, rename, typo, whitespace, or template fill).
-    **Hard rule:** Haiku is **never** used for orchestration, architecture, development, testing, review,
-    security, or debugging. Route a sub-task to `fast-ops` only when it needs *zero* judgment; if it
-    turns out to need any, `fast-ops` escalates back. When unsure, use Sonnet, not Haiku.
+- **Model routing (Opus is the recommended main model):** quality-critical work runs on a strong model;
+  cost-effectiveness comes from **tiering + trivial-only Haiku**, never from downgrading important work.
+  - **Opus — judgment & main:** `architect`, `code-reviewer`, `security-reviewer` are pinned Opus, and
+    the orchestrator itself runs on your session model (use **Opus** for quality work).
+  - **Sonnet (inherit) — throughput:** builders, **qa/testing**, diagrams, Bug Council follow the session
+    model (Opus when you run Opus). Sonnet is a capable, high-quality tier — fine for routine throughput.
+  - **Haiku — `fast-ops` only, the LOW tier:** the cheap "hands" tier for **trivial, mechanical,
+    fully-specified** ops (gather/grep/count; a literal find/replace, rename, typo, whitespace, template
+    fill). **HARD RULE — never route the low model to anything complicated or quality-sensitive:** not
+    orchestration, architecture, development, testing, review, security, or debugging. Use `fast-ops`
+    only when a sub-task needs *zero* judgment; it escalates the instant it doesn't. **When in doubt,
+    never Haiku** — use Opus/Sonnet.
 - **Tier-gating is the default** — most tasks are T0/T1 and need no team.
 - **Contracts cap tokens** — exclusive scope + read-list + ≤150-word reports keep agents from reading
   the whole repo or rambling.

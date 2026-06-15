@@ -2,6 +2,13 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.8.1] — 2026-06-15
+### Changed
+- **Model-routing guardrail hardened** — made explicit everywhere that **Opus is the recommended main
+  model**, and that the **low (Haiku) tier is never used for complicated or quality-sensitive work**.
+  Strengthened the `fast-ops` agent and the orchestration skill to escalate on anything complicated or
+  quality-sensitive (not just "needs judgment"); updated the README routing note to lead with Opus-as-main.
+
 ## [1.8.0] — 2026-06-15
 ### Added
 - **PR autopilot (`/claude-dev-team:autopilot <PR#>`)** — roadmap **Phase 1**. Drives a real GitHub PR
