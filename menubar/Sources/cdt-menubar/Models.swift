@@ -57,9 +57,15 @@ func textBar(_ pct: Int, width: Int = 10) -> String {
 func formatCountdown(to date: Date, now: Date = Date()) -> String {
     let s = date.timeIntervalSince(now)
     if s <= 0 { return "now" }
-    let h = Int(s) / 3600
-    let m = (Int(s) % 3600) / 60
-    return h > 0 ? "\(h)h \(m)m" : "\(m)m"
+    // Under a day → a countdown ("in 3h 47m"); a day or more away → an absolute time ("Fri 1:59 AM").
+    if s < 24 * 3600 {
+        let h = Int(s) / 3600
+        let m = (Int(s) % 3600) / 60
+        return h > 0 ? "in \(h)h \(m)m" : "in \(m)m"
+    }
+    let f = DateFormatter()
+    f.dateFormat = "EEE h:mm a"
+    return f.string(from: date)
 }
 
 // Short display name for a model id (e.g. "claude-opus-4-7" -> "Opus").

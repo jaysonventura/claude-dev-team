@@ -2,6 +2,16 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.4.1] — 2026-06-15
+### Changed
+- Plugin auto-install now builds **CDT Usage.app into ~/Applications** (a real, signed app) instead of a
+  bare background binary, and registers login via **SMAppService** so macOS Login Items / Background
+  Activity shows **"CDT Usage"** (not the signing team name).
+- Menu bar: long resets (weekly) show an absolute time (e.g. **"Fri 1:59 AM"**); short ones stay a
+  countdown ("in 3h 18m").
+### Fixed
+- Agent activity no longer logs **"unknown"** runs (tries agent_type/subagent_type/agent_name, else skips).
+
 ## [1.4.0] — 2026-06-15
 ### Added
 - **Notarized-DMG release pipeline** for the menu bar app (`menubar/release.sh` + `Info.plist` +

@@ -50,17 +50,16 @@ final class UsageStore {
 
     private func fetchSubscription() {
         Task {
-            var nextDelay = subNormal
+            let nextDelay: TimeInterval
             do {
                 let sub = try await fetchSubscriptionUsage()
                 await MainActor.run { self.applySubscription(sub, error: nil) }
+                nextDelay = subNormal
             } catch let e as NSError {
-                if e.code == 429 {
-                    nextDelay = subBackoff   // endpoint rate-limited us — wait 15 min
-                    await MainActor.run { self.applySubscription(nil, error: "rate limited — retrying in 15m") }
-                } else {
-                    await MainActor.run { self.applySubscription(nil, error: e.localizedDescription) }
-                }
+                let rateLimited = e.code == 429
+                let msg = rateLimited ? "rate limited — retrying in 15m" : e.localizedDescription
+                await MainActor.run { self.applySubscription(nil, error: msg) }
+                nextDelay = rateLimited ? subBackoff : subNormal   // back off 15 min on 429
             }
             await MainActor.run { self.scheduleSubscription(after: nextDelay) }
         }

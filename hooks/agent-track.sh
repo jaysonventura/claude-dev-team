@@ -9,7 +9,10 @@ INPUT="$(cat 2>/dev/null)"
 printf '%s' "$INPUT" | grep -q '"stop_hook_active"[[:space:]]*:[[:space:]]*true' && exit 0
 
 get() { printf '%s' "$INPUT" | sed -n "s/.*\"$1\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p" | head -1; }
-AGENT="$(get agent_type)"; [ -z "$AGENT" ] && AGENT="unknown"
+AGENT="$(get agent_type)"
+[ -z "$AGENT" ] && AGENT="$(get subagent_type)"
+[ -z "$AGENT" ] && AGENT="$(get agent_name)"
+[ -z "$AGENT" ] && exit 0   # no identifiable agent type — skip rather than logging "unknown"
 SID="$(get session_id)"
 
 HOOKS_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
