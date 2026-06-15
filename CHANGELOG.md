@@ -2,6 +2,18 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.13.0] — 2026-06-15
+### Added
+- **Two new role agents (Opus)** — completing a product → design → build → review chain:
+  - **`product-manager`** (Wave 0, read-only) — turns a vague/user-facing ask into **requirements +
+    testable acceptance criteria + scope/non-goals**; its criteria feed the qa tests and the review's
+    scope check. Pairs with `superpowers:brainstorming`.
+  - **`ui-ux-engineer`** (Wave 0 design + Wave 2 review) — UX flows, **design system/tokens**, and an
+    **accessibility (a11y) + visual-polish review**. Owns `design/*`; auto-applies `ui-ux-pro-max` +
+    `web-design-guidelines`; the frontend/mobile engineer implements.
+  Roster is now **13 core agents** (+ 5 Bug Council). Wired into the Wave 0/Wave 2 flow, SKILL routing,
+  the Opus tier, and the team table/diagram. (Memory stays infrastructure; product ownership stays human.)
+
 ## [1.12.1] — 2026-06-15
 ### Changed
 - Menu-bar **Eco mode** submenu now labels the default option **"Off (default)"** — uniform with the

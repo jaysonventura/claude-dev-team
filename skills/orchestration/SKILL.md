@@ -53,8 +53,11 @@ Never dispatch a vague task. Each agent gets a 6-part contract:
 
 Dispatch agents for a wave in **one message with multiple Agent tool calls** so they run concurrently.
 
-- **Wave 0 — research & specs:** `Explore` (read-only recon) + `architect` (design, interfaces,
-  contracts). Cheap, grounds everything.
+- **Wave 0 — requirements, research & specs:** for a vague or user-facing feature, `product-manager`
+  (requirements + testable acceptance criteria + scope/non-goals) **first**; then `Explore` (read-only
+  recon) + `architect` (design, interfaces, contracts); and `ui-ux-engineer` (UX flow + design tokens)
+  for any user-facing UI. Cheap, grounds everything — the PM's acceptance criteria become qa's tests and
+  the review's scope check.
 - **Wave 1 — build (exclusive file scope):** the engineers needed — `backend-engineer`,
   `frontend-engineer`, `mobile-engineer`, `data-engineer`, `devops-engineer`, `qa-engineer` — each on
   disjoint paths.
@@ -64,8 +67,8 @@ Dispatch agents for a wave in **one message with multiple Agent tool calls** so 
   (or should have) an e2e harness — `qa-engineer` writes/runs the real user journey (Playwright/Cypress,
   Detox/Maestro, supertest). If no harness exists, propose one; if e2e can't run here, say so — never fake it.
 - **Wave 2 — independent review (parallel):** `code-reviewer` (correctness/scope/acceptance) +
-  `security-reviewer`. **Security veto:** if security-reviewer flags risk >= medium, do **not** ship
-  until resolved.
+  `security-reviewer` + `ui-ux-engineer` (UX/accessibility/polish review, for user-facing changes).
+  **Security veto:** if security-reviewer flags risk >= medium, do **not** ship until resolved.
 
 ## STEP 3b · TASK LOOP (bounded autonomy)
 
@@ -157,8 +160,9 @@ Do **not** invent token figures; Claude Code's `/cost` / `/usage` is the authori
 
 - **Model routing (Opus is the recommended main model):** quality-critical work runs on a strong model;
   cost-effectiveness comes from **tiering + trivial-only Haiku**, never from downgrading important work.
-  - **Opus — judgment & main:** `architect`, `code-reviewer`, `security-reviewer` are pinned Opus, and
-    the orchestrator itself runs on your session model (use **Opus** for quality work).
+  - **Opus — judgment & main:** `product-manager`, `architect`, `ui-ux-engineer`, `code-reviewer`,
+    `security-reviewer` are pinned Opus, and the orchestrator itself runs on your session model (use
+    **Opus** for quality work).
   - **Sonnet (inherit) — throughput:** builders, **qa/testing**, diagrams, Bug Council follow the session
     model (Opus when you run Opus). Sonnet is a capable, high-quality tier — fine for routine throughput.
   - **Haiku — `fast-ops` only, the LOW tier:** the cheap "hands" tier for **trivial, mechanical,
@@ -187,8 +191,9 @@ come from the auto-installed companions. Don't make the user request them.
 
 | When the work is… | Auto-invoke |
 |---|---|
-| Web UI / components / styling | `web-design-guidelines` → then `ui-ux-pro-max` for polish (+ `frontend-design`) |
-| Mobile UI | `ui-ux-pro-max` + platform conventions |
+| A vague / user-facing **feature request** | `product-manager` (Wave 0) — requirements + acceptance criteria — then `superpowers:brainstorming` |
+| Web UI / components / styling | `ui-ux-engineer` (UX/design + a11y) with `web-design-guidelines` → `ui-ux-pro-max` (+ `frontend-design`); `frontend-engineer` builds |
+| Mobile UI | `ui-ux-engineer` + `ui-ux-pro-max` + platform conventions; `mobile-engineer` builds |
 | TypeScript / JavaScript | `clean-code-typescript` |
 | A simplify / refactor / cleanup step | `karpathy-guidelines` + `code-splitting` + `gauge-improvements` |
 | A perf change or any "this is better" claim | `gauge-improvements` (measure before/after) |

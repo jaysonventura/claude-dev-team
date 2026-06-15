@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.12.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.13.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -38,7 +38,8 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - **Tiered triage (T0–T3)** — trivial edits run solo; features escalate to a parallel team.
 - **Contract-driven dispatch** — every agent gets exclusive file ownership, a read-list, a verifiable
   done-condition, guardrails, and a ≤150-word structured report. (This is the anti-hallucination engine.)
-- **11 role agents** (incl. a Haiku `fast-ops` tier) + a gated **5-agent Bug Council** for stuck bugs.
+- **13 role agents** (product-manager → architect → ui-ux-engineer → builders → reviewers, incl. a Haiku
+  `fast-ops` tier) + a gated **5-agent Bug Council** for stuck bugs.
 - **10-gate quality chain** (incl. **e2e** for user-facing flows) + a bounded **Task Loop** (iterate to
   green, anti-abandonment, capped, then notify).
 - **Completion mandate** (tier-scaled) — simplify, review, reuse-audit, dead-code scan, learn, ship.
@@ -129,19 +130,21 @@ Orchestrator, specialists, and skills (Diagram D):
 
 ```mermaid
 flowchart LR
-    O(("Orchestrator")) --> RES["architect / Explore"]
+    O(("Orchestrator")) --> RES["product-manager / architect / ui-ux-engineer / Explore"]
     O --> BUILD["backend / frontend / mobile / data / devops / qa"]
-    O --> REV["code-reviewer / security-reviewer"]
+    O --> REV["code-reviewer / security-reviewer / ui-ux-engineer"]
     O -.->|"stuck bug"| BC["Bug Council x5"]
     O --> SK["skills: karpathy, clean-ts, code-splitting,<br/>gauge, rca, web-design, ui-ux"]
 ```
 
 | Agent | Model | Role / file scope |
 |-------|-------|-------------------|
+| `product-manager` | Opus | requirements + testable acceptance criteria + scope/non-goals (read-only, Wave 0) |
 | `architect` | Opus | design, interfaces, contracts (read-only) |
 | `backend-engineer` | inherit | APIs, server, data access, logic (`api/server/*`) |
 | `frontend-engineer` | inherit | web UI/components (`ui/client/*`) |
 | `mobile-engineer` | inherit | RN/Expo/Flutter/native (`mobile/app/*`) |
+| `ui-ux-engineer` | Opus | UX flows, design system/tokens, accessibility + visual-polish review (`design/*`) |
 | `qa-engineer` | inherit | tests + the gate chain (`test/*`) |
 | `code-reviewer` | Opus | independent correctness/scope review (read-only) |
 | `security-reviewer` | Opus | security review with **veto** (read-only) |
@@ -153,7 +156,7 @@ flowchart LR
 
 **Model routing — Opus is the recommended main model.** Quality-critical work runs on a strong model;
 cost-effectiveness comes from **tiering + a trivial-only low tier**, never from downgrading important
-work. **Opus** reasons & reviews (architect, code & security review) and is the right session model for
+work. **Opus** reasons & reviews (product, architecture, UX, code & security) and is the right session model for
 quality work; **Sonnet** (inherit) is a capable high-quality tier fine for routine throughput; **Haiku**
 (`fast-ops`) is the **low tier for *trivial mechanical* ops only** — it **never** touches complicated or
 quality-sensitive work (orchestration, development, testing, review, security) and escalates the instant
@@ -597,7 +600,7 @@ step 1 you're back to stock Claude Code.
 
 ```
 .claude-plugin/   plugin.json, marketplace.json
-agents/           11 core role agents (incl. Haiku fast-ops) + 5 Bug Council agents (flat)
+agents/           13 core role agents (incl. product-manager, ui-ux-engineer, Haiku fast-ops) + 5 Bug Council agents (flat)
 skills/           orchestration (brain) + 7 quality skills
 commands/         ship, triage, bug-council, autopilot, stats, notify-setup, menubar, recall, advise, config, doctor, budget, learn, deps
 hooks/            hooks.json + scripts (vault/db/recall/advise/pr/config/doctor/learn/budget/statusline/deps/format/notify/setup/stats/guard) + vault-template
