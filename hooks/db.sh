@@ -9,13 +9,15 @@ CDT_DB="${CDT_DB:-$HOME/.claude/claude-dev-team.db}"
 _cdt_have_sqlite() { command -v sqlite3 >/dev/null 2>&1 || command -v python3 >/dev/null 2>&1; }
 
 # Run a SQL script, swallowing all errors. Prefer the sqlite3 CLI; fall back to python3.
+# busy_timeout makes concurrent writers (e.g. parallel SubagentStop waves) wait for the lock
+# instead of erroring out and silently dropping the row.
 _cdt_sql() {
   if command -v sqlite3 >/dev/null 2>&1; then
-    sqlite3 "$CDT_DB" "$1" >/dev/null 2>&1 || true
+    sqlite3 "$CDT_DB" "PRAGMA busy_timeout=3000; $1" >/dev/null 2>&1 || true
   elif command -v python3 >/dev/null 2>&1; then
     CDT_DB="$CDT_DB" _CDT_SQL="$1" python3 -c 'import os,sqlite3
 try:
-    c=sqlite3.connect(os.environ["CDT_DB"]); c.executescript(os.environ["_CDT_SQL"]); c.commit(); c.close()
+    c=sqlite3.connect(os.environ["CDT_DB"], timeout=3); c.executescript(os.environ["_CDT_SQL"]); c.commit(); c.close()
 except Exception: pass' >/dev/null 2>&1 || true
   fi
 }
