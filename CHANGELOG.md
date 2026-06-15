@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.5.2] — 2026-06-15
+### Docs
+- **README polish pass** — added a Table of Contents, a **Troubleshooting** table, a **Security &
+  privacy** section, and a dedicated **Uninstall** section; added a PRs-welcome badge.
+- **`docs/architecture.md`** — hooks table now includes the `SubagentStop` (`agent-track.sh`) hook and
+  the macOS menu-bar auto-install.
+- Added **`CONTRIBUTING.md`** and GitHub **issue / PR templates** (`.github/`).
+
 ## [1.5.1] — 2026-06-15
 ### Fixed
 - **`db.sh`** flattens newlines/tabs to spaces in stored values (cleaner rows, no smearing); single-quote

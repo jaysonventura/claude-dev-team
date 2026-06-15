@@ -48,8 +48,9 @@ pasting output. Library/API questions -> context7 first. Report milestones via
 
 | Event | Script | Effect |
 |-------|--------|--------|
-| SessionStart | `session-start-vault.sh` | bootstrap vault + DB + `~/.claude/bin/*`; inject learnings |
+| SessionStart | `session-start-vault.sh` | bootstrap vault + DB + `~/.claude/bin/*`; inject learnings; auto-install the menu bar (macOS, once) |
 | PostToolUse (Edit/Write) | `format-on-write.sh` | guarded prettier (only if configured) + edits marker |
+| SubagentStop | `agent-track.sh` | record each dispatched subagent by role (powers the `/stats` agent-run breakdown) |
 | Stop | `completion-guard.sh` | record session row; optional one-time mandate reminder (`CDT_STOP_REMINDER=1`) |
 
 All hooks are **fail-open** — any error exits 0 so they never interrupt your session.

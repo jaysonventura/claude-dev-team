@@ -8,14 +8,32 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.5.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.5.2-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
 
 ---
 
-## ✨ What you get
+## Contents
+
+<details>
+<summary>Jump to a section</summary>
+
+- [What you get](#what-you-get) · [Why](#why)
+- [Architecture](#architecture) · [Execution model](#execution-model) · [Triage & tiers](#triage--tiers)
+- [The team](#the-team) · [Skills](#skills) · [Commands](#commands)
+- [Installation](#installation) · [Notifications (Discord + Telegram)](#notifications-discord--telegram)
+- [Usage examples](#usage-examples) · [Autonomy & debugging](#autonomy--debugging) · [State & cost analytics](#state--cost-analytics)
+- [Menu bar usage monitor (macOS)](#menu-bar-usage-monitor-macos) · [Configuration](#configuration)
+- [Security & privacy](#security--privacy) · [Troubleshooting](#troubleshooting) · [How to review / audit](#how-to-review--audit)
+- [Uninstall](#uninstall) · [Project layout](#project-layout) · [Roadmap & contributing](#roadmap--contributing) · [License](#license)
+
+</details>
+
+---
+
+## What you get
 
 - **Tiered triage (T0–T3)** — trivial edits run solo; features escalate to a parallel team.
 - **Contract-driven dispatch** — every agent gets exclusive file ownership, a read-list, a verifiable
@@ -384,12 +402,60 @@ certificate + `notarytool` credentials, then `cd menubar && ./release.sh`.
 Effort runs at your session level and the orchestration never uses heavy multi-agent fan-out engines —
 it dispatches a bounded set of subagents per tier. Pin any agent's `model:` in `agents/*.md` to taste.
 
+## Security & privacy
+
+`claude-dev-team` runs **entirely on your machine** and phones home to nothing.
+
+- **No telemetry.** The plugin sends no analytics anywhere. The only outbound traffic is what *you*
+  configure: milestone messages to *your own* Discord/Telegram channel.
+- **Secrets** (notifier webhook/token) live in `~/.claude/claude-dev-team.env` (`chmod 600`, gitignored,
+  never committed). Input is strictly validated and handed to `curl` via a stdin config, so secrets never
+  appear in the process list (`ps`).
+- **The menu bar app** (macOS, optional) reads Claude Code's existing OAuth token from your **Keychain**
+  (never logged) and calls Anthropic's `oauth/usage` endpoint over TLS — the token is only ever sent to
+  `api.anthropic.com`. That endpoint is **undocumented** (the same one Claude Code uses) and may change;
+  the app **fails soft** if it does. Token *counts* are summed from your own local `~/.claude/projects`
+  transcripts and are never transmitted.
+- **Hooks are fail-open and local** — they read/write only under `~/.claude/` and exit 0 on any error, so
+  they can't break or leak your session.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| Commands/agents don't show up | Restart the session or run `/reload-plugins`; confirm `claude plugin list` shows `claude-dev-team` enabled. Commands are **namespaced**: `/claude-dev-team:<cmd>`. |
+| Companion plugins didn't enable | You're on Claude Code &lt; 2.1.143 — update, or enable `superpowers` / `code-review` / `frontend-design` / `context7` once manually. |
+| Notifications never arrive | `~/.claude/bin/cdt-setup --show` — provider must not be `off`, level not `off`. Re-run `--test`. Discord: webhook still valid? Telegram: did you message the bot **first**? Is `curl` installed? |
+| `cdt-*: command not found` | In a **plain terminal** use the full path `~/.claude/bin/cdt-…` (the `!cdt-…` shorthand only works **inside** Claude Code's input box). |
+| Menu bar item missing (macOS) | Needs the Swift toolchain (`xcode-select --install`). Check `~/.claude/bin/cdt-menubar status`; approve the one-time Keychain prompt (**Always Allow**); `cdt-menubar restart`. It installs to **/Applications → "CDT Usage"**. |
+| Subscription shows "unavailable" | The undocumented usage endpoint or your login is unavailable — it **fails soft**; local token counts still work. Try **Refresh now** (⌘R). |
+| "Orchestration isn't dispatching agents" | By design — only **T2+** (multi-domain or risk) fans out; small tasks stay solo. See [Triage & tiers](#triage--tiers). Force it with a multi-domain/risk task or the `FULL:` prefix. |
+| No vault / DB / CLIs after install | The SessionStart hook bootstraps them — **restart your session once** after installing. |
+
 ## How to review / audit
 
 Everything is plain files. Check: agents honoring exclusive scope (the diffs), gates actually run
 (pasted output in reports), `~/.claude/vault/` session notes + learnings, `status-log.md`, and the DB
-(`/claude-dev-team:stats`). To uninstall, `claude plugin uninstall claude-dev-team` and remove the orchestration block
-from `~/.claude/CLAUDE.md` — you're back to stock Claude Code.
+(`/claude-dev-team:stats`). To remove it entirely, see [Uninstall](#uninstall).
+
+## Uninstall
+
+```bash
+# 1) remove the plugin (stops the hooks / agents / skills / commands)
+claude plugin uninstall claude-dev-team
+
+# 2) remove the macOS menu bar app + its login item (macOS only)
+~/.claude/bin/cdt-menubar uninstall
+
+# 3) (optional) wipe local state — vault, SQLite DB, CLIs, notifier creds, staged app source
+rm -rf ~/.claude/vault ~/.claude/claude-dev-team.db ~/.claude/claude-dev-team.env \
+       ~/.claude/bin/cdt-* ~/.claude/claude-dev-team-menubar \
+       ~/.claude/.cdt-menubar-installed ~/.claude/.cdt-menubar-disabled
+```
+
+If you added the always-on activator, delete the orchestration block from `~/.claude/CLAUDE.md`. The
+companion plugins (`superpowers`, etc.) are independent — uninstall them separately if you wish. After
+step 1 you're back to stock Claude Code.
 
 ## Project layout
 
