@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.19.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.20.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -197,6 +197,7 @@ session; the bare `/command` form won't match).
 | `/cdt:config [...]` | enable/disable CDT + set defaults (effort, model, eco, statusline); defaults xhigh + Opus 4.8 |
 | `/cdt:doctor` | health-check the install (hooks, CLIs, DB, gh, notifier, menu bar, deps) |
 | `/cdt:deps [--install]` | check / install system prerequisites (python3, git, curl, sqlite3, gh) |
+| `/cdt:worktree [new\|list\|rm\|...]` | git-worktree isolation for parallel work (interops with `claude --worktree`) |
 | `/cdt:budget` | show usage % + the Eco (conserve-when-low) recommendation |
 | `/cdt:learn <lesson>` | teach the vault a durable lesson (surfaced later by recall) |
 | `/cdt:notify-setup [...]` | configure Discord/Telegram (no manual `.env`) |
@@ -468,6 +469,30 @@ authenticated. Uses a read-mostly wrapper (`cdt-pr`) whose only write is posting
 
 ---
 
+## Parallel isolation (git worktrees)
+
+For **large parallel work** — several features at once, or isolating each builder in a big T3 wave —
+CDT turns its *disjoint-paths* convention into a **hard filesystem guarantee** with git worktrees: each
+strand gets its own checkout + branch, so even shared-file edits can't collide.
+
+```
+~/.claude/bin/cdt-worktree new <name>     # isolated checkout at .claude/worktrees/<name> (branch worktree-<name>)
+~/.claude/bin/cdt-worktree list           # see all worktrees
+~/.claude/bin/cdt-worktree rm <name>      # remove after committing + merging back (refuses dirty without --force)
+```
+
+It **interoperates with Claude Code's native flag** — `cdt-worktree new feat` and `claude --worktree feat`
+open the *same* checkout — so you can spin up a worktree and drop a parallel session into it. CDT's state
+(DB, vault, `cdt-*` CLIs) lives in `~/.claude/`, so **every worktree inherits the full toolchain for
+free**. Safe by design: names are validated (no path traversal), removal refuses a dirty/locked worktree
+unless you pass `--force`, and `.claude/worktrees/` is auto-added to `.gitignore`.
+
+> **Opt-in, on purpose.** Worktree setup has real cost — it's for *genuinely large, parallelizable*
+> work. Small tasks (T0–T2) stay bounded and in-place. This is **Phase 1 of the scaling track**
+> ([`docs/roadmap.md`](docs/roadmap.md)); agent-team councils and dynamic-workflow Scale mode follow.
+
+---
+
 ## State & cost analytics
 
 A local SQLite DB (`~/.claude/claude-dev-team.db`) records `sessions`, `tasks`, `agent_runs`, `events`,
@@ -677,8 +702,8 @@ step 1 you're back to stock Claude Code.
 .claude-plugin/   plugin.json, marketplace.json
 agents/           14 core role agents (incl. product-manager, ui-ux-engineer, technical-writer, Haiku fast-ops) + 5 Bug Council agents (flat)
 skills/           orchestration (brain) + 8 skills (quality, design, debug, technical-writing)
-commands/         ship, triage, bug-council, autopilot, stats, notify-setup, menubar, recall, advise, config, doctor, budget, learn, deps
-hooks/            hooks.json + scripts (vault/db/recall/advise/pr/config/doctor/learn/budget/statusline/deps/format/notify/setup/stats/guard) + vault-template
+commands/         ship, triage, bug-council, autopilot, stats, notify-setup, menubar, recall, advise, config, doctor, budget, learn, deps, worktree
+hooks/            hooks.json + scripts (vault/db/recall/advise/pr/config/doctor/learn/budget/statusline/deps/worktree/format/notify/setup/stats/guard) + vault-template
 docs/             architecture.md, examples.md, roadmap.md
 ```
 

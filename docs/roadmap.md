@@ -98,6 +98,12 @@ CLI, and each ships token-budgeted (a dry-run / slice-first before it's ever on 
 
 ## Phase 4 — Worktree isolation (parallel builders)  ·  fit ★★★  ·  effort: small
 
+> ✅ **Shipped (v1.20.0).** `cdt-worktree` (`new`/`list`/`path`/`rm`/`clean`) + `/cdt:worktree`, mirroring
+> `claude --worktree` (checkout `.claude/worktrees/<name>`, branch `worktree-<name>`). Name-injection
+> boundary + dirty-removal protection (security PASS); resolves the main worktree via the git common-dir
+> (no nesting from inside a worktree). `cdt-doctor` readiness check; orchestration skill notes it's
+> opt-in for large parallel work only. The convention items below are all in.
+
 **Goal:** turn CDT's *disjoint-paths* convention into a *hard* filesystem guarantee.
 
 CDT already forbids two agents writing the same path in a wave. **Git worktrees** enforce it physically —

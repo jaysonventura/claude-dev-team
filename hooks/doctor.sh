@@ -12,7 +12,7 @@ jval(){ command -v python3 >/dev/null 2>&1 && python3 -c "import json,os;print(j
 echo "claude-dev-team — doctor"
 
 missing=""
-for c in cdt-notify cdt-setup cdt-stats cdt-task cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps; do
+for c in cdt-notify cdt-setup cdt-stats cdt-task cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps cdt-worktree; do
   [ -x "$BIN/$c" ] || missing="$missing $c"
 done
 [ -z "$missing" ] && P "CLIs installed" || W "CLIs missing:$missing" "open a new Claude Code session (the SessionStart hook installs them)"
@@ -23,6 +23,14 @@ command -v python3 >/dev/null 2>&1 && P "python3 available" || F "python3 missin
 if command -v gh >/dev/null 2>&1; then
   gh auth status >/dev/null 2>&1 && P "gh authenticated (autopilot ready)" || W "gh not authenticated" "gh auth login — only needed for /autopilot"
 else W "gh not installed" "optional — only for /autopilot"; fi
+
+# Worktree isolation: cdt-worktree needs git; native `claude --worktree` sessions need a recent CLI.
+if command -v git >/dev/null 2>&1; then
+  P "git present (cdt-worktree isolation ready)"
+  if command -v claude >/dev/null 2>&1 && claude --help 2>/dev/null | grep -q -- '--worktree'; then
+    P "claude --worktree supported"
+  fi
+else W "git not found" "worktree isolation + autopilot need git — run: cdt-deps --install"; fi
 
 prov="$(grep -E '^CDT_NOTIFY_PROVIDER=' "$ENVF" 2>/dev/null | cut -d= -f2-)"
 { [ -n "$prov" ] && [ "$prov" != "off" ]; } && P "notifier configured ($prov)" || W "notifier not configured" "optional — run: cdt-setup"

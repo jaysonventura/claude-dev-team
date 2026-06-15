@@ -73,6 +73,17 @@ Dispatch agents for a wave in **one message with multiple Agent tool calls** so 
   `security-reviewer` + `ui-ux-engineer` (UX/accessibility/polish review, for user-facing changes).
   **Security veto:** if security-reviewer flags risk >= medium, do **not** ship until resolved.
 
+**Worktree isolation (opt-in — large parallel work only).** Wave 1's *exclusive file scope* is the
+default collision guard; for a **big T3 wave** (or to run parallel sessions on different features), you
+can make it a *hard* filesystem guarantee with git worktrees — each strand in its own checkout+branch:
+```
+~/.claude/bin/cdt-worktree new <name>     # isolated checkout at .claude/worktrees/<name> (branch worktree-<name>)
+claude --worktree <name>                  # …or open a parallel session in it (same checkout)
+~/.claude/bin/cdt-worktree rm <name>      # after committing + merging back (refuses dirty without --force)
+```
+**Do not** reach for this on T0/T1/T2 — worktree setup has real cost; it's only worth it for genuinely
+large, parallelizable work. Default stays bounded, in-place dispatch.
+
 ## STEP 3b · TASK LOOP (bounded autonomy)
 
 After build, enforce quality by looping:

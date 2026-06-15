@@ -2,6 +2,25 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.20.0] — 2026-06-15
+### Added — Scaling track Phase 1: worktree isolation
+- **`cdt-worktree` CLI + `/cdt:worktree` command** — safe git-worktree isolation for parallel work
+  (`new` / `list` / `path` / `rm` / `clean`). Each strand gets its own checkout at
+  `.claude/worktrees/<name>` on branch `worktree-<name>`, **mirroring Claude Code's `claude --worktree`
+  convention** so the two interoperate (same checkout). Turns CDT's disjoint-paths convention into a hard
+  filesystem guarantee for big T3 waves / parallel sessions; CDT's HOME-based state means every worktree
+  inherits the toolchain for free.
+- **Safe by design:** worktree names are validated against path-traversal / option-injection (allowlist),
+  removal **refuses a dirty/locked worktree without `--force`** (never a constructed `rm -rf`), and
+  `.claude/worktrees/` is auto-added to `.gitignore`. Resolves the **main** worktree via the shared git
+  common-dir, so creating a worktree from *inside* a worktree targets the main repo (no nesting).
+- **`cdt-doctor`** gains a git/worktree readiness check (+ probes `claude --worktree` support); the
+  orchestration skill documents worktree isolation as **opt-in for large parallel work only** (T0–T2 stay
+  bounded and in-place). e2e covers create/list/path/reuse/clean + the safety paths (invalid name, dirty
+  refusal, force, no-nesting).
+- Reviewed in Wave 2: **security PASS** (injection boundary holds), **code review** caught + fixed a
+  linked-worktree top-resolution bug before ship.
+
 ## [1.19.0] — 2026-06-15
 ### Added
 - **Per-agent token telemetry (P2)** — a `SubagentStop` hook now sums each dispatched subagent's **real**

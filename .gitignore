@@ -19,6 +19,9 @@ Thumbs.db
 # Node (if a consumer project nests this)
 node_modules/
 
+# Git worktrees created by cdt-worktree / claude --worktree (parallel isolation)
+.claude/worktrees/
+
 # Swift build artifacts (menu bar app)
 .build/
 menubar/.build/

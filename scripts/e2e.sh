@@ -54,6 +54,38 @@ echo "== 7. notify -> vault status-log =="
 "$BIN/cdt-notify" INFO "e2e-sandbox-line" >/dev/null 2>&1
 has "$(cat "$HOME/.claude/vault/status-log.md" 2>/dev/null)" "e2e-sandbox-line" "notify writes the vault log"
 
+echo "== 8. worktree isolation (cdt-worktree) =="
+if command -v git >/dev/null 2>&1; then
+  PROJ="$SBX/proj"; mkdir -p "$PROJ"
+  ( cd "$PROJ" && git init -q && git config user.email e2e@cdt.local && git config user.name e2e \
+      && git commit -q --allow-empty -m init ) >/dev/null 2>&1
+  # create -> the checkout + branch exist, and .gitignore gained the worktrees line
+  ( cd "$PROJ" && "$BIN/cdt-worktree" new feat ) >/dev/null 2>&1
+  [ -d "$PROJ/.claude/worktrees/feat" ] && ok "worktree checkout created" || no "worktree checkout created"
+  has "$(cd "$PROJ" && git branch --list worktree-feat 2>&1)" "worktree-feat" "worktree branch created"
+  has "$(cat "$PROJ/.gitignore" 2>/dev/null)" ".claude/worktrees/" "worktrees path auto-gitignored"
+  has "$(cd "$PROJ" && "$BIN/cdt-worktree" list 2>&1)" "feat" "worktree list shows it"
+  has "$(cd "$PROJ" && "$BIN/cdt-worktree" path feat 2>&1)" "worktrees/feat" "worktree path resolves"
+  # regression (linked-worktree top resolution): creating from INSIDE a worktree targets the MAIN repo, not nested
+  ( cd "$PROJ/.claude/worktrees/feat" && "$BIN/cdt-worktree" new inner ) >/dev/null 2>&1
+  { [ -d "$PROJ/.claude/worktrees/inner" ] && [ ! -d "$PROJ/.claude/worktrees/feat/.claude/worktrees/inner" ]; } \
+    && ok "create from inside a worktree targets main repo (no nesting)" || no "worktree nesting bug"
+  ( cd "$PROJ" && "$BIN/cdt-worktree" rm inner --force ) >/dev/null 2>&1
+  # safety: an invalid name (path traversal / injection) is rejected
+  if ( cd "$PROJ" && "$BIN/cdt-worktree" new "../evil" ) >/dev/null 2>&1; then no "invalid worktree name rejected"; else ok "invalid worktree name rejected"; fi
+  # safety: rm refuses a dirty worktree without --force, then --force removes it
+  : > "$PROJ/.claude/worktrees/feat/untracked.txt"
+  if ( cd "$PROJ" && "$BIN/cdt-worktree" rm feat ) >/dev/null 2>&1; then no "dirty worktree rm refused without --force"; else ok "dirty worktree rm refused without --force"; fi
+  ( cd "$PROJ" && "$BIN/cdt-worktree" rm feat --force ) >/dev/null 2>&1
+  [ -d "$PROJ/.claude/worktrees/feat" ] && no "worktree --force removal" || ok "worktree --force removal"
+  # branch-reuse: re-creating 'feat' reuses the leftover worktree-feat branch (and clean prunes cleanly)
+  ( cd "$PROJ" && "$BIN/cdt-worktree" new feat ) >/dev/null 2>&1
+  [ -d "$PROJ/.claude/worktrees/feat" ] && ok "worktree re-created (branch reused)" || no "worktree re-created (branch reused)"
+  has "$(cd "$PROJ" && "$BIN/cdt-worktree" clean 2>&1)" "pruned" "worktree clean prunes"
+else
+  ok "git not present — worktree test skipped (cdt-worktree needs git)"
+fi
+
 echo
 if [ "$fail" = 0 ]; then echo "E2E PASSED"; else echo "E2E FAILED"; fi
 exit "$fail"
