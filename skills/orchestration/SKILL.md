@@ -120,6 +120,27 @@ iteration counts. This is how cost is made visible on Max 5x.
   the whole repo or rambling.
 - Prefer the read-only `Explore` agent for recon. Keep the main context lean (let subagents hold detail).
 
+## SKILL ROUTING (auto-apply — don't wait to be asked)
+
+Invoke these automatically the moment the work matches — both at the orchestrator level and inside each
+specialist's contract. The custom skills ship with this plugin; the `superpowers:*` and `/command` ones
+come from the auto-installed companions. Don't make the user request them.
+
+| When the work is… | Auto-invoke |
+|---|---|
+| Web UI / components / styling | `web-design-guidelines` → then `ui-ux-pro-max` for polish (+ `frontend-design`) |
+| Mobile UI | `ui-ux-pro-max` + platform conventions |
+| TypeScript / JavaScript | `clean-code-typescript` |
+| A simplify / refactor / cleanup step | `karpathy-guidelines` + `code-splitting` + `gauge-improvements` |
+| A perf change or any "this is better" claim | `gauge-improvements` (measure before/after) |
+| Debugging a bug / test failure | `root-cause-analysis` (+ `superpowers:systematic-debugging`) |
+| Implementing a new feature / bugfix | `superpowers:test-driven-development` |
+| Before claiming done | `superpowers:verification-before-completion` |
+| Any library / framework / API specifics | `context7` (resolve-library-id → query-docs) |
+| Designing / brainstorming a feature | `superpowers:brainstorming` |
+
+When you dispatch a specialist, **name the skills it must apply** in its contract so it auto-uses them.
+
 ## ANTI-HALLUCINATION (hard rules)
 
 1. Ground every claim in a real file/line or actual command output. No invented APIs, files, or results.
