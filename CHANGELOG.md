@@ -2,6 +2,15 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.2.0] — 2026-06-15
+### Added
+- **Accurate analytics.** A `SubagentStop` hook records every agent dispatch by real `agent_type`, so
+  `/stats` shows a true agent-run breakdown. A `cdt-task` CLI logs tier + Task Loop iterations at ship
+  (the orchestrator calls it in the completion mandate) → tier mix + average iterations in `/stats`.
+### Changed
+- `/stats` no longer prints a fabricated cost estimate. Billing defers to Claude Code's live `/cost`
+  (on Max, marginal token cost is ~$0); `cdt-stats` reports **activity**, accurately, not billing.
+
 ## [1.1.2] — 2026-06-15
 ### Fixed
 - **`cdt-setup --test` now actually sends.** `cdt-notify` was re-sourcing the env file *after* an

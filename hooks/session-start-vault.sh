@@ -20,6 +20,7 @@ fi
 cp "$HOOKS_DIR/notify.sh" "$BIN/cdt-notify"   2>/dev/null && chmod +x "$BIN/cdt-notify" 2>/dev/null
 cp "$HOOKS_DIR/setup.sh"  "$BIN/cdt-setup"    2>/dev/null && chmod +x "$BIN/cdt-setup"  2>/dev/null
 cp "$HOOKS_DIR/stats.sh"  "$BIN/cdt-stats"    2>/dev/null && chmod +x "$BIN/cdt-stats"  2>/dev/null
+cp "$HOOKS_DIR/task.sh"   "$BIN/cdt-task"     2>/dev/null && chmod +x "$BIN/cdt-task"   2>/dev/null
 cp "$HOOKS_DIR/db.sh"     "$BIN/cdt-db.sh"    2>/dev/null
 
 # 3) Initialize the state DB.

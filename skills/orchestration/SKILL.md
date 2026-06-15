@@ -104,11 +104,19 @@ if configured; it is silent/fail-open when not):
 ```
 Report **DELIVERED**, **DEFERRED**, and **BLOCKER** as they happen; post a **SHIP** digest at the end.
 
-## STATE LOGGING (cost awareness)
+## STATE LOGGING (accurate analytics)
 
-If `~/.claude/bin/cdt-stats` exists, the hooks record sessions/tasks/agent-runs to the SQLite DB
-automatically. When you finish a multi-agent task, you may log a task row so `/stats` reflects tier and
-iteration counts. This is how cost is made visible on Max 5x.
+Mostly automatic: the SessionStart hook records sessions, `cdt-notify` records milestone events, and a
+**SubagentStop hook records every agent dispatch by role** — so `/claude-dev-team:stats` shows an
+accurate agent-run breakdown with zero effort.
+
+**One manual step at ship** — log the task's tier + Task Loop iteration count so `/stats` reflects the
+tier mix and average iterations:
+```
+~/.claude/bin/cdt-task <T0|T1|T2|T3> shipped <iterations> "<short task description>"
+```
+Run it once per completed task (part of the completion mandate). Do **not** invent token/$ figures —
+billing isn't tracked here (on Max it's ~$0 marginal); Claude Code's `/cost` is the authoritative source.
 
 ## COST DISCIPLINE (cost-effective by default, high quality always)
 

@@ -50,3 +50,23 @@ db_session() {
   id="$(_cdt_esc "$1")"; cwd="$(_cdt_esc "$2")"; outcome="$(_cdt_esc "${3:-}")"
   _cdt_sql "INSERT INTO sessions(id,cwd,started,ended,outcome) VALUES('$id','$cwd','$ts','$ts','$outcome');"
 }
+
+# db_agent <agent_type> [session_id] — one row per dispatched subagent (from the SubagentStop hook).
+db_agent() {
+  _cdt_have_sqlite || return 0
+  local ts agent sid
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null)"
+  agent="$(_cdt_esc "${1:-unknown}")"; sid="$(_cdt_esc "${2:-}")"
+  _cdt_sql "INSERT INTO agent_runs(task_id,agent,model,started,ended) VALUES('$sid','$agent','','$ts','$ts');"
+}
+
+# db_task <tier> [status] [iterations] [description] [session_id] — one row per completed task.
+db_task() {
+  _cdt_have_sqlite || return 0
+  local ts tier status iters desc sid
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null)"
+  tier="$(_cdt_esc "${1:-?}")"; status="$(_cdt_esc "${2:-shipped}")"
+  iters="${3:-0}"; case "$iters" in ''|*[!0-9]*) iters=0 ;; esac
+  desc="$(_cdt_esc "${4:-}")"; sid="$(_cdt_esc "${5:-}")"
+  _cdt_sql "INSERT INTO tasks(session_id,description,tier,status,iterations,started,ended) VALUES('$sid','$desc','$tier','$status',$iters,'$ts','$ts');"
+}

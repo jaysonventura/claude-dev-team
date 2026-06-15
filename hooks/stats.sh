@@ -34,14 +34,10 @@ q "SELECT '  '||type||'  '||COUNT(*) FROM events WHERE ts >= '$SINCE' AND type I
 echo
 echo "Tasks by tier:"
 q "SELECT '  '||COALESCE(tier,'?')||'  '||COUNT(*) FROM tasks WHERE started >= '$SINCE' GROUP BY tier;"
+echo "Avg Task Loop iterations: $(q "SELECT IFNULL(ROUND(AVG(iterations),1),'n/a') FROM tasks WHERE started >= '$SINCE';")"
 echo
-echo "Agent runs:"
+echo "Agent runs (by role):"
 q "SELECT '  '||agent||'  '||COUNT(*) FROM agent_runs WHERE started >= '$SINCE' GROUP BY agent ORDER BY COUNT(*) DESC;"
 echo
-# Best-effort cost note from Claude Code's own usage cache (labeled estimate).
-CACHE="$HOME/.claude/stats-cache.json"
-if [ -f "$CACHE" ]; then
-  echo "Cost: see Claude Code usage (~/.claude/stats-cache.json) — token/cost figures are an estimate."
-else
-  echo "Cost: estimate unavailable (no usage cache found)."
-fi
+echo "Billing: this tracks activity, not billing. On a Claude Max plan marginal token cost is ~\$0;"
+echo "         for authoritative token/usage totals use Claude Code's own /cost (live & accurate)."
