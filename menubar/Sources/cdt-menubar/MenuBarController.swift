@@ -16,23 +16,37 @@ final class MenuBarController: NSObject {
         return .labelColor
     }
 
+    // Renders two short lines stacked vertically (top over bottom) into a narrow menu-bar-height image.
+    private func stackedImage(top: String, topColor: NSColor, bottom: String, bottomColor: NSColor) -> NSImage {
+        let font = NSFont.systemFont(ofSize: 9, weight: .semibold)
+        let topStr = NSAttributedString(string: top, attributes: [.font: font, .foregroundColor: topColor])
+        let botStr = NSAttributedString(string: bottom, attributes: [.font: font, .foregroundColor: bottomColor])
+        let h = NSStatusBar.system.thickness                       // menu bar height (~22pt)
+        let w = ceil(max(topStr.size().width, botStr.size().width)) + 2
+        let image = NSImage(size: NSSize(width: w, height: h))
+        image.lockFocus()
+        topStr.draw(at: NSPoint(x: (w - topStr.size().width) / 2, y: h / 2))   // upper half
+        botStr.draw(at: NSPoint(x: (w - botStr.size().width) / 2, y: 0))       // lower half
+        image.unlockFocus()
+        image.isTemplate = false   // colored, not a template image
+        return image
+    }
+
     func render(_ snap: UsageSnapshot) {
-        // --- compact menu bar title: "CDT <session%> <weekly%>" (kept narrow so it doesn't crowd
-        //     other menu bar items). The Session/Weekly labels live in the dropdown.
-        let pctFont = NSFont.systemFont(ofSize: 12, weight: .semibold)
-        let title = NSMutableAttributedString(string: "CDT ", attributes: [
-            .foregroundColor: NSColor.secondaryLabelColor, .font: NSFont.boldSystemFont(ofSize: 10)
-        ])
+        // --- compact menu bar item: two STACKED lines — session % on top, weekly % on bottom — so the
+        //     item is only as wide as "48%" and survives a crowded / notched menu bar. Labels in dropdown.
         if let sub = snap.subscription {
-            title.append(NSAttributedString(string: "\(sub.sessionPct)% ",
-                attributes: [.foregroundColor: color(for: sub.sessionPct), .font: pctFont]))
-            title.append(NSAttributedString(string: "\(sub.weeklyPct)%",
-                attributes: [.foregroundColor: color(for: sub.weeklyPct), .font: pctFont]))
+            statusItem.button?.title = ""
+            statusItem.button?.image = stackedImage(
+                top: "\(sub.sessionPct)%", topColor: color(for: sub.sessionPct),
+                bottom: "\(sub.weeklyPct)%", bottomColor: color(for: sub.weeklyPct))
         } else {
-            title.append(NSAttributedString(string: formatTokens(snap.local.todayTotal),
-                attributes: [.foregroundColor: NSColor.labelColor, .font: pctFont]))
+            // No subscription data → a small single line with today's tokens.
+            statusItem.button?.image = nil
+            statusItem.button?.attributedTitle = NSAttributedString(
+                string: "CDT \(formatTokens(snap.local.todayTotal))",
+                attributes: [.foregroundColor: NSColor.labelColor, .font: NSFont.systemFont(ofSize: 11)])
         }
-        statusItem.button?.attributedTitle = title
 
         // --- dropdown menu ---
         let menu = NSMenu()
