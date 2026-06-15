@@ -2,6 +2,16 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.6.1] — 2026-06-15
+### Added
+- **Haiku tier (`fast-ops` agent)** — a cheap, fast "hands" tier for **trivial, mechanical,
+  fully-specified** operations only (gather/grep/count, literal find-replace, rename, typo, whitespace,
+  template fill). **Hard-guarded:** it is never routed orchestration, architecture, development, testing,
+  review, security, or debugging — and it escalates the instant a task needs judgment, so the cheap tier
+  can't touch quality-critical work. Model routing is now an explicit 3-tier strategy
+  (Opus = judgment · Sonnet = throughput/testing · Haiku = trivial ops). Adapted from the tiered-routing
+  idea in public agent catalogs, kept on-ethos.
+
 ## [1.6.0] — 2026-06-15
 ### Added
 - **Targeted memory recall (`cdt-recall`)** — roadmap **Phase 2, first cut**. Instead of dumping the

@@ -19,8 +19,10 @@ implementation to specialist subagents under strict contracts.
 ## Why it's cost-effective and high quality at once
 
 - **Tiering** means most tasks (T0/T1) cost a single call; you only pay for orchestration when warranted.
-- **Model routing** spends Opus only on judgment (architect, reviewers) and Sonnet on throughput
-  (builders). Output stays high quality because Opus reviews everything.
+- **Model routing (3 tiers)** spends Opus only on judgment (architect, reviewers), Sonnet on throughput
+  (builders, tests, orchestration), and Haiku (`fast-ops`) only on *trivial mechanical* ops — which
+  escalates the moment a task needs judgment, so the cheap tier never touches quality-critical work.
+  Output stays high quality because Opus reviews everything.
 - **Contracts** cap tokens per agent (no whole-repo reads, no rambling).
 - **Bounded autonomy** (Task Loop cap, gated Bug Council) prevents runaway spend.
 - Effort stays at your session level; the orchestrator uses ordinary bounded subagent dispatch and

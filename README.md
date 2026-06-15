@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.6.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.6.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -38,7 +38,7 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - **Tiered triage (T0–T3)** — trivial edits run solo; features escalate to a parallel team.
 - **Contract-driven dispatch** — every agent gets exclusive file ownership, a read-list, a verifiable
   done-condition, guardrails, and a ≤150-word structured report. (This is the anti-hallucination engine.)
-- **10 role agents** + a gated **5-agent Bug Council** for stuck bugs.
+- **11 role agents** (incl. a Haiku `fast-ops` tier) + a gated **5-agent Bug Council** for stuck bugs.
 - **9-gate quality chain** + a bounded **Task Loop** (iterate to green, anti-abandonment, capped, then
   notify).
 - **Completion mandate** (tier-scaled) — simplify, review, reuse-audit, dead-code scan, learn, ship.
@@ -149,9 +149,13 @@ flowchart LR
 | `diagrams` | inherit | mermaid / figma visuals |
 | `data-engineer` | inherit | schema, migrations, queries (`db/*`) |
 | **Bug Council** (gated ×5) | inherit | root-cause-analyst · code-archaeologist · pattern-matcher · systems-thinker · adversarial-tester |
+| `fast-ops` | **Haiku** | the cheap "hands" tier — trivial mechanical ops **only** (gather, literal find/replace, rename, template fill); **never** dev/test/review/security |
 
-**Model routing is the core cost lever:** Opus reasons & reviews; Sonnet does the bulk typing. Run a
-Sonnet session for routine work; `FULL:` or `/model opus` for critical work.
+**Model routing is the core cost lever (3 tiers):** **Opus** reasons & reviews (architect, code &
+security review); **Sonnet** does the bulk typing, testing, and orchestration throughput; **Haiku**
+(`fast-ops`) handles only *trivial mechanical* work and escalates the moment a task needs judgment — so
+the cheap tier can never touch quality-critical work. Run a Sonnet session for routine work; `FULL:` or
+`/model opus` for critical work.
 
 ## Skills
 
@@ -478,7 +482,7 @@ step 1 you're back to stock Claude Code.
 
 ```
 .claude-plugin/   plugin.json, marketplace.json
-agents/           10 core role agents + 5 Bug Council agents (flat)
+agents/           11 core role agents (incl. Haiku fast-ops) + 5 Bug Council agents (flat)
 skills/           orchestration (brain) + 7 quality skills
 commands/         ship, triage, bug-council, stats, notify-setup, menubar, recall
 hooks/            hooks.json + scripts (vault/db/recall/format/notify/setup/stats/guard) + vault-template

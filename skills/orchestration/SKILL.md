@@ -122,9 +122,15 @@ Do **not** invent token figures; Claude Code's `/cost` / `/usage` is the authori
 
 ## COST DISCIPLINE (cost-effective by default, high quality always)
 
-- **Model routing:** the judgment agents (`architect`, `code-reviewer`, `security-reviewer`) run on
-  **Opus**; builders inherit the session model (run Sonnet sessions for routine work). Opus reasons and
-  reviews; Sonnet does the bulk typing — high quality at lower token cost.
+- **Model routing (3 tiers):**
+  - **Opus — judgment:** `architect`, `code-reviewer`, `security-reviewer`. Reasons and reviews.
+  - **Sonnet (inherit) — throughput:** all builders, **qa/testing**, diagrams, Bug Council. Does the
+    bulk of the work at high quality.
+  - **Haiku — `fast-ops` only:** the cheap "hands" tier for **trivial, mechanical, fully-specified**
+    operations (file/info gathering; a literal find/replace, rename, typo, whitespace, or template fill).
+    **Hard rule:** Haiku is **never** used for orchestration, architecture, development, testing, review,
+    security, or debugging. Route a sub-task to `fast-ops` only when it needs *zero* judgment; if it
+    turns out to need any, `fast-ops` escalates back. When unsure, use Sonnet, not Haiku.
 - **Tier-gating is the default** — most tasks are T0/T1 and need no team.
 - **Contracts cap tokens** — exclusive scope + read-list + ≤150-word reports keep agents from reading
   the whole repo or rambling.
