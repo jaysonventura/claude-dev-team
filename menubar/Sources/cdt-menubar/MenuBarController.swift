@@ -114,7 +114,7 @@ final class MenuBarController: NSObject {
         menu.addItem(enabledItem)
 
         menu.addItem(optionSubmenu("Eco mode", key: "eco", current: cfg.eco,
-            options: [("Auto", "auto"), ("On", "on"), ("Off", "off")]))
+            options: [("Auto", "auto"), ("On", "on"), ("Off (default)", "off")]))
         menu.addItem(optionSubmenu("Effort", key: "effort", current: cfg.effort,
             options: [("Low", "low"), ("Medium", "medium"), ("High", "high"), ("Xhigh (default)", "xhigh")]))
         menu.addItem(optionSubmenu("Model", key: "model", current: cfg.model,

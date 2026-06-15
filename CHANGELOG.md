@@ -2,6 +2,11 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.12.1] — 2026-06-15
+### Changed
+- Menu-bar **Eco mode** submenu now labels the default option **"Off (default)"** — uniform with the
+  Effort ("Xhigh (default)") and Model ("Opus 4.8 (default)") submenus.
+
 ## [1.12.0] — 2026-06-15
 ### Added
 - **Interactive menu-bar controls.** The macOS menu bar dropdown is now a control panel, not just a
