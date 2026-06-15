@@ -17,21 +17,27 @@ final class MenuBarController: NSObject {
     }
 
     func render(_ snap: UsageSnapshot) {
-        // --- compact menu bar title: "CDT <session%> <weekly%>" ---
-        let brand: [NSAttributedString.Key: Any] = [
-            .foregroundColor: NSColor.secondaryLabelColor,
-            .font: NSFont.boldSystemFont(ofSize: 11)
+        // --- compact menu bar title: "CDT <session%> Session  <weekly%> Weekly" ---
+        // Percentages prominent + color-coded; the labels in a small font.
+        let pctFont = NSFont.systemFont(ofSize: 13, weight: .semibold)
+        let labelFont = NSFont.systemFont(ofSize: 9, weight: .regular)
+        let labelAttrs: [NSAttributedString.Key: Any] = [
+            .foregroundColor: NSColor.secondaryLabelColor, .font: labelFont
         ]
-        let title = NSMutableAttributedString(string: "CDT ", attributes: brand)
+        let title = NSMutableAttributedString(string: "CDT ", attributes: [
+            .foregroundColor: NSColor.secondaryLabelColor, .font: NSFont.boldSystemFont(ofSize: 10)
+        ])
         if let sub = snap.subscription {
-            // session % then weekly %, each colored by its own threshold
             title.append(NSAttributedString(string: "\(sub.sessionPct)%",
-                attributes: [.foregroundColor: color(for: sub.sessionPct)]))
-            title.append(NSAttributedString(string: " \(sub.weeklyPct)%",
-                attributes: [.foregroundColor: color(for: sub.weeklyPct)]))
+                attributes: [.foregroundColor: color(for: sub.sessionPct), .font: pctFont]))
+            title.append(NSAttributedString(string: " Session  ", attributes: labelAttrs))
+            title.append(NSAttributedString(string: "\(sub.weeklyPct)%",
+                attributes: [.foregroundColor: color(for: sub.weeklyPct), .font: pctFont]))
+            title.append(NSAttributedString(string: " Weekly", attributes: labelAttrs))
         } else {
-            title.append(NSAttributedString(string: "⏱\(formatTokens(snap.local.todayTotal))",
-                attributes: [.foregroundColor: NSColor.labelColor]))
+            title.append(NSAttributedString(string: "\(formatTokens(snap.local.todayTotal)) ",
+                attributes: [.foregroundColor: NSColor.labelColor, .font: pctFont]))
+            title.append(NSAttributedString(string: "today", attributes: labelAttrs))
         }
         statusItem.button?.attributedTitle = title
 

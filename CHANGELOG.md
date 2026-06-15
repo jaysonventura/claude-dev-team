@@ -2,6 +2,11 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.3.2] — 2026-06-15
+### Changed
+- Menu bar strip now shows **`CDT <session%> Session  <weekly%> Weekly`** — percentages prominent +
+  color-coded, with the `Session`/`Weekly` labels in a small font.
+
 ## [1.3.1] — 2026-06-15
 ### Changed
 - Menu bar now shows **`CDT <session%> <weekly%>`** (each % color-coded), instead of a single worst-%.
