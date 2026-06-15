@@ -38,14 +38,17 @@ Much of the "nervous system" vision already exists; the gaps below build *on* it
 
 **Goal:** extend the Task Loop from *local gates* to the *real VCS*.
 
-- A `gh`-driven loop: read a PR's CI status → dispatch a focused fix agent on failures → push → re-run →
-  repeat (capped by `CDT_MAX_ITERATIONS`).
-- A **merge-conflict resolver** agent (read both sides, propose a resolution, gate it).
-- **Auto-review** on a PR: run `code-reviewer` + `security-reviewer`, post a structured comment.
-- Surfaced as something like `/claude-dev-team:autopilot <PR#>`, reporting via `cdt-notify`.
+- ✅ **Shipped (v1.8.0) — `/claude-dev-team:autopilot <PR#> [--live]`:** a `gh`-driven loop (read CI →
+  diagnose → focused fix → push → re-check, capped by `CDT_MAX_ITERATIONS`), merge-conflict resolution on
+  the branch, and a `code-reviewer` + `security-reviewer` synthesis posted as a PR comment. Backed by a
+  read-mostly wrapper (`cdt-pr`) whose only write is a comment. **Safe by design:** dry-run by default,
+  **never** force-pushes / auto-merges / closes; merging is the human's call; security review mandatory
+  before the "ready" verdict.
+- ⏳ **Next:** auto-detect the PR for the current branch; richer failing-log retrieval; optional
+  `--merge-when-green` behind an explicit confirmation.
 
-**Fit:** a natural, bounded extension of an existing loop. **Risk:** writes to a real remote — must be
-opt-in, dry-run-able, and never force-push without confirmation. **Cost:** bounded by the iteration cap.
+**Fit:** a natural, bounded extension of an existing loop. **Risk** (writes to a real remote) is
+contained by the safety rails above. **Cost:** bounded by the iteration cap.
 
 ## Phase 2 — Semantic / RAG memory  ·  fit ★★★  ·  effort: medium
 

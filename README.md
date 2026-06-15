@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.7.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.8.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -183,6 +183,7 @@ session; the bare `/command` form won't match).
 | `/claude-dev-team:triage <task>` | preview the tier + proposed dispatch **without** executing |
 | `/claude-dev-team:ship` | run the completion mandate on the current work and ship |
 | `/claude-dev-team:bug-council <symptom>` | convene the 5-agent diagnostic squad |
+| `/claude-dev-team:autopilot <PR#> [--live]` | drive a GitHub PR toward green — CI fixes, conflicts, review (dry-run by default) |
 | `/claude-dev-team:stats [today\|week\|all]` | cost & activity report from the state DB |
 | `/claude-dev-team:recall <task>` | recall the most relevant past lessons from the vault for a task |
 | `/claude-dev-team:advise <task>` | advisory tier/effort prior learned from how similar past tasks went |
@@ -351,6 +352,13 @@ flowchart TD
 Anti-abandonment: agents must emit a structured `BLOCKER` rather than quit or fake success. The loop
 stops after `CDT_MAX_ITERATIONS` (default 5) and notifies you — protecting your Max rate limits.
 
+**PR autopilot (opt-in).** `/claude-dev-team:autopilot <PR#>` drives a real GitHub PR toward green: read
+CI status → diagnose + dispatch a focused fix → push to the branch → re-check → and, once green, post a
+`code-reviewer` + `security-reviewer` synthesis as a PR comment. It's deliberately **safe**: **dry-run by
+default** (add `--live` to act), **never force-pushes, never auto-merges, never closes** — merging stays
+your explicit call. Bounded by `CDT_MAX_ITERATIONS`, reports each step via the notifier. Needs `gh`
+authenticated. Uses a read-mostly wrapper (`cdt-pr`) whose only write is posting a comment.
+
 ---
 
 ## State & cost analytics
@@ -490,8 +498,8 @@ step 1 you're back to stock Claude Code.
 .claude-plugin/   plugin.json, marketplace.json
 agents/           11 core role agents (incl. Haiku fast-ops) + 5 Bug Council agents (flat)
 skills/           orchestration (brain) + 7 quality skills
-commands/         ship, triage, bug-council, stats, notify-setup, menubar, recall, advise
-hooks/            hooks.json + scripts (vault/db/recall/advise/format/notify/setup/stats/guard) + vault-template
+commands/         ship, triage, bug-council, autopilot, stats, notify-setup, menubar, recall, advise
+hooks/            hooks.json + scripts (vault/db/recall/advise/pr/format/notify/setup/stats/guard) + vault-template
 docs/             architecture.md, examples.md, roadmap.md
 ```
 

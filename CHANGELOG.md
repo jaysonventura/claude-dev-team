@@ -2,6 +2,17 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.8.0] — 2026-06-15
+### Added
+- **PR autopilot (`/claude-dev-team:autopilot <PR#>`)** — roadmap **Phase 1**. Drives a real GitHub PR
+  toward green: read CI → diagnose → focused fix → push to the branch → re-check (capped by
+  `CDT_MAX_ITERATIONS`), resolve merge conflicts on the branch, and post a `code-reviewer` +
+  `security-reviewer` synthesis as a PR comment. Backed by `cdt-pr`, a read-mostly `gh` wrapper whose
+  only state change is posting a comment.
+- **Safe by design:** **dry-run by default** (`--live` to act); **never** force-pushes, auto-merges, or
+  closes — merging stays the user's explicit call; security review is mandatory before the "ready"
+  verdict; reports each milestone via `cdt-notify`. Requires `gh` authenticated.
+
 ## [1.7.0] — 2026-06-15
 ### Added
 - **Adaptive routing (`cdt-advise`)** — roadmap **Phase 3**. Matches a new task against past `tasks`
