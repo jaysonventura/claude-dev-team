@@ -115,8 +115,9 @@ tier mix and average iterations:
 ```
 ~/.claude/bin/cdt-task <T0|T1|T2|T3> shipped <iterations> "<short task description>"
 ```
-Run it once per completed task (part of the completion mandate). Do **not** invent token/$ figures —
-billing isn't tracked here (on Max it's ~$0 marginal); Claude Code's `/cost` is the authoritative source.
+Run it once per completed task (part of the completion mandate). The real "cost" on Max is **token /
+rate-limit budget** (session + weekly limits), **not money** — the logged activity is the proxy for it.
+Do **not** invent token figures; Claude Code's `/cost` / `/usage` is the authoritative live source.
 
 ## COST DISCIPLINE (cost-effective by default, high quality always)
 

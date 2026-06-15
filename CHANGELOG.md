@@ -2,6 +2,11 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.2.1] — 2026-06-15
+### Changed
+- Analytics framing: "cost" means **token / rate-limit budget** (Claude subscription session + weekly
+  limits), **not money** — `/stats` and the orchestrator wording corrected to match Max.
+
 ## [1.2.0] — 2026-06-15
 ### Added
 - **Accurate analytics.** A `SubagentStop` hook records every agent dispatch by real `agent_type`, so

@@ -39,5 +39,6 @@ echo
 echo "Agent runs (by role):"
 q "SELECT '  '||agent||'  '||COUNT(*) FROM agent_runs WHERE started >= '$SINCE' GROUP BY agent ORDER BY COUNT(*) DESC;"
 echo
-echo "Billing: this tracks activity, not billing. On a Claude Max plan marginal token cost is ~\$0;"
-echo "         for authoritative token/usage totals use Claude Code's own /cost (live & accurate)."
+echo "Token budget (your real 'cost' on Max = session + weekly rate-limit usage, NOT money):"
+echo "  the activity above is what consumes your token budget — more T2/T3 tasks & agent runs = more tokens."
+echo "  For exact tokens used against your limit, use Claude Code's /cost or /usage (live & accurate)."
