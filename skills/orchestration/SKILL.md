@@ -131,15 +131,20 @@ Close every task — scaled to tier so trivial work stays cheap and risky work s
 
 ## STATUS REPORTING (keep the human in the loop)
 
-Call the notifier at each milestone (it logs to `vault/status-log.md` **and** pushes to Discord/Telegram
-if configured; it is silent/fail-open when not):
+Call the notifier at each milestone (it logs to `vault/status-log.md` **and** pushes an elegant, detailed
+message to Discord/Telegram if configured; silent/fail-open when not). **Pass the detail flags** so the
+message is genuinely useful — they render as a rich Discord embed / formatted Telegram message:
 ```
-~/.claude/bin/cdt-notify DELIVERED "<task> shipped: <1-line summary>"
-~/.claude/bin/cdt-notify DEFERRED  "<task> partial: <what's left + why>"
-~/.claude/bin/cdt-notify BLOCKER   "<task> blocked: <root cause + what's needed>"
-~/.claude/bin/cdt-notify SHIP      "<digest: N delivered / M deferred / K blockers>"
+~/.claude/bin/cdt-notify DELIVERED "<1-line summary>" --task "<task>" --tier <T0-T3> --duration <seconds> --iters <n>
+~/.claude/bin/cdt-notify DEFERRED  "<what's left + why>" --task "<task>" --tier <T0-T3>
+~/.claude/bin/cdt-notify BLOCKER   "<root cause + what's needed>" --task "<task>"
+~/.claude/bin/cdt-notify SHIP      "<N delivered / M deferred / K blockers>" --duration <seconds>
 ```
-Report **DELIVERED**, **DEFERRED**, and **BLOCKER** as they happen; post a **SHIP** digest at the end.
+Flags are all optional (bare `cdt-notify TYPE "msg"` still works). Pass **`--duration`** = the task's
+wall-clock seconds (note when you start), **`--tier`**, **`--iters`** (Task Loop count), and
+**`--task`**; the notifier auto-appends the current **Max usage %** from the usage cache. For exact tokens
+use `--tokens <n>` only if you actually have a real count (e.g. from `/cost`) — never invent one.
+Report **DELIVERED / DEFERRED / BLOCKER** as they happen; post a **SHIP** digest at the end.
 
 ## STATE LOGGING (accurate analytics)
 

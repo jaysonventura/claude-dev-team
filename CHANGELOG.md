@@ -2,6 +2,15 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.14.0] — 2026-06-15
+### Changed
+- **Notifications are now rich + detailed.** Discord uses a **colored embed** (green delivered / red
+  blocker / …) and Telegram a **formatted HTML** message — each with the **task**, **tier**, **duration**,
+  **Task-Loop iterations**, and your current **Max usage %** (session/weekly), plus a timestamp.
+  `cdt-notify` gained optional flags (`--task --tier --duration --iters --tokens`); bare
+  `cdt-notify TYPE "msg"` still works. The orchestrator fills the fields in automatically. Secrets still
+  go to curl via a stdin config; all fields are JSON/HTML-escaped (injection-safe).
+
 ## [1.13.0] — 2026-06-15
 ### Added
 - **Two new role agents (Opus)** — completing a product → design → build → review chain:

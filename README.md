@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.13.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.14.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -318,11 +318,24 @@ use the `/claude-dev-team:` prefix), or the `cdt-setup` CLI directly.
    …or via CLI: `!~/.claude/bin/cdt-setup --telegram <your-bot-token>` → `Telegram saved (chat id: …)`
 4. Send a test: `!~/.claude/bin/cdt-setup --test` → you should get a Telegram message.
 
+### Message format
+Notifications are **rich and detailed**, not one-liners — a colored **Discord embed** (green delivered,
+red blocker, …) and a **formatted Telegram** message, each with the **task**, **tier**, **duration**,
+**Task-Loop iterations**, and your current **Max usage %** (session/weekly), plus a timestamp:
+
+```
+✅ DELIVERED
+/login endpoint shipped: rate-limited, 12 tests green
+  Task: add /login endpoint   ·   Tier: T2   ·   Duration: 2m 5s   ·   Iterations: 1
+  Usage (Max budget): session 7% · weekly 53%
+```
+
+The orchestrator fills these in automatically (`cdt-notify DELIVERED "<msg>" --task … --tier … --duration …`).
+
 ### Settings
 `CDT_NOTIFY_PROVIDER` = `discord` | `telegram` | `both` | `off` · `CDT_NOTIFY_LEVEL` = `all` |
 `milestones` | `off`. Credentials live in `~/.claude/claude-dev-team.env` (`chmod 600`, **never
-committed**). A posted message looks like:
-`✅ [DELIVERED] /login endpoint shipped: rate-limited, 12 tests green`.
+committed**).
 
 ---
 

@@ -63,8 +63,8 @@ show() {
 send_test() {
   local n="$HOME/.claude/bin/cdt-notify"
   [ -x "$n" ] || n="$(cd "$(dirname "$0")" && pwd)/notify.sh"
-  CDT_NOTIFY_LEVEL=all "$n" INFO "claude-dev-team test notification — you're wired up. 🎉"
-  echo "Test sent (check your channel; if nothing arrives, re-check the webhook/token)."
+  CDT_NOTIFY_LEVEL=all "$n" DELIVERED "claude-dev-team is wired up — this is what milestone alerts look like 🎉" --task "notifier setup" --tier T0 --duration 3
+  echo "Test sent (check your channel for the rich message; if nothing arrives, re-check the webhook/token)."
 }
 
 # Auto-detect the most recent chat id from the bot's getUpdates (needs the user to have messaged the bot).
