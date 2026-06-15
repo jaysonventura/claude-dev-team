@@ -12,6 +12,24 @@ All notable changes to claude-dev-team. Versions follow semver.
   discounted. The ranking now reflects real cost. New `agent_runs.cache_read` column migrates in place;
   e2e asserts the split (fresh vs cache). *(Historical pre-fix rows keep their old combined `tokens` until
   they age out of the today/week windows — the split is forward-looking; counts/roles are unaffected.)*
+- **`fast-ops` can now create files from a template** — the agent advertised this but was granted only
+  `Edit` (which cannot create new files); added `Write`.
+- **State DB no longer drops telemetry under concurrent writes** — `db.sh` sets `busy_timeout` (sqlite3
+  CLI) / `connect(timeout=)` (python) so parallel `SubagentStop` waves wait for the lock instead of
+  hitting "database is locked" and silently losing the row.
+- **`/cdt:notify-setup`** corrected in the env-file template (was a bare `/notify-setup`).
+
+### Hardened (production review)
+- **Hooks parse the env file instead of `source`-ing it** (`notify.sh`, `session-start-vault.sh`,
+  `completion-guard.sh`) — a value in a hand-edited env can no longer execute. `notify.sh` also validates
+  the webhook URL / bot token (rejects quote, backslash, control chars) before it reaches the `curl -K -`
+  config line.
+- **`statusline.sh`** writes the usage cache atomically (per-PID temp + `os.replace`) so a concurrent
+  render can't read a half-written file.
+- **`cdt-pr`** reports a clear message when `python3` is absent for `status`/`checks`/`view` (the JSON
+  parsers); `diff`/`comment` already degraded cleanly.
+- **`code-reviewer`** agent carries an explicit Anti-hallucination section like the builders.
+- Independent code review: **APPROVE**; `validate` / `lint-agents` / `e2e` all green.
 
 ## [1.21.0] — 2026-06-15
 ### Added — Autonomous Agent Orchestration (scaling track Phases 2 + 3, as one controller)
