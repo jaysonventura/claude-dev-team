@@ -4,7 +4,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.0.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.1.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -186,21 +186,40 @@ auto-apply, and `/ship` `/triage` `/bug-council` `/stats` are available. Nothing
 
 ## Notifications (Discord + Telegram)
 
-Configure by **pasting** your webhook/token — never hand-edit `.env`:
+Milestones (`DELIVERED` / `DEFERRED` / `BLOCKER` / `SHIP`) are logged to the vault and pushed to your
+channel. Configure by **pasting** your webhook/token — never hand-edit `.env`. The fastest path is the
+hidden-input wizard:
 
 ```
-/notify-setup discord https://discord.com/api/webhooks/XXX/YYY
-# or, securely in your terminal (hidden input for tokens):
-!cdt-setup
+!cdt-setup        # interactive: pick Discord / Telegram / Both, paste secrets (hidden), test
 ```
 
-- **Discord:** Server Settings → Integrations → Webhooks → New Webhook → Copy URL.
-- **Telegram:** message **@BotFather** → `/newbot` → copy token; message your bot once, then read your
-  chat id from `https://api.telegram.org/bot<token>/getUpdates`.
+### Discord — step by step
+1. In Discord: **Server Settings → Integrations → Webhooks → New Webhook**.
+2. Pick a channel, click **Copy Webhook URL**.
+3. Configure it:
+   ```
+   /notify-setup discord https://discord.com/api/webhooks/XXXXXX/YYYYYY
+   ```
+4. You should get a test message in that channel. Done.
 
-Choose `CDT_NOTIFY_PROVIDER` = `discord` | `telegram` | `both` | `off`, and `CDT_NOTIFY_LEVEL` =
-`all` | `milestones` | `off`. Credentials are stored in `~/.claude/claude-dev-team.env` at `chmod 600`
-and are **never committed**. A posted message looks like: `✅ [DELIVERED] /login endpoint shipped: rate-limited, 12 tests green`.
+### Telegram — step by step
+1. In Telegram, open **@BotFather** → send `/newbot` → follow prompts → **copy the bot token**
+   (looks like `123456789:AA...`).
+2. **Open your new bot and send it any message** (e.g. `hi`). *(Required — the bot can only find your
+   chat id after you message it first.)*
+3. Configure it — the chat id is **auto-detected** from the token, so you don't need to find it:
+   ```
+   !~/.claude/bin/cdt-setup --telegram <your-bot-token>
+   ```
+   (or run `!cdt-setup` and choose Telegram — it auto-detects too.) You'll see `Telegram saved (chat id: …)`.
+4. Send a test: `!~/.claude/bin/cdt-setup --test` → you should get a Telegram message.
+
+### Settings
+`CDT_NOTIFY_PROVIDER` = `discord` | `telegram` | `both` | `off` · `CDT_NOTIFY_LEVEL` = `all` |
+`milestones` | `off`. Credentials live in `~/.claude/claude-dev-team.env` (`chmod 600`, **never
+committed**). A posted message looks like:
+`✅ [DELIVERED] /login endpoint shipped: rate-limited, 12 tests green`.
 
 ---
 

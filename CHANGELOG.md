@@ -2,6 +2,13 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.1.0] — 2026-06-15
+### Added
+- `cdt-setup` **auto-detects your Telegram chat id** from the bot token (via `getUpdates`) — no manual
+  chat-id lookup. Works in both flag mode (`--telegram <token>`) and the interactive wizard.
+### Changed
+- README: **step-by-step** Discord and Telegram notification setup.
+
 ## [1.0.0] — 2026-06-15
 First production release.
 ### Added
