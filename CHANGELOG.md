@@ -2,6 +2,13 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.17.1] — 2026-06-15
+### Docs
+- **README installation overhaul** — a guide-style, production-grade flow: **Step 1 (install, all
+  platforms) → Step 2 (per-OS setup) → verify with `/cdt:doctor`**. Separate, collapsible step-by-step
+  guides for **macOS / Windows / Linux** (Windows covers Git Bash + the WSL `CLAUDE_CODE_GIT_BASH_PATH`
+  pin + the status line). Fixed the cross-links. Written via the new technical-writing discipline.
+
 ## [1.17.0] — 2026-06-15
 ### Added
 - **`technical-writer` agent + `technical-writing` skill** — a docs specialist for user-facing

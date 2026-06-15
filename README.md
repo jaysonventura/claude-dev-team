@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.17.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.17.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -231,55 +231,88 @@ install the missing ones via your package manager:
 **Companion plugins auto-install** with claude-dev-team (declared as manifest `dependencies`):
 `superpowers`, `code-review`, `frontend-design`, `context7` (`figma` is optional).
 
-**Platforms:** macOS · Linux · **Windows** (see [Windows & Linux](#windows--linux)). The **menu bar is
-macOS-only**; elsewhere use the cross-platform status line.
+**Platforms:** macOS · Linux · **Windows** — each has a step-by-step guide in
+[Step 2 — Set up your platform](#step-2--set-up-your-platform) below. The **menu bar is macOS-only**;
+elsewhere use the cross-platform status line.
 
-**Install this plugin** — the companions (`superpowers`, `code-review`, `frontend-design`, `context7`)
-**auto-install** as dependencies:
+### Step 1 — Install the plugin (all platforms)
+
 ```
 claude plugin marketplace add jaysonventura/claude-dev-team
 claude plugin install cdt@claude-dev-team
 ```
-> The marketplace/repo is **`claude-dev-team`** (the project), but the plugin installs as **`cdt`** — so
-> its slash commands are short and namespaced: **`/cdt:ship`**, **`/cdt:doctor`**, etc. (matching the
-> `cdt-*` CLIs).
 
-Install **auto-enables** the plugin (and its companions) — no manual enable step. It's a **user-scope**
-install in `~/.claude/`, so it works automatically across **every Claude Code surface** on this machine —
-the CLI, the VS Code & JetBrains extensions, and the Claude desktop app all share that same config (agents,
-skills, commands, hooks, and the orchestration `CLAUDE.md`). Non–Claude-Code agents (e.g. Google
-Antigravity) run a different engine and won't load it.
+> The repo / marketplace is **`claude-dev-team`** (the project); the plugin installs as **`cdt`**, so its
+> commands are short — **`/cdt:ship`**, **`/cdt:doctor`**, … (matching the `cdt-*` CLIs).
 
-**Set up the system tools** (see [Requirements](#requirements)): run **`/cdt:doctor`** to check
-or **`~/.claude/bin/cdt-deps --install`** to install any missing ones. If python3 is missing, the first
-session prints a one-line reminder.
+Install **auto-enables** the plugin and its companions (`superpowers`, `code-review`, `frontend-design`,
+`context7`) — no manual enable step. It's a **user-scope** install in `~/.claude/`, shared across every
+Claude Code surface on this machine (the CLI, the VS Code & JetBrains extensions, and the desktop app).
+*(Non–Claude-Code tools like Google Antigravity run a different engine and won't load it.)*
 
-**After install → just prompt (zero config).** Restart your Claude Code session (or `/reload-plugins`)
-once so it loads. From then on, describe any task normally — the `orchestration` skill auto-triggers,
-the SessionStart hook bootstraps `~/.claude/vault/` + the SQLite DB + the `~/.claude/bin/` CLIs, skills
-auto-apply, and the `/cdt:*` commands (`ship`, `triage`, `bug-council`, `stats`) are
-available. Nothing else to set up.
+### Step 2 — Set up your platform
 
-- **Notifications are optional** — run `/cdt:notify-setup` only if you want Discord/Telegram pushes.
-- **Power-user (guaranteed every session):** installers get orchestration via the auto-triggering skill
-  + hook. For a hard always-on guarantee, drop the `orchestration` summary into your global
-  `~/.claude/CLAUDE.md` (see `docs/architecture.md`). Most users don't need this.
+Follow the guide for your OS, then run **`/cdt:doctor`** — it verifies hooks, CLIs, the DB, `gh`, the
+notifier, the menu bar, and companion plugins, and prints a fix for anything not green.
 
-### Windows & Linux
+<details open>
+<summary><b>🍎 macOS</b></summary>
 
-The whole orchestration layer — agents, skills, commands, the `cdt-*` CLIs, hooks, vault, and analytics —
-is **cross-platform**. Only the **menu bar app is macOS-only**; on Windows/Linux use the **status line**
-instead for the same usage display: `~/.claude/bin/cdt-config statusline on`.
+1. **Install the system tools** (or run `~/.claude/bin/cdt-deps --install` to do it for you):
+   ```
+   brew install python3 git          # required · gh + sqlite are optional
+   ```
+2. **Restart your Claude Code session** (or run `/reload-plugins`) so the plugin loads.
+3. **Menu bar app** — it builds + installs automatically on your first session (look for the **CDT** item
+   showing your session/weekly %). It needs the Swift toolchain — if it doesn't appear, run
+   `xcode-select --install`, or grab the **notarized DMG** from the [Releases](https://github.com/jaysonventura/claude-dev-team/releases) page. Manage it with `/cdt:menubar`.
+4. **Verify:** `/cdt:doctor` → all green. Done — just describe a task.
 
-**Windows** (one-time setup — Claude Code runs the `.sh` hooks through Git Bash):
-1. Install **[Git for Windows](https://gitforwindows.org/)** (provides the Bash that hooks/CLIs need) and **Python 3** (on PATH).
-2. If you *also* have **WSL**, pin Git Bash so hooks don't resolve to WSL's `bash.exe` — add to `~/.claude/settings.json` (i.e. `%USERPROFILE%\.claude\settings.json`):
+</details>
+
+<details>
+<summary><b>🪟 Windows</b></summary>
+
+Claude Code runs the plugin's `.sh` hooks through **Git Bash**, so:
+
+1. **Install [Git for Windows](https://gitforwindows.org/)** (provides Bash) and
+   **[Python 3](https://www.python.org/downloads/)** — tick *"Add Python to PATH"* during setup.
+2. **If you also have WSL,** pin Git Bash so hooks don't resolve to WSL's `bash.exe`. Add to
+   `%USERPROFILE%\.claude\settings.json`:
    ```json
    { "env": { "CLAUDE_CODE_GIT_BASH_PATH": "C:\\Program Files\\Git\\bin\\bash.exe" } }
    ```
-3. Open a fresh session, then run **`/cdt:doctor`** to confirm everything's wired. (Shell scripts ship with enforced LF line endings via `.gitattributes`, so Git's autocrlf won't break them.)
+3. **Restart your Claude Code session** (or `/reload-plugins`).
+4. **Usage display** — the menu bar is macOS-only; turn on the cross-platform **status line** instead:
+   ```
+   ~/.claude/bin/cdt-config statusline on
+   ```
+5. **Verify:** `/cdt:doctor` → all green. *(Shell scripts ship with LF line endings via `.gitattributes`,
+   so Git's autocrlf can't break them.)*
 
-**Linux** works out of the box (bash + Python 3 are standard). The menu bar is skipped; use the status line.
+</details>
+
+<details>
+<summary><b>🐧 Linux</b></summary>
+
+Bash + Python 3 are standard, so it works out of the box:
+
+1. Make sure `python3` and `git` are installed (`~/.claude/bin/cdt-deps --install` adds any missing via
+   apt / dnf / pacman / zypper).
+2. **Restart your Claude Code session.**
+3. **Usage display** — the menu bar is macOS-only; use the status line: `cdt-config statusline on`.
+4. **Verify:** `/cdt:doctor` → all green.
+
+</details>
+
+### After install → just prompt (zero config)
+
+Describe any task normally. The `orchestration` skill auto-triggers, the SessionStart hook bootstraps the
+vault + SQLite DB + `cdt-*` CLIs, skills auto-apply, and the `/cdt:*` commands are available.
+
+- **Notifications are optional** — run `/cdt:notify-setup` only if you want Discord/Telegram pushes.
+- **Always-on (power users):** for a hard guarantee every session, drop the `orchestration` summary into
+  your global `~/.claude/CLAUDE.md` (see [`docs/architecture.md`](docs/architecture.md)). Most users don't need this.
 
 ---
 
@@ -578,7 +611,7 @@ cross-platform **status line** (`cdt-config statusline on`) to feed it.
 | Subscription shows "unavailable" | The undocumented usage endpoint or your login is unavailable — it **fails soft**; local token counts still work. Try **Refresh now** (⌘R). |
 | "Orchestration isn't dispatching agents" | By design — only **T2+** (multi-domain or risk) fans out; small tasks stay solo. See [Triage & tiers](#triage--tiers). Force it with a multi-domain/risk task or the `FULL:` prefix. |
 | No vault / DB / CLIs after install | The SessionStart hook bootstraps them — **restart your session once** after installing. |
-| Hooks/CLIs not running on **Windows** | Install **Git for Windows** + **Python 3**; if WSL is also present, pin `CLAUDE_CODE_GIT_BASH_PATH` (see [Windows & Linux](#windows--linux)). Then run `/cdt:doctor`. The menu bar is macOS-only — use `cdt-config statusline on`. |
+| Hooks/CLIs not running on **Windows** | Install **Git for Windows** + **Python 3**; if WSL is also present, pin `CLAUDE_CODE_GIT_BASH_PATH` (see the [Windows setup](#step-2--set-up-your-platform)). Then run `/cdt:doctor`. The menu bar is macOS-only — use `cdt-config statusline on`. |
 
 ## How to review / audit
 
