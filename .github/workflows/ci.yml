@@ -17,6 +17,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y shellcheck sqlite3
       - name: Validate plugin (manifests, frontmatter, shell scripts)
         run: bash scripts/validate.sh
+      - name: Agent lint (conformance + least-privilege)
+        run: bash scripts/lint-agents.sh
       - name: Unit tests (demo)
         run: python3 -m unittest discover -s demo/login-rate-limit/tests -t demo/login-rate-limit
       - name: End-to-end integration test (sandboxed)

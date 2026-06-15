@@ -158,17 +158,20 @@ not a cumulative/remaining figure. Report **DELIVERED / DEFERRED / BLOCKER** as 
 ## STATE LOGGING (accurate analytics)
 
 Mostly automatic: the SessionStart hook records sessions, `cdt-notify` records milestone events, and a
-**SubagentStop hook records every agent dispatch by role** — so `/cdt:stats` shows an
-accurate agent-run breakdown with zero effort.
+**SubagentStop hook records every agent dispatch by role *and its real token cost*** (summed from that
+subagent's transcript) — so `/cdt:stats` shows an accurate agent-run breakdown, ranked by tokens, with
+zero effort. You never compute or pass those per-agent figures; the hook reads them from actual usage.
 
 **One manual step at ship** — log the task's tier + Task Loop iteration count so `/stats` reflects the
 tier mix and average iterations:
 ```
-~/.claude/bin/cdt-task <T0|T1|T2|T3> shipped <iterations> "<short task description>"
+~/.claude/bin/cdt-task <T0|T1|T2|T3> shipped <iterations> "<short task description>" [tokens]
 ```
-Run it once per completed task (part of the completion mandate). The real "cost" on Max is **token /
-rate-limit budget** (session + weekly limits), **not money** — the logged activity is the proxy for it.
-Do **not** invent token figures; Claude Code's `/cost` / `/usage` is the authoritative live source.
+Run it once per completed task (part of the completion mandate). `[tokens]` is **optional** — pass the
+real `cdt-tokens` delta you already captured for the notifier if you have it; otherwise **omit it**
+(stored 0). The real "cost" on Max is **token / rate-limit budget** (session + weekly limits), **not
+money** — the logged activity is the proxy for it. Do **not** invent token figures; the per-agent numbers
+come from transcripts and Claude Code's `/cost` / `/usage` is the authoritative live source.
 
 ## COST DISCIPLINE (cost-effective by default, high quality always)
 

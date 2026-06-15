@@ -45,13 +45,19 @@ echo
 echo "Blockers/Deferred:"
 q "SELECT '  '||type||'  '||COUNT(*) FROM events WHERE ts >= '$SINCE' AND type IN ('BLOCKER','DEFERRED') GROUP BY type;"
 echo
-echo "Tasks by tier:"
-q "SELECT '  '||COALESCE(tier,'?')||'  '||COUNT(*) FROM tasks WHERE started >= '$SINCE' GROUP BY tier;"
+# Humanize a token count inline in SQL (k / M), used for the cost columns below.
+_HUM="CASE WHEN %s >= 1000000 THEN printf('%%.1fM',%s/1000000.0) WHEN %s >= 1000 THEN printf('%%.1fk',%s/1000.0) ELSE CAST(%s AS TEXT) END"
+hum() { printf "$_HUM" "$1" "$1" "$1" "$1" "$1"; }
+
+echo "Tasks by tier (count · tokens):"
+q "SELECT '  '||COALESCE(tier,'?')||'  ×'||COUNT(*)||'  '||$(hum "SUM(COALESCE(tokens,0))") FROM tasks WHERE started >= '$SINCE' GROUP BY tier ORDER BY tier;"
 echo "Avg Task Loop iterations: $(q "SELECT IFNULL(ROUND(AVG(iterations),1),'n/a') FROM tasks WHERE started >= '$SINCE';")"
 echo
-echo "Agent runs (by role):"
-q "SELECT '  '||REPLACE(agent,'claude-dev-team:','')||'  '||COUNT(*) FROM agent_runs WHERE started >= '$SINCE' AND agent NOT IN ('unknown','') GROUP BY agent ORDER BY COUNT(*) DESC;"
+echo "Agent runs — which roles cost the most (role · runs · tokens):"
+q "SELECT '  '||REPLACE(REPLACE(agent,'claude-dev-team:',''),'cdt:','')||'  ×'||COUNT(*)||'  '||$(hum "SUM(COALESCE(tokens,0))") FROM agent_runs WHERE started >= '$SINCE' AND agent NOT IN ('unknown','') GROUP BY agent ORDER BY SUM(COALESCE(tokens,0)) DESC, COUNT(*) DESC;"
+echo "Total agent tokens: $(q "SELECT $(hum "SUM(COALESCE(tokens,0))") FROM agent_runs WHERE started >= '$SINCE' AND agent NOT IN ('unknown','');")"
 echo
 echo "Token budget (your real 'cost' on Max = session + weekly rate-limit usage, NOT money):"
-echo "  the activity above is what consumes your token budget — more T2/T3 tasks & agent runs = more tokens."
-echo "  For exact tokens used against your limit, use Claude Code's /cost or /usage (live & accurate)."
+echo "  per-agent tokens above are REAL — summed from each subagent's transcript (input+output+cache)."
+echo "  more T2/T3 tasks & agent runs = more of your budget; reserve FULL: / Opus builders for what needs it."
+echo "  For exact tokens used against your limit, use Claude Code's /cost or /usage (live & authoritative)."

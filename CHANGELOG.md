@@ -2,6 +2,21 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.19.0] — 2026-06-15
+### Added
+- **Per-agent token telemetry (P2)** — a `SubagentStop` hook now sums each dispatched subagent's **real**
+  token usage straight from its transcript JSONL (`input + output + cache_*`) and stores it on the
+  `agent_runs` row; tasks gained a `tokens` column too (`cdt-task … <tokens>`). `/cdt:stats` now ranks
+  **which roles cost the most tokens** and shows per-tier token totals — all grounded in actual usage
+  rows, never an estimate. Backward-compatible: existing DBs are migrated in place (`ALTER TABLE … ADD
+  COLUMN tokens`), and the hook is fail-open (no python3 / unreadable transcript → logs the run with 0).
+### CI / quality
+- **Agent least-privilege lint (P1)** — `scripts/lint-agents.sh` is now a CI gate. It statically asserts
+  every agent's contract can't silently regress: explicit `tools:` allowlist (no implicit "all tools"),
+  **no agent may carry `Task`/`Agent`** (no fan-out — only the orchestrator dispatches), read-only agents
+  have no `Write`/`Edit`, builders stay within `Read/Grep/Glob/Bash/Write/Edit`, Opus/Haiku pins hold,
+  and each agent keeps a `REPORT` section + anti-hallucination language. Runs alongside `validate.sh`.
+
 ## [1.18.0] — 2026-06-15
 ### Security / hardening (full agent-system audit)
 - **Least-privilege tools** — the 7 builders (`backend/frontend/mobile/data/devops/qa/diagrams`) now

@@ -33,14 +33,19 @@ db_init() {
       id TEXT, cwd TEXT, started TEXT, ended TEXT, tier TEXT, outcome TEXT);
     CREATE TABLE IF NOT EXISTS tasks(
       session_id TEXT, description TEXT, tier TEXT, status TEXT,
-      iterations INTEGER, started TEXT, ended TEXT);
+      iterations INTEGER, started TEXT, ended TEXT, tokens INTEGER);
     CREATE TABLE IF NOT EXISTS agent_runs(
-      task_id TEXT, agent TEXT, model TEXT, started TEXT, ended TEXT);
+      task_id TEXT, agent TEXT, model TEXT, started TEXT, ended TEXT, tokens INTEGER);
     CREATE TABLE IF NOT EXISTS events(
       ts TEXT, session_id TEXT, type TEXT, message TEXT);
     CREATE TABLE IF NOT EXISTS usage(
       session_id TEXT, ts TEXT, est_tokens INTEGER, est_cost REAL);
   "
+  # Migrations for pre-existing DBs — each in its own call so one no-op doesn't abort the other.
+  # (CREATE TABLE IF NOT EXISTS won't add a column to a table that already exists; ALTER does.
+  #  The ADD COLUMN errors harmlessly if the column is already there — _cdt_sql swallows it.)
+  _cdt_sql "ALTER TABLE agent_runs ADD COLUMN tokens INTEGER;"
+  _cdt_sql "ALTER TABLE tasks ADD COLUMN tokens INTEGER;"
 }
 
 # db_event <type> <message> [session_id]
@@ -61,22 +66,25 @@ db_session() {
   _cdt_sql "INSERT INTO sessions(id,cwd,started,ended,outcome) VALUES('$id','$cwd','$ts','$ts','$outcome');"
 }
 
-# db_agent <agent_type> [session_id] — one row per dispatched subagent (from the SubagentStop hook).
+# db_agent <agent_type> [session_id] [tokens] — one row per dispatched subagent (from the SubagentStop
+# hook). `tokens` is the real total summed from that subagent's transcript (input+output+cache), or 0.
 db_agent() {
   _cdt_have_sqlite || return 0
-  local ts agent sid
+  local ts agent sid tokens
   ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null)"
   agent="$(_cdt_esc "${1:-unknown}")"; sid="$(_cdt_esc "${2:-}")"
-  _cdt_sql "INSERT INTO agent_runs(task_id,agent,model,started,ended) VALUES('$sid','$agent','','$ts','$ts');"
+  tokens="${3:-0}"; case "$tokens" in ''|*[!0-9]*) tokens=0 ;; esac
+  _cdt_sql "INSERT INTO agent_runs(task_id,agent,model,started,ended,tokens) VALUES('$sid','$agent','','$ts','$ts',$tokens);"
 }
 
-# db_task <tier> [status] [iterations] [description] [session_id] — one row per completed task.
+# db_task <tier> [status] [iterations] [description] [session_id] [tokens] — one row per completed task.
 db_task() {
   _cdt_have_sqlite || return 0
-  local ts tier status iters desc sid
+  local ts tier status iters desc sid tokens
   ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null)"
   tier="$(_cdt_esc "${1:-?}")"; status="$(_cdt_esc "${2:-shipped}")"
   iters="${3:-0}"; case "$iters" in ''|*[!0-9]*) iters=0 ;; esac
   desc="$(_cdt_esc "${4:-}")"; sid="$(_cdt_esc "${5:-}")"
-  _cdt_sql "INSERT INTO tasks(session_id,description,tier,status,iterations,started,ended) VALUES('$sid','$desc','$tier','$status',$iters,'$ts','$ts');"
+  tokens="${6:-0}"; case "$tokens" in ''|*[!0-9]*) tokens=0 ;; esac
+  _cdt_sql "INSERT INTO tasks(session_id,description,tier,status,iterations,started,ended,tokens) VALUES('$sid','$desc','$tier','$status',$iters,'$ts','$ts',$tokens);"
 }

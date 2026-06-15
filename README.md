@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.18.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.19.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -191,7 +191,7 @@ session; the bare `/command` form won't match).
 | `/cdt:ship` | run the completion mandate on the current work and ship |
 | `/cdt:bug-council <symptom>` | convene the 5-agent diagnostic squad |
 | `/cdt:autopilot <PR#> [--live]` | drive a GitHub PR toward green — CI fixes, conflicts, review (dry-run by default) |
-| `/cdt:stats [today\|week\|all]` | cost & activity report from the state DB |
+| `/cdt:stats [today\|week\|all]` | cost & activity report from the state DB — incl. **which agents cost the most tokens** |
 | `/cdt:recall <task>` | recall the most relevant past lessons from the vault for a task |
 | `/cdt:advise <task>` | advisory tier/effort prior learned from how similar past tasks went |
 | `/cdt:config [...]` | enable/disable CDT + set defaults (effort, model, eco, statusline); defaults xhigh + Opus 4.8 |
@@ -471,10 +471,25 @@ authenticated. Uses a read-mostly wrapper (`cdt-pr`) whose only write is posting
 ## State & cost analytics
 
 A local SQLite DB (`~/.claude/claude-dev-team.db`) records `sessions`, `tasks`, `agent_runs`, `events`,
-and `usage`. Run `/cdt:stats` (or `cdt-stats today|week|all`) for activity by tier/agent,
-iteration counts, and blocker rate. Activity/timing is precise. "Cost" here means **token / rate-limit
-budget** (Claude subscription session + weekly limits, not money); for exact tokens used, see Claude
-Code's `/cost`.
+and `usage`. Run `/cdt:stats` (or `cdt-stats today|week|all`) for activity by tier/agent, iteration
+counts, and blocker rate. Activity/timing is precise. "Cost" here means **token / rate-limit budget**
+(Claude subscription session + weekly limits, not money); for exact tokens used, see Claude Code's `/cost`.
+
+**Per-agent token telemetry (real, not estimated).** A `SubagentStop` hook sums each dispatched
+subagent's **actual** token usage straight from its transcript (input + output + cache) and stores it on
+the `agent_runs` row — so `/cdt:stats` ranks **which roles cost the most**, and tasks carry a per-tier
+token total. This is grounded in real usage rows, never a guess. Example:
+
+```
+Agent runs — which roles cost the most (role · runs · tokens):
+  security-reviewer  ×6  4.1M
+  backend-engineer   ×3  2.3M
+  qa-engineer        ×2  610.0k
+Total agent tokens: 7.0M
+```
+
+Use it to tune routing — e.g. if a role dominates spend, reserve `FULL:` / Opus builders for the work
+that truly needs them.
 
 **Adaptive routing (learns from history):** on T2+, the orchestrator also runs
 `cdt-advise "<task>"` — an *advisory* prior derived from how **similar past tasks** went (typical tier,
@@ -501,15 +516,20 @@ or network**). Context stays lean and sharp no matter how large the vault grows.
 
 A native Swift app (`menubar/`) puts your usage in the menu bar as a compact **`CDT`** badge with the
 **current-session %** stacked over the **weekly %** (each color-coded 80/90) — a deliberately narrow,
-two-line shape that survives a crowded or notched menu bar. Click it for the full dropdown: the **real
-subscription %** (current session, weekly all-models, weekly Sonnet, with reset countdowns) from
-Anthropic's `oauth/usage` endpoint, **plus** accurate local token usage by model and a
-**`claude-dev-team (7d)`** activity panel — sessions logged, tasks by tier, and any specialist
-subagents dispatched. The dropdown is also a **control panel**: an **Enabled** toggle and **Eco mode /
-Effort / Model** submenus let you change CDT's defaults right from the menu bar (they call `cdt-config`).
+two-line shape that survives a crowded or notched menu bar. Click it for the full dropdown:
+
+- **Subscription %** — current session, weekly (all-models), and weekly Sonnet, each with a reset
+  countdown, from Anthropic's `oauth/usage` endpoint.
+- **Tokens today (local)** — your real token usage by model (with cache) and the 7-day total, summed
+  from your own `~/.claude/projects` transcripts.
+- **`claude-dev-team` activity panel** — an **Enabled** toggle plus **Eco mode / Effort / Model**
+  submenus to change CDT's defaults right from the bar (they call `cdt-config`; effort/model apply next
+  session), then the **7-day activity**: sessions logged, **tasks by tier** (e.g. `T2×4 T3×2`), and the
+  **specialist subagents dispatched by role** (e.g. `security-reviewer ×6`). For each role's **token
+  cost**, run `/cdt:stats`.
 
 <p align="center">
-  <img src="assets/menubar-screenshot.png" alt="CDT Usage menu bar dropdown" width="440">
+  <img src="assets/menubar-screenshot.png" alt="CDT Usage menu bar dropdown — subscription %, local tokens, and the interactive claude-dev-team control panel" width="300">
 </p>
 
 > **macOS only.** On **Windows/Linux** there's no menu bar — use the cross-platform **status line** for
@@ -619,10 +639,11 @@ Everything is plain files. Check: agents honoring exclusive scope (the diffs), g
 (pasted output in reports), `~/.claude/vault/` session notes + learnings, `status-log.md`, and the DB
 (`/cdt:stats`).
 
-**Run the test flow yourself** (all three run in CI on every push/PR):
+**Run the test flow yourself** (all four run in CI on every push/PR):
 
 ```
 bash scripts/validate.sh        # manifests + frontmatter + shellcheck
+bash scripts/lint-agents.sh     # agent least-privilege lint (no fan-out, read-only stays read-only, model pins)
 python3 -m unittest discover -s demo/login-rate-limit/tests -t demo/login-rate-limit   # unit tests
 bash scripts/e2e.sh             # sandboxed end-to-end (temp HOME — never touches your ~/.claude)
 ```
