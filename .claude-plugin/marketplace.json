@@ -6,6 +6,7 @@
     "name": "Jayson Ventura",
     "email": "jgventura03business@gmail.com"
   },
+  "allowCrossMarketplaceDependenciesOn": ["claude-plugins-official"],
   "plugins": [
     {
       "name": "claude-dev-team",

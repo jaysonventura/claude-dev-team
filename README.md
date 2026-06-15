@@ -144,8 +144,8 @@ Sonnet session for routine work; `FULL:` or `/model opus` for critical work.
 | `web-design-guidelines` | UI fundamentals + a11y |
 | `ui-ux-pro-max` | polish, motion, micro-interactions |
 
-Reused official plugins (recommended companions): `superpowers`, `code-review`, `frontend-design`,
-`figma`, `context7`.
+Reused official plugins: `superpowers`, `code-review`, `frontend-design`, `context7` — these
+**auto-install as dependencies** when you install claude-dev-team (see Installation). `figma` is optional.
 
 ## Commands
 
@@ -161,12 +161,11 @@ Reused official plugins (recommended companions): `superpowers`, `code-review`, 
 
 ## Installation
 
-**Prerequisites:** Claude Code; `git`; macOS/Linux. Optional but recommended companions:
-```
-claude plugin install superpowers code-review frontend-design context7
-```
+**Prerequisites:** Claude Code **≥ 2.1.110**; `git`; macOS/Linux; and the official marketplace
+registered (it ships by default — if not, `claude plugin marketplace add anthropics/claude-plugins-official`).
 
-**Install this plugin:**
+**Install this plugin** — the companions (`superpowers`, `code-review`, `frontend-design`, `context7`)
+**auto-install** as dependencies:
 ```
 claude plugin marketplace add jaysonventura/claude-dev-team
 claude plugin install claude-dev-team
