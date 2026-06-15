@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.11.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.11.2-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -557,7 +557,19 @@ work. Usage data is supplied automatically by the **macOS menu bar** (it caches 
 
 Everything is plain files. Check: agents honoring exclusive scope (the diffs), gates actually run
 (pasted output in reports), `~/.claude/vault/` session notes + learnings, `status-log.md`, and the DB
-(`/claude-dev-team:stats`). To remove it entirely, see [Uninstall](#uninstall).
+(`/claude-dev-team:stats`).
+
+**Run the test flow yourself** (all three run in CI on every push/PR):
+
+```
+bash scripts/validate.sh        # manifests + frontmatter + shellcheck
+python3 -m unittest discover -s demo/login-rate-limit/tests -t demo/login-rate-limit   # unit tests
+bash scripts/e2e.sh             # sandboxed end-to-end (temp HOME — never touches your ~/.claude)
+```
+
+The **e2e** boots the SessionStart hook in a throwaway sandbox and asserts the whole chain works
+(CLIs installed → doctor → learn→recall → task→stats → statusline→budget → config on/off → notify→log).
+To remove the plugin entirely, see [Uninstall](#uninstall).
 
 ## Uninstall
 

@@ -8,11 +8,14 @@ it lean, grounded, and cost-effective are very welcome.
 ```bash
 git clone https://github.com/jaysonventura/claude-dev-team
 cd claude-dev-team
-bash scripts/validate.sh        # must pass before you open a PR
+bash scripts/validate.sh        # 1) lint: JSON manifests, frontmatter, shellcheck
+python3 -m unittest discover -s demo/login-rate-limit/tests -t demo/login-rate-limit   # 2) unit tests
+bash scripts/e2e.sh             # 3) end-to-end (sandboxed — uses a temp HOME, never touches ~/.claude)
 ```
 
-`validate.sh` checks the JSON manifests, agent/skill/command frontmatter, and runs `shellcheck` on the
-hooks. Install `shellcheck` locally (`brew install shellcheck`) so you get the same signal CI does.
+All three run in CI and must pass before a PR merges. `validate.sh` checks manifests + frontmatter and
+runs `shellcheck` (install it: `brew install shellcheck`). `e2e.sh` boots the SessionStart hook in a
+throwaway sandbox and exercises the full chain (CLIs, doctor, recall, stats, eco, config on/off, notify).
 
 ## How to add things
 

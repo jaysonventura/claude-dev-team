@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.11.2] — 2026-06-15
+### Added
+- **Committed end-to-end test (`scripts/e2e.sh`) + CI gates.** The e2e runs in a **sandbox** (a throwaway
+  temp HOME — never touches your real `~/.claude`) and asserts the full chain: SessionStart bootstrap →
+  doctor → deps → learn→recall → task→stats → statusline→budget(eco) → config on/off → notify→log. CI now
+  runs **three gates** on every push/PR: `validate.sh`, the demo unit tests, and `e2e.sh`. Documented in
+  the README ("How to review / audit") and CONTRIBUTING.
+
 ## [1.11.1] — 2026-06-15
 ### Changed
 - **Documentation:** a single, complete **Requirements** section — a per-OS table of every system tool
