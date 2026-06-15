@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.10.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.10.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -202,7 +202,8 @@ session; the bare `/command` form won't match).
 
 **Prerequisites:** Claude Code **≥ 2.1.143** (needed for dependencies to auto-**enable**, not just
 install; on 2.1.110–2.1.142 the companions install but you may need to enable them once); `git`;
-macOS/Linux; and the official marketplace registered (it ships by default — if not,
+**Python 3** (for `recall`/`advise`/`config`); macOS / Linux / **Windows** (see below); and the official
+marketplace registered (it ships by default — if not,
 `claude plugin marketplace add anthropics/claude-plugins-official`).
 
 **Install this plugin** — the companions (`superpowers`, `code-review`, `frontend-design`, `context7`)
@@ -227,6 +228,22 @@ available. Nothing else to set up.
 - **Power-user (guaranteed every session):** installers get orchestration via the auto-triggering skill
   + hook. For a hard always-on guarantee, drop the `orchestration` summary into your global
   `~/.claude/CLAUDE.md` (see `docs/architecture.md`). Most users don't need this.
+
+### Windows & Linux
+
+The whole orchestration layer — agents, skills, commands, the `cdt-*` CLIs, hooks, vault, and analytics —
+is **cross-platform**. Only the **menu bar app is macOS-only**; on Windows/Linux use the **status line**
+instead for the same usage display: `~/.claude/bin/cdt-config statusline on`.
+
+**Windows** (one-time setup — Claude Code runs the `.sh` hooks through Git Bash):
+1. Install **[Git for Windows](https://gitforwindows.org/)** (provides the Bash that hooks/CLIs need) and **Python 3** (on PATH).
+2. If you *also* have **WSL**, pin Git Bash so hooks don't resolve to WSL's `bash.exe` — add to `~/.claude/settings.json` (i.e. `%USERPROFILE%\.claude\settings.json`):
+   ```json
+   { "env": { "CLAUDE_CODE_GIT_BASH_PATH": "C:\\Program Files\\Git\\bin\\bash.exe" } }
+   ```
+3. Open a fresh session, then run **`/claude-dev-team:doctor`** to confirm everything's wired. (Shell scripts ship with enforced LF line endings via `.gitattributes`, so Git's autocrlf won't break them.)
+
+**Linux** works out of the box (bash + Python 3 are standard). The menu bar is skipped; use the status line.
 
 ---
 
@@ -410,6 +427,9 @@ subagents dispatched.
   <img src="assets/menubar-screenshot.png" alt="CDT Usage menu bar dropdown" width="440">
 </p>
 
+> **macOS only.** On **Windows/Linux** there's no menu bar — use the cross-platform **status line** for
+> the same usage display: `~/.claude/bin/cdt-config statusline on` (shows `CDT on · Opus · xhigh · 41% wk`).
+
 **On macOS it auto-installs** on your first session after the plugin is installed — it builds, launches,
 and enables login auto-start automatically (set `CDT_MENUBAR_AUTO=0` in `~/.claude/claude-dev-team.env`
 to opt out). Manage it any time:
@@ -504,6 +524,7 @@ or the macOS menu bar. The **status line** also works great on Linux/Windows whe
 | Subscription shows "unavailable" | The undocumented usage endpoint or your login is unavailable — it **fails soft**; local token counts still work. Try **Refresh now** (⌘R). |
 | "Orchestration isn't dispatching agents" | By design — only **T2+** (multi-domain or risk) fans out; small tasks stay solo. See [Triage & tiers](#triage--tiers). Force it with a multi-domain/risk task or the `FULL:` prefix. |
 | No vault / DB / CLIs after install | The SessionStart hook bootstraps them — **restart your session once** after installing. |
+| Hooks/CLIs not running on **Windows** | Install **Git for Windows** + **Python 3**; if WSL is also present, pin `CLAUDE_CODE_GIT_BASH_PATH` (see [Windows & Linux](#windows--linux)). Then run `/claude-dev-team:doctor`. The menu bar is macOS-only — use `cdt-config statusline on`. |
 
 ## How to review / audit
 

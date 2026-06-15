@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.10.1] — 2026-06-15
+### Added
+- **Windows support** — the orchestration layer (agents, skills, commands, `cdt-*` CLIs, hooks, vault,
+  analytics) now runs on Windows. Added `.gitattributes` to **force LF** on shell scripts (CRLF would
+  break the bash shebang on Windows checkouts) and a **Windows & Linux** setup section (Git for Windows +
+  Python 3; pin `CLAUDE_CODE_GIT_BASH_PATH` if WSL is present; run `/doctor` to verify). The macOS-only
+  **menu bar** is skipped on Windows/Linux — use the cross-platform **status line** instead.
+
 ## [1.10.0] — 2026-06-15
 ### Added
 - **Budget-aware Eco mode** (`cdt-budget` + `cdt-config eco`) — before a T2+ dispatch the orchestrator

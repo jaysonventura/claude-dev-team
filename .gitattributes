@@ -1,0 +1,11 @@
+# Shell scripts (and the cdt-* CLIs generated from them) MUST stay LF.
+# Git on Windows defaults to autocrlf=true; CRLF in a bash script breaks the shebang
+# (`/usr/bin/env bash^M: bad interpreter`) and silently kills every hook/CLI.
+*.sh    text eol=lf
+
+# Normalize other text; let Git infer. Binary assets are never touched.
+*       text=auto
+*.png   binary
+*.icns  binary
+*.dmg   binary
+*.zip   binary
