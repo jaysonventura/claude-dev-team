@@ -36,14 +36,15 @@ fmt_duration() {
 }
 DURATION="$(fmt_duration "$DURATION")"
 
-# Current Max usage (session/weekly %) from the cache the status line / menu bar writes.
-USAGE=""
-if [ -f "$CDT_HOME/.cdt-usage.json" ] && command -v python3 >/dev/null 2>&1; then
-  USAGE="$(CACHE="$CDT_HOME/.cdt-usage.json" python3 -c 'import os,json
-try:
-    d=json.load(open(os.environ["CACHE"])); print("session %d%% · weekly %d%%"%(int(d.get("session",0)),int(d.get("weekly",0))))
-except Exception: pass' 2>/dev/null)"
-fi
+# Humanize a token count (45200 -> "45.2k", 3600000 -> "3.6M") — this is what THIS task consumed.
+fmt_tokens() {
+  case "$1" in ''|*[!0-9]*) printf '%s' "$1"; return ;; esac
+  local n="$1"
+  if [ "$n" -ge 1000000 ]; then printf '%d.%dM' "$((n/1000000))" "$(((n%1000000)/100000))"
+  elif [ "$n" -ge 1000 ]; then printf '%d.%dk' "$((n/1000))" "$(((n%1000)/100))"
+  else printf '%d' "$n"; fi
+}
+[ -n "$TOKENS" ] && TOKENS="$(fmt_tokens "$TOKENS") tokens"
 
 # 1) Vault status log (always) — with a compact detail suffix.
 mkdir -p "$VAULT" 2>/dev/null
@@ -51,6 +52,7 @@ SUFFIX=""
 [ -n "$TASK" ] && SUFFIX="$SUFFIX · $TASK"
 [ -n "$TIER" ] && SUFFIX="$SUFFIX · $TIER"
 [ -n "$DURATION" ] && SUFFIX="$SUFFIX · $DURATION"
+[ -n "$TOKENS" ] && SUFFIX="$SUFFIX · $TOKENS"
 printf -- "- %s  **%s**  %s%s\n" "$TS" "$TYPE" "$MSG" "$SUFFIX" >> "$STATUS_LOG" 2>/dev/null
 
 # 2) State DB event.
@@ -74,7 +76,7 @@ ICON="ℹ️"
 case "$TYPE" in
   DELIVERED) ICON="✅" ;; SHIP) ICON="🚀" ;; BLOCKER) ICON="⛔" ;; DEFERRED) ICON="⏸️" ;;
 esac
-export _T="$TYPE" _M="$MSG" _TASK="$TASK" _TIER="$TIER" _DUR="$DURATION" _ITERS="$ITERS" _TOKENS="$TOKENS" _USAGE="$USAGE" _ICON="$ICON" _TS="$TS"
+export _T="$TYPE" _M="$MSG" _TASK="$TASK" _TIER="$TIER" _DUR="$DURATION" _ITERS="$ITERS" _TOKENS="$TOKENS" _ICON="$ICON" _TS="$TS"
 
 json_escape() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | tr '\n\r' '  '; }
 
@@ -88,7 +90,7 @@ def add(n, key, inline=True):
     v = os.environ.get(key,"").strip()
     if v: fields.append({"name": n, "value": v[:1000], "inline": inline})
 add("Task","_TASK"); add("Tier","_TIER"); add("Duration","_DUR")
-add("Iterations","_ITERS"); add("Tokens","_TOKENS"); add("Usage (Max budget)","_USAGE", inline=False)
+add("Iterations","_ITERS"); add("Tokens (this task)","_TOKENS", inline=False)
 embed = {"title": f"{icon} {t}".strip(), "description": os.environ.get("_M","")[:4000],
          "color": colors.get(t,9807270), "fields": fields,
          "footer": {"text":"claude-dev-team"}, "timestamp": os.environ.get("_TS","")}
@@ -104,7 +106,7 @@ task = os.environ.get("_TASK","").strip()
 if task: out.append(f"<b>{html.escape(task)}</b>")
 out.append(html.escape(os.environ.get("_M","")))
 det = []
-for label, key in [("Tier","_TIER"),("Duration","_DUR"),("Iterations","_ITERS"),("Tokens","_TOKENS"),("Usage","_USAGE")]:
+for label, key in [("Tier","_TIER"),("Duration","_DUR"),("Iterations","_ITERS"),("Tokens (this task)","_TOKENS")]:
     v = os.environ.get(key,"").strip()
     if v: det.append(f"• {label}: <b>{html.escape(v)}</b>")
 if det: out.append("\n".join(det))

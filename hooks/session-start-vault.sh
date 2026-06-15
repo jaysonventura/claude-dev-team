@@ -32,6 +32,7 @@ cp "$HOOKS_DIR/learn.sh"   "$BIN/cdt-learn"    2>/dev/null && chmod +x "$BIN/cdt
 cp "$HOOKS_DIR/budget.sh"  "$BIN/cdt-budget"   2>/dev/null && chmod +x "$BIN/cdt-budget"  2>/dev/null
 cp "$HOOKS_DIR/statusline.sh" "$BIN/cdt-statusline" 2>/dev/null && chmod +x "$BIN/cdt-statusline" 2>/dev/null
 cp "$HOOKS_DIR/deps.sh"    "$BIN/cdt-deps"     2>/dev/null && chmod +x "$BIN/cdt-deps"     2>/dev/null
+cp "$HOOKS_DIR/tokens.sh"  "$BIN/cdt-tokens"   2>/dev/null && chmod +x "$BIN/cdt-tokens"   2>/dev/null
 
 # Stage the menu bar Swift source to a stable, buildable location (source only — not .build).
 MENUBAR_SRC="$(cd "$HOOKS_DIR/.." 2>/dev/null && pwd)/menubar"

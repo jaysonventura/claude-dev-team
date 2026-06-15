@@ -140,11 +140,17 @@ message is genuinely useful — they render as a rich Discord embed / formatted 
 ~/.claude/bin/cdt-notify BLOCKER   "<root cause + what's needed>" --task "<task>"
 ~/.claude/bin/cdt-notify SHIP      "<N delivered / M deferred / K blockers>" --duration <seconds>
 ```
-Flags are all optional (bare `cdt-notify TYPE "msg"` still works). Pass **`--duration`** = the task's
-wall-clock seconds (note when you start), **`--tier`**, **`--iters`** (Task Loop count), and
-**`--task`**; the notifier auto-appends the current **Max usage %** from the usage cache. For exact tokens
-use `--tokens <n>` only if you actually have a real count (e.g. from `/cost`) — never invent one.
-Report **DELIVERED / DEFERRED / BLOCKER** as they happen; post a **SHIP** digest at the end.
+Flags are all optional (bare `cdt-notify TYPE "msg"` still works). To report a task's real **cost +
+duration**, capture a baseline when you START the task and pass the **deltas** at delivery:
+```
+T0=$(date +%s); K0=$(~/.claude/bin/cdt-tokens)        # at task start
+# … do the task …
+~/.claude/bin/cdt-notify DELIVERED "<summary>" --task "<task>" --tier <T0-T3> \
+   --duration $(( $(date +%s) - T0 )) --iters <n> --tokens $(( $(~/.claude/bin/cdt-tokens) - K0 ))
+```
+`--tokens` here is the **tokens used to deliver THIS task** (an input+output delta from `cdt-tokens`),
+not a cumulative/remaining figure. Report **DELIVERED / DEFERRED / BLOCKER** as they happen; post a
+**SHIP** digest at the end.
 
 ## STATE LOGGING (accurate analytics)
 

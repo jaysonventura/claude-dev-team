@@ -2,6 +2,16 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.16.0] — 2026-06-15
+### Changed
+- **Notifications now report the cost of *that task*, not cumulative budget.** The Discord/Telegram
+  message shows **tokens used to deliver this task** (an input+output **delta**) and **how long it took**
+  — instead of the running session/weekly %. The orchestrator captures a `cdt-tokens` baseline at task
+  start and passes the `--tokens`/`--duration` deltas at delivery.
+### Added
+- **`cdt-tokens`** — prints today's running input+output token total from local transcripts, so a
+  per-task cost can be measured as a delta. Pure python3 stdlib.
+
 ## [1.15.0] — 2026-06-15
 ### Changed
 - **Plugin renamed to `cdt`** — slash commands are now **`/cdt:*`** (e.g. `/cdt:ship`, `/cdt:doctor`,
