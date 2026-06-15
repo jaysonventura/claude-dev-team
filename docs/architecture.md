@@ -11,7 +11,8 @@ implementation to specialist subagents under strict contracts.
 2. **Contract** — each dispatched agent gets: types/signatures · exclusive file ownership · files-it-may-
    read · a verifiable DONE-WHEN · DO-NOT guardrails · a ≤150-word structured report. Exclusive ownership
    means parallel agents never collide; the read-list + grounding rules kill hallucination.
-3. **Execute** — parallel waves (research → build → review) with a 9-gate quality chain and a bounded Task
+3. **Execute** — parallel waves (research → build → review) with a 10-gate quality chain (incl. e2e for
+   user-facing flows) and a bounded Task
    Loop between them. Security review holds a veto.
 4. **Completion mandate** — tier-scaled close (simplify → review → reuse-audit → dead-code → vault-learning
    → ship), full on T2/T3 and all risk work.

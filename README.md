@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.11.2-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.11.3-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -39,8 +39,8 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - **Contract-driven dispatch** — every agent gets exclusive file ownership, a read-list, a verifiable
   done-condition, guardrails, and a ≤150-word structured report. (This is the anti-hallucination engine.)
 - **11 role agents** (incl. a Haiku `fast-ops` tier) + a gated **5-agent Bug Council** for stuck bugs.
-- **9-gate quality chain** + a bounded **Task Loop** (iterate to green, anti-abandonment, capped, then
-  notify).
+- **10-gate quality chain** (incl. **e2e** for user-facing flows) + a bounded **Task Loop** (iterate to
+  green, anti-abandonment, capped, then notify).
 - **Completion mandate** (tier-scaled) — simplify, review, reuse-audit, dead-code scan, learn, ship.
 - **SQLite cost analytics** (`/claude-dev-team:stats`) so you can see and tune spend on Max.
 - **Discord / Telegram notifications** for every milestone — delivered, deferred, blocker, ship.
@@ -87,7 +87,7 @@ Parallel waves and the quality-gate chain (Diagram B):
 ```mermaid
 flowchart TD
     W0["Wave 0: Explore + architect"] --> W1["Wave 1: builders on exclusive paths"]
-    W1 --> GATES["Gates: fmt, lint, type, unit, intg, build, smoke"]
+    W1 --> GATES["Gates: fmt, lint, type, unit, intg, e2e, build, smoke"]
     GATES -->|"fail"| FIX["Fix agent"]
     FIX --> GATES
     GATES -->|"pass"| W2["Wave 2: code-reviewer + security-reviewer"]

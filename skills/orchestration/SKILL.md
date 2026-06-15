@@ -58,8 +58,11 @@ Dispatch agents for a wave in **one message with multiple Agent tool calls** so 
 - **Wave 1 — build (exclusive file scope):** the engineers needed — `backend-engineer`,
   `frontend-engineer`, `mobile-engineer`, `data-engineer`, `devops-engineer`, `qa-engineer` — each on
   disjoint paths.
-- **Quality-gate chain (9):** `1 fmt · 2 lint · 3 typecheck · 4 unit · 5 integration · 6 build ·
-  7 smoke · 8 review · 9 close`. Run what the project supports; skip absent gates explicitly (say so).
+- **Quality-gate chain (10):** `1 fmt · 2 lint · 3 typecheck · 4 unit · 5 integration · 6 e2e · 7 build ·
+  8 smoke · 9 review · 10 close`. Run what the project supports; skip absent gates explicitly (say so).
+  **e2e is required when the change is user-facing** (web UI / mobile / an API flow) and the project has
+  (or should have) an e2e harness — `qa-engineer` writes/runs the real user journey (Playwright/Cypress,
+  Detox/Maestro, supertest). If no harness exists, propose one; if e2e can't run here, say so — never fake it.
 - **Wave 2 — independent review (parallel):** `code-reviewer` (correctness/scope/acceptance) +
   `security-reviewer`. **Security veto:** if security-reviewer flags risk >= medium, do **not** ship
   until resolved.
@@ -67,7 +70,7 @@ Dispatch agents for a wave in **one message with multiple Agent tool calls** so 
 ## STEP 3b · TASK LOOP (bounded autonomy)
 
 After build, enforce quality by looping:
-1. Run gates: tests → types → lint → security → **coverage**.
+1. Run gates: tests → types → lint → security → **coverage** (+ **e2e** for user-facing flows).
 2. On failure, dispatch a **focused fix agent** (tight contract) and re-run the failing gate.
 3. **Anti-abandonment:** an agent must emit a structured `BLOCKER` (what failed, what it tried, what it
    needs) — never silently quit or fake success.

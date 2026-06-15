@@ -2,6 +2,15 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.11.3] — 2026-06-15
+### Changed
+- **e2e is now a first-class quality gate.** The qa-engineer's playbook and the orchestration gate chain
+  (now **10 gates**, e2e at #6) require **end-to-end tests for user-facing changes** — the real user
+  journey via Playwright/Cypress (web), Detox/Maestro (mobile), or supertest/HTTP-flow (APIs), using
+  context7 for the framework API and kept deterministic. If a project has no e2e harness, the orchestrator
+  proposes one; if e2e can't run, it says so — **never fakes an e2e pass**. (Distinct from `scripts/e2e.sh`,
+  which tests this plugin itself.)
+
 ## [1.11.2] — 2026-06-15
 ### Added
 - **Committed end-to-end test (`scripts/e2e.sh`) + CI gates.** The e2e runs in a **sandbox** (a throwaway
