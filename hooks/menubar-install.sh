@@ -12,7 +12,10 @@ set +e
 CDT_HOME="$HOME/.claude"
 SRC="$CDT_HOME/claude-dev-team-menubar"
 BIN="$CDT_HOME/bin"
-APPS="${CDT_MENUBAR_APPS:-$HOME/Applications}"
+# Prefer the standard /Applications (visible to everyone); fall back to ~/Applications if not writable.
+if [ -n "${CDT_MENUBAR_APPS:-}" ]; then APPS="$CDT_MENUBAR_APPS"
+elif [ -w "/Applications" ]; then APPS="/Applications"
+else APPS="$HOME/Applications"; fi
 APP_BUNDLE="$APPS/CDT Usage.app"
 APP="$APP_BUNDLE/Contents/MacOS/cdt-menubar"
 LABEL="com.jaysonventura.claude-dev-team.menubar"

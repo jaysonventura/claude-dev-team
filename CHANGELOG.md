@@ -2,6 +2,11 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.4.2] — 2026-06-15
+### Fixed
+- The menu bar app installs to **/Applications** (was ~/Applications, which isn't where users look),
+  falling back to ~/Applications only when /Applications isn't writable. Override with `CDT_MENUBAR_APPS`.
+
 ## [1.4.1] — 2026-06-15
 ### Changed
 - Plugin auto-install now builds **CDT Usage.app into ~/Applications** (a real, signed app) instead of a
