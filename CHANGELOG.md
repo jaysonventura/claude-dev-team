@@ -2,6 +2,15 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.9.0] — 2026-06-15
+### Added
+- **`cdt-config` + `/claude-dev-team:config`** — a control surface to **enable/disable** the whole
+  orchestration layer and set its **defaults (effort, model)**. `off` makes the next session behave as
+  stock Claude Code (the SessionStart hook stops injecting the protocol). `effort`/`model` are written to
+  `~/.claude/settings.json` as a **safe merge** (all other settings preserved) and apply next session.
+  Defaults are **xhigh effort + Opus 4.8** (`claude-opus-4-8`); `max` effort is correctly refused
+  (session-only). The menu bar dropdown now shows the current mode (`on · xhigh · opus-4-8`).
+
 ## [1.8.1] — 2026-06-15
 ### Changed
 - **Model-routing guardrail hardened** — made explicit everywhere that **Opus is the recommended main

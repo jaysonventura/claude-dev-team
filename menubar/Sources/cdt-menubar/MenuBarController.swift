@@ -99,20 +99,19 @@ final class MenuBarController: NSObject {
             line("  total    \(formatTokens(snap.local.todayTotal))   · week \(formatTokens(snap.local.weekTotal))")
         }
 
-        // Dev-team activity
-        if snap.team.sessions > 0 || !snap.team.agentRuns.isEmpty || !snap.team.tasksByTier.isEmpty {
-            menu.addItem(.separator())
-            header("claude-dev-team (7d)")
-            if snap.team.sessions > 0 {
-                line("  \("sessions".padding(toLength: 18, withPad: " ", startingAt: 0)) \(snap.team.sessions)")
-            }
-            if !snap.team.tasksByTier.isEmpty {
-                line("  tasks: " + snap.team.tasksByTier.map { "\($0.tier)×\($0.count)" }.joined(separator: " "))
-            }
-            // Subagent dispatches (specialists) — rare by design; only when the orchestrator delegates.
-            for run in snap.team.agentRuns.prefix(6) {
-                line("  \(run.role.padding(toLength: 18, withPad: " ", startingAt: 0)) ×\(run.count)")
-            }
+        // Dev-team config + activity (the mode line always shows; activity lines when present)
+        menu.addItem(.separator())
+        header("claude-dev-team")
+        line("  \("mode".padding(toLength: 16, withPad: " ", startingAt: 0)) \(readCDTConfig())")
+        if snap.team.sessions > 0 {
+            line("  \("sessions (7d)".padding(toLength: 16, withPad: " ", startingAt: 0)) \(snap.team.sessions)")
+        }
+        if !snap.team.tasksByTier.isEmpty {
+            line("  tasks: " + snap.team.tasksByTier.map { "\($0.tier)×\($0.count)" }.joined(separator: " "))
+        }
+        // Subagent dispatches (specialists) — rare by design; only when the orchestrator delegates.
+        for run in snap.team.agentRuns.prefix(6) {
+            line("  \(run.role.padding(toLength: 18, withPad: " ", startingAt: 0)) ×\(run.count)")
         }
 
         menu.addItem(.separator())

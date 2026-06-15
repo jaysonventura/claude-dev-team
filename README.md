@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.8.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.9.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -189,6 +189,7 @@ session; the bare `/command` form won't match).
 | `/claude-dev-team:stats [today\|week\|all]` | cost & activity report from the state DB |
 | `/claude-dev-team:recall <task>` | recall the most relevant past lessons from the vault for a task |
 | `/claude-dev-team:advise <task>` | advisory tier/effort prior learned from how similar past tasks went |
+| `/claude-dev-team:config [...]` | enable/disable CDT + set defaults (effort, model); defaults xhigh + Opus 4.8 |
 | `/claude-dev-team:notify-setup [...]` | configure Discord/Telegram (no manual `.env`) |
 | `/claude-dev-team:menubar [install\|status\|...]` | macOS menu bar usage monitor (subscription % + local tokens) |
 
@@ -439,6 +440,22 @@ certificate + `notarytool` credentials, then `cd menubar && ./release.sh`.
 Effort runs at your session level and the orchestration never uses heavy multi-agent fan-out engines —
 it dispatches a bounded set of subagents per tier. Pin any agent's `model:` in `agents/*.md` to taste.
 
+**Enable/disable + defaults — `cdt-config` (or `/claude-dev-team:config`):**
+
+```
+~/.claude/bin/cdt-config                 # show current config
+~/.claude/bin/cdt-config off | on        # disable / enable the whole orchestration layer
+~/.claude/bin/cdt-config effort xhigh    # default effort: low | medium | high | xhigh
+~/.claude/bin/cdt-config model  opus     # default model (e.g. claude-opus-4-8 / opus / sonnet)
+~/.claude/bin/cdt-config reset           # restore defaults: enabled, xhigh, Opus 4.8
+```
+
+Defaults are **xhigh effort + Opus 4.8** (`claude-opus-4-8`). `off` makes the next session behave as
+stock Claude Code (the SessionStart hook stops injecting the orchestration protocol). `effort`/`model`
+are written to `~/.claude/settings.json` as a **safe merge** (your other settings are preserved) and
+apply next session. The menu bar dropdown shows the current mode (`on · xhigh · opus-4-8`).
+(`max` effort is session-only — `/effort max` — and intentionally can't be persisted; xhigh is the cap.)
+
 ## Security & privacy
 
 `claude-dev-team` runs **entirely on your machine** and phones home to nothing.
@@ -500,8 +517,8 @@ step 1 you're back to stock Claude Code.
 .claude-plugin/   plugin.json, marketplace.json
 agents/           11 core role agents (incl. Haiku fast-ops) + 5 Bug Council agents (flat)
 skills/           orchestration (brain) + 7 quality skills
-commands/         ship, triage, bug-council, autopilot, stats, notify-setup, menubar, recall, advise
-hooks/            hooks.json + scripts (vault/db/recall/advise/pr/format/notify/setup/stats/guard) + vault-template
+commands/         ship, triage, bug-council, autopilot, stats, notify-setup, menubar, recall, advise, config
+hooks/            hooks.json + scripts (vault/db/recall/advise/pr/config/format/notify/setup/stats/guard) + vault-template
 docs/             architecture.md, examples.md, roadmap.md
 ```
 

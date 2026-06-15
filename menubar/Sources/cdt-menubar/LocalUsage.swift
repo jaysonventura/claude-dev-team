@@ -69,6 +69,24 @@ func readLocalUsage() -> LocalUsage {
     return result
 }
 
+/// Reads the claude-dev-team on/off switch + default effort/model for a read-only menu line.
+func readCDTConfig() -> String {
+    let home = FileManager.default.homeDirectoryForCurrentUser
+    var enabled = true
+    if let env = try? String(contentsOf: home.appendingPathComponent(".claude/claude-dev-team.env"), encoding: .utf8) {
+        for raw in env.split(separator: "\n") where raw.hasPrefix("CDT_ENABLED=") {
+            if raw.dropFirst("CDT_ENABLED=".count).trimmingCharacters(in: .whitespaces) == "0" { enabled = false }
+        }
+    }
+    var effort = "—", model = "—"
+    if let data = try? Data(contentsOf: home.appendingPathComponent(".claude/settings.json")),
+       let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+        effort = (obj["effortLevel"] as? String) ?? "—"
+        if let m = obj["model"] as? String { model = m.replacingOccurrences(of: "claude-", with: "") }
+    }
+    return "\(enabled ? "on" : "OFF") · \(effort) · \(model)"
+}
+
 /// Reads claude-dev-team activity (last 7 days) from the SQLite DB via the sqlite3 CLI.
 func readTeamActivity() -> TeamActivity {
     var activity = TeamActivity()

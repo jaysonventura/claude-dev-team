@@ -26,6 +26,7 @@ cp "$HOOKS_DIR/menubar-install.sh" "$BIN/cdt-menubar" 2>/dev/null && chmod +x "$
 cp "$HOOKS_DIR/recall.sh"  "$BIN/cdt-recall"   2>/dev/null && chmod +x "$BIN/cdt-recall"  2>/dev/null
 cp "$HOOKS_DIR/advise.sh"  "$BIN/cdt-advise"   2>/dev/null && chmod +x "$BIN/cdt-advise"  2>/dev/null
 cp "$HOOKS_DIR/pr.sh"      "$BIN/cdt-pr"       2>/dev/null && chmod +x "$BIN/cdt-pr"      2>/dev/null
+cp "$HOOKS_DIR/config.sh"  "$BIN/cdt-config"   2>/dev/null && chmod +x "$BIN/cdt-config"  2>/dev/null
 
 # Stage the menu bar Swift source to a stable, buildable location (source only — not .build).
 MENUBAR_SRC="$(cd "$HOOKS_DIR/.." 2>/dev/null && pwd)/menubar"
@@ -52,13 +53,20 @@ fi
 # 3) Initialize the state DB.
 [ -f "$BIN/cdt-db.sh" ] && . "$BIN/cdt-db.sh" 2>/dev/null && db_init 2>/dev/null
 
-# 4) Inject context: only the most RECENT lessons (cheap + scales as the vault grows). For lessons
-#    relevant to a SPECIFIC task, the orchestrator runs `cdt-recall "<task>"` during triage instead of
-#    re-reading the whole file — targeted recall keeps context lean and cost-effective.
+# 4) Inject context — but first honor the on/off switch (`cdt-config off` → behave as stock Claude Code).
+CDT_ENABLED="$(grep -E '^CDT_ENABLED=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+if [ "$CDT_ENABLED" = "0" ]; then
+  echo "## claude-dev-team is DISABLED (cdt-config off) — operate as standard Claude Code; do not run the"
+  echo "tech-lead orchestration protocol. Re-enable any time: ~/.claude/bin/cdt-config on"
+  exit 0
+fi
+
+# Inject only the most RECENT lessons (cheap + scales as the vault grows). For lessons relevant to a
+# SPECIFIC task, the orchestrator runs `cdt-recall "<task>"` during triage instead of re-reading the file.
 echo "## claude-dev-team — vault learnings (operate as the tech-lead orchestrator)"
 if [ -f "$VAULT/learnings.md" ]; then
   grep '^- \[' "$VAULT/learnings.md" 2>/dev/null | tail -n 6
 fi
 echo
-echo "_Triage every task (T0–T3); delegate under contracts; gate; ship; persist. For lessons relevant to a specific task, run \`~/.claude/bin/cdt-recall \"<task>\"\`. Report milestones via cdt-notify._"
+echo "_Triage every task (T0–T3); delegate under contracts; gate; ship; persist. Preferred defaults: **xhigh** effort + **Opus 4.8** (adjust via cdt-config). For lessons relevant to a task, run \`~/.claude/bin/cdt-recall \"<task>\"\`. Report milestones via cdt-notify._"
 exit 0
