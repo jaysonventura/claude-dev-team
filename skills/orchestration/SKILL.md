@@ -129,7 +129,7 @@ After build, enforce quality by looping:
 
 ## STEP 3c · BUG COUNCIL — DEPTH mode (gated — stuck/complex bugs only)
 
-Do **not** convene on routine bugs. When stuck-loop detection fires or the user runs `/bug-council`,
+Do **not** convene on routine bugs. When stuck-loop detection fires or the user runs `/cdt:bug-council`,
 first run `cdt-auto gate team`:
 
 - **DENY** (teams off / autonomy off) → run the **fallback**: dispatch all five diagnostic agents **in
@@ -233,7 +233,7 @@ Mostly automatic: the SessionStart hook records sessions, `cdt-notify` records m
 subagent's transcript) — so `/cdt:stats` shows an accurate agent-run breakdown, ranked by tokens, with
 zero effort. You never compute or pass those per-agent figures; the hook reads them from actual usage.
 
-**One manual step at ship** — log the task's tier + Task Loop iteration count so `/stats` reflects the
+**One manual step at ship** — log the task's tier + Task Loop iteration count so `/cdt:stats` reflects the
 tier mix and average iterations:
 ```
 ~/.claude/bin/cdt-task <T0|T1|T2|T3> shipped <iterations> "<short task description>" [tokens]

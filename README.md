@@ -24,7 +24,9 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - [Architecture](#architecture) · [Execution model](#execution-model) · [Triage & tiers](#triage--tiers)
 - [The team](#the-team) · [Skills](#skills) · [Commands](#commands)
 - [Installation](#installation) · [Requirements](#requirements) · [Notifications (Discord + Telegram)](#notifications-discord--telegram)
-- [Usage examples](#usage-examples) · [Autonomy & debugging](#autonomy--debugging) · [State & cost analytics](#state--cost-analytics) · [Memory & recall](#memory--recall)
+- [Usage examples](#usage-examples) · [Autonomy & debugging](#autonomy--debugging)
+- [Parallel isolation (git worktrees)](#parallel-isolation-git-worktrees) · [Autonomous orchestration](#autonomous-orchestration-router--cost-governor)
+- [State & cost analytics](#state--cost-analytics) · [Memory & recall](#memory--recall)
 - [Menu bar usage monitor (macOS)](#menu-bar-usage-monitor-macos) · [Configuration](#configuration)
 - [Security & privacy](#security--privacy) · [Troubleshooting](#troubleshooting) · [How to review / audit](#how-to-review--audit)
 - [Uninstall](#uninstall) · [Project layout](#project-layout) · [Roadmap & contributing](#roadmap--contributing) · [License](#license)
@@ -36,6 +38,11 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 ## What you get
 
 - **Tiered triage (T0–T3)** — trivial edits run solo; features escalate to a parallel team.
+- **Autonomous orchestration** — a mode router + cost governor that, only when the work warrants it,
+  escalates to a *debating* **agent-team** (depth) or a *fan-out* **dynamic workflow** (breadth) —
+  gated, capped, and budget-aware so it stays cheap on Max. Off by default; opt in per engine.
+- **Parallel isolation (git worktrees)** — `cdt-worktree` gives each parallel strand its own
+  checkout+branch (interops with `claude --worktree`) for collision-free big features.
 - **Contract-driven dispatch** — every agent gets exclusive file ownership, a read-list, a verifiable
   done-condition, guardrails, and a ≤150-word structured report. (This is the anti-hallucination engine.)
 - **14 role agents** (product-manager → architect → ui-ux-engineer → builders → technical-writer →
@@ -43,7 +50,8 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - **10-gate quality chain** (incl. **e2e** for user-facing flows) + a bounded **Task Loop** (iterate to
   green, anti-abandonment, capped, then notify).
 - **Completion mandate** (tier-scaled) — simplify, review, reuse-audit, dead-code scan, learn, ship.
-- **SQLite cost analytics** (`/cdt:stats`) so you can see and tune spend on Max.
+- **SQLite cost analytics** with **real per-agent token telemetry** (`/cdt:stats` ranks which roles
+  cost the most) so you can see and tune spend on Max.
 - **Discord / Telegram notifications** for every milestone — delivered, deferred, blocker, ship.
 - **A markdown vault** for durable memory (learnings, ADRs, session logs).
 - **8 quality skills** (karpathy guidelines, clean TS, code-splitting, gauge-improvements, RCA, web
@@ -682,6 +690,13 @@ cross-platform **status line** (`cdt-config statusline on`) to feed it.
   `api.anthropic.com`. That endpoint is **undocumented** (the same one Claude Code uses) and may change;
   the app **fails soft** if it does. Token *counts* are summed from your own local `~/.claude/projects`
   transcripts and are never transmitted.
+- **Transparency — macOS first-session auto-build.** On macOS, the SessionStart hook compiles the
+  plugin's *own* bundled Swift source and installs a login item ("CDT Usage") **once**, in the background,
+  only if `swift` is already present. Opt out with `CDT_MENUBAR_AUTO=0` in `~/.claude/claude-dev-team.env`
+  (or `cdt-menubar uninstall`). It builds only audited in-repo source — nothing is downloaded.
+- **Enabling agent teams** (`cdt-config teams on`) writes `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` into
+  your `settings.json` `env` (a safe merge that preserves your other keys). It's **off by default**;
+  remove it with `cdt-config teams off`.
 - **Hooks are fail-open and local** — they read/write only under `~/.claude/` and exit 0 on any error, so
   they can't break or leak your session.
 

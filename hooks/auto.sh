@@ -12,8 +12,9 @@
 #   cdt-auto explain "<task>"       advisory preview of which mode the live router would lean to
 #   cdt-auto off|assist|auto        set the autonomy leash (delegates to cdt-config autonomy)
 #
-# Read-mostly + fail-open. The gate keeps "autonomous" and "cost-effective on Max 5x" both true:
-# expensive modes are gated by the autonomy leash + each engine's on/off + a weekly-budget ceiling.
+# Read-mostly + fail-SAFE: the governor keeps "autonomous" and "cost-effective on Max 5x" both true.
+# Expensive modes are gated by the autonomy leash + each engine's on/off + a weekly-budget ceiling, and
+# when the budget can't be read (telemetry off / stale) the gate ASKs rather than ALLOWing a blind spend.
 set -u
 
 CDT_HOME="$HOME/.claude"

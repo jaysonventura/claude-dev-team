@@ -12,8 +12,9 @@ implementation to specialist subagents under strict contracts.
    read · a verifiable DONE-WHEN · DO-NOT guardrails · a ≤150-word structured report. Exclusive ownership
    means parallel agents never collide; the read-list + grounding rules kill hallucination.
 3. **Execute** — parallel waves (research → build → review) with a 10-gate quality chain (incl. e2e for
-   user-facing flows) and a bounded Task
-   Loop between them. Security review holds a veto.
+   user-facing flows) and a bounded Task Loop between them. Security review holds a veto. An **autonomous
+   mode router** (see below) may escalate beyond bounded dispatch only when the work-shape warrants it;
+   large parallel work can be **worktree-isolated** (`cdt-worktree`).
 4. **Completion mandate** — tier-scaled close (simplify → review → reuse-audit → dead-code → vault-learning
    → ship), full on T2/T3 and all risk work.
 
@@ -26,8 +27,9 @@ implementation to specialist subagents under strict contracts.
   Output stays high quality because Opus reviews everything.
 - **Contracts** cap tokens per agent (no whole-repo reads, no rambling).
 - **Bounded autonomy** (Task Loop cap, gated Bug Council) prevents runaway spend.
-- Effort stays at your session level; the orchestrator uses ordinary bounded subagent dispatch and
-  **never** the heavy multi-agent fan-out engines.
+- Effort stays at your session level (xhigh, never `max`); the orchestrator uses **bounded subagent
+  dispatch by default**. The heavier engines (agent teams, dynamic workflows) are **never auto-invoked** —
+  they are *summoned* only through the cost governor (`cdt-auto gate`), gated/capped/measured (see below).
 
 ## Dual delivery
 
@@ -44,8 +46,20 @@ For any non-trivial software task, invoke the `orchestration` skill and follow i
 triage (T0–T3, risk floor) -> contract -> dispatch specialists -> quality gates -> review ->
 tier-scaled completion mandate -> ship. Never claim done without running the verifying command and
 pasting output. Library/API questions -> context7 first. Report milestones via
-~/.claude/bin/cdt-notify. Effort stays xhigh; never use heavy fan-out engines.
+~/.claude/bin/cdt-notify. Effort stays xhigh (never max); heavy engines only via the gated cost governor.
 ```
+
+## Autonomous orchestration & scaling (router + cost governor)
+
+On top of triage, an **autonomous mode router** reads the *work shape* and picks the execution mode —
+**BOUNDED** (default, cheap), **DEPTH** (an agent-team Bug Council that *debates*), or **BREADTH** (a
+dynamic workflow that fans out). Escalation fires only on signature (a stuck bug → team; a large
+homogeneous set → workflow) and is gated by the **cost governor** `cdt-auto gate <team|scale>`, which
+returns `ALLOW | ASK | DENY` by enforcing the autonomy leash (`off|assist|auto`), each engine's on/off,
+and a **weekly-budget ceiling** — and **fails safe** (ASK) when the budget can't be read. Engines ship
+**off**; enable with `cdt-config teams on` / `scale on`. Everything stays at xhigh effort, Opus for
+judgment, never Haiku. **Parallel isolation:** `cdt-worktree` (mirroring `claude --worktree`) gives each
+parallel strand its own checkout+branch for collision-free large work. Full plan + status: `docs/roadmap.md`.
 
 ## Hooks
 
@@ -53,7 +67,7 @@ pasting output. Library/API questions -> context7 first. Report milestones via
 |-------|--------|--------|
 | SessionStart | `session-start-vault.sh` | bootstrap vault + DB + `~/.claude/bin/*`; inject learnings; auto-install the menu bar (macOS, once) |
 | PostToolUse (Edit/Write) | `format-on-write.sh` | guarded prettier (only if configured) + edits marker |
-| SubagentStop | `agent-track.sh` | record each dispatched subagent by role (powers the `/stats` agent-run breakdown) |
+| SubagentStop | `agent-track.sh` | record each dispatched subagent by role **and its real token cost** (summed from the transcript) — powers the `/cdt:stats` per-agent cost breakdown |
 | Stop | `completion-guard.sh` | record session row; optional one-time mandate reminder (`CDT_STOP_REMINDER=1`) |
 
 All hooks are **fail-open** — any error exits 0 so they never interrupt your session.
@@ -70,5 +84,7 @@ no embedding model or network). See `docs/roadmap.md` Phase 2 for the planned se
 ## State DB schema
 
 `sessions(id,cwd,started,ended,tier,outcome)` · `tasks(session_id,description,tier,status,iterations,
-started,ended)` · `agent_runs(task_id,agent,model,started,ended)` · `events(ts,session_id,type,message)`
-· `usage(session_id,ts,est_tokens,est_cost)`.
+started,ended,tokens)` · `agent_runs(task_id,agent,model,started,ended,tokens)` ·
+`events(ts,session_id,type,message)` · `usage(session_id,ts,est_tokens,est_cost)`. The `tokens` columns
+hold real per-task / per-agent usage summed from transcripts (added in-place via migration for existing
+DBs); `/cdt:stats` ranks roles by token cost.

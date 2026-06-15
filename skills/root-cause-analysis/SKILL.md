@@ -25,5 +25,5 @@ Fix the **cause**, not the symptom. A fix you can't explain is a guess.
   the real cause.
 
 ## When stuck
-Two failed cycles on the same signature → escalate to the **Bug Council** (`/bug-council`) for
+Two failed cycles on the same signature → escalate to the **Bug Council** (`/cdt:bug-council`) for
 multi-lens diagnosis.
