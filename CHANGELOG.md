@@ -2,6 +2,13 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.12.0] — 2026-06-15
+### Added
+- **Interactive menu-bar controls.** The macOS menu bar dropdown is now a control panel, not just a
+  display: an **Enabled** toggle (enable/disable CDT) plus **Eco mode**, **Effort**, and **Model**
+  submenus (current value checkmarked). Each selection runs `cdt-config` and the menu refreshes in place.
+  effort/model apply next session, as before.
+
 ## [1.11.4] — 2026-06-15
 ### Added
 - **Worked e2e example** in `demo/login-rate-limit/`: a stdlib HTTP API (`api/server.py`, `POST /login`)

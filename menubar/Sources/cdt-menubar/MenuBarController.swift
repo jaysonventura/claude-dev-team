@@ -3,6 +3,7 @@ import AppKit
 final class MenuBarController: NSObject {
     private let statusItem: NSStatusItem
     var onRefresh: (() -> Void)?
+    private var lastSnap: UsageSnapshot?   // so config changes can rebuild the menu in place
 
     override init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -40,6 +41,7 @@ final class MenuBarController: NSObject {
     }
 
     func render(_ snap: UsageSnapshot) {
+        lastSnap = snap
         // --- compact menu bar item: two STACKED lines — session % on top, weekly % on bottom — so the
         //     item is only as wide as "48%" and survives a crowded / notched menu bar. Labels in dropdown.
         if let sub = snap.subscription {
@@ -99,10 +101,30 @@ final class MenuBarController: NSObject {
             line("  total    \(formatTokens(snap.local.todayTotal))   · week \(formatTokens(snap.local.weekTotal))")
         }
 
-        // Dev-team config + activity (the mode line always shows; activity lines when present)
+        // Dev-team config (interactive) + activity
         menu.addItem(.separator())
         header("claude-dev-team")
-        line("  \("mode".padding(toLength: 16, withPad: " ", startingAt: 0)) \(readCDTConfig())")
+        let cfg = readCDTConfig()
+
+        // Enable / disable — clicking flips it (cdt-config on|off).
+        let enabledItem = NSMenuItem(title: "Enabled", action: #selector(applyConfig(_:)), keyEquivalent: "")
+        enabledItem.target = self
+        enabledItem.state = cfg.enabled ? .on : .off
+        enabledItem.representedObject = [cfg.enabled ? "off" : "on"]
+        menu.addItem(enabledItem)
+
+        menu.addItem(optionSubmenu("Eco mode", key: "eco", current: cfg.eco,
+            options: [("Auto", "auto"), ("On", "on"), ("Off", "off")]))
+        menu.addItem(optionSubmenu("Effort", key: "effort", current: cfg.effort,
+            options: [("Low", "low"), ("Medium", "medium"), ("High", "high"), ("Xhigh (default)", "xhigh")]))
+        menu.addItem(optionSubmenu("Model", key: "model", current: cfg.model,
+            options: [("Opus 4.8 (default)", "claude-opus-4-8"), ("Opus", "opus"),
+                      ("Sonnet", "sonnet"), ("Haiku", "haiku")]))
+        let applyNote = NSMenuItem(title: "effort / model apply next session", action: nil, keyEquivalent: "")
+        applyNote.isEnabled = false
+        menu.addItem(applyNote)
+
+        // Activity (7d)
         if snap.team.sessions > 0 {
             line("  \("sessions (7d)".padding(toLength: 16, withPad: " ", startingAt: 0)) \(snap.team.sessions)")
         }
@@ -130,6 +152,37 @@ final class MenuBarController: NSObject {
         menu.addItem(quit)
 
         statusItem.menu = menu
+    }
+
+    /// A submenu of mutually-exclusive options; the current value is checkmarked. Selecting one runs
+    /// `cdt-config <key> <value>`.
+    private func optionSubmenu(_ title: String, key: String, current: String,
+                               options: [(String, String)]) -> NSMenuItem {
+        let parent = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        let sub = NSMenu()
+        for (label, value) in options {
+            let it = NSMenuItem(title: label, action: #selector(applyConfig(_:)), keyEquivalent: "")
+            it.target = self
+            it.representedObject = [key, value]
+            it.state = (current == value) ? .on : .off
+            sub.addItem(it)
+        }
+        parent.submenu = sub
+        return parent
+    }
+
+    /// Runs `~/.claude/bin/cdt-config <args>` then rebuilds the menu so checkmarks reflect the change.
+    @objc private func applyConfig(_ sender: NSMenuItem) {
+        guard let args = sender.representedObject as? [String] else { return }
+        let bin = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude/bin/cdt-config").path
+        guard FileManager.default.isExecutableFile(atPath: bin) else { return }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: bin)
+        p.arguments = args
+        p.standardOutput = Pipe(); p.standardError = Pipe()
+        try? p.run(); p.waitUntilExit()
+        if let snap = lastSnap { render(snap) }   // refresh the menu (updated checkmarks / mode)
     }
 
     @objc private func refreshClicked() { onRefresh?() }

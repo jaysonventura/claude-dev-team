@@ -69,22 +69,33 @@ func readLocalUsage() -> LocalUsage {
     return result
 }
 
-/// Reads the claude-dev-team on/off switch + default effort/model for a read-only menu line.
-func readCDTConfig() -> String {
-    let home = FileManager.default.homeDirectoryForCurrentUser
+/// The claude-dev-team on/off switch + defaults, read from the env file + settings.json.
+struct CDTConfig {
     var enabled = true
+    var effort = "—"
+    var model = "—"          // raw, e.g. "claude-opus-4-8"
+    var eco = "auto"
+}
+
+func readCDTConfig() -> CDTConfig {
+    var c = CDTConfig()
+    let home = FileManager.default.homeDirectoryForCurrentUser
     if let env = try? String(contentsOf: home.appendingPathComponent(".claude/claude-dev-team.env"), encoding: .utf8) {
-        for raw in env.split(separator: "\n") where raw.hasPrefix("CDT_ENABLED=") {
-            if raw.dropFirst("CDT_ENABLED=".count).trimmingCharacters(in: .whitespaces) == "0" { enabled = false }
+        for raw in env.split(separator: "\n") {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            if line.hasPrefix("CDT_ENABLED=") {
+                c.enabled = line.dropFirst("CDT_ENABLED=".count).trimmingCharacters(in: .whitespaces) != "0"
+            } else if line.hasPrefix("CDT_ECO=") {
+                c.eco = String(line.dropFirst("CDT_ECO=".count)).trimmingCharacters(in: .whitespaces)
+            }
         }
     }
-    var effort = "—", model = "—"
     if let data = try? Data(contentsOf: home.appendingPathComponent(".claude/settings.json")),
        let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-        effort = (obj["effortLevel"] as? String) ?? "—"
-        if let m = obj["model"] as? String { model = m.replacingOccurrences(of: "claude-", with: "") }
+        c.effort = (obj["effortLevel"] as? String) ?? "—"
+        c.model = (obj["model"] as? String) ?? "—"
     }
-    return "\(enabled ? "on" : "OFF") · \(effort) · \(model)"
+    return c
 }
 
 /// Reads claude-dev-team activity (last 7 days) from the SQLite DB via the sqlite3 CLI.

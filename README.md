@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.11.4-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.12.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -448,7 +448,8 @@ two-line shape that survives a crowded or notched menu bar. Click it for the ful
 subscription %** (current session, weekly all-models, weekly Sonnet, with reset countdowns) from
 Anthropic's `oauth/usage` endpoint, **plus** accurate local token usage by model and a
 **`claude-dev-team (7d)`** activity panel — sessions logged, tasks by tier, and any specialist
-subagents dispatched.
+subagents dispatched. The dropdown is also a **control panel**: an **Enabled** toggle and **Eco mode /
+Effort / Model** submenus let you change CDT's defaults right from the menu bar (they call `cdt-config`).
 
 <p align="center">
   <img src="assets/menubar-screenshot.png" alt="CDT Usage menu bar dropdown" width="440">
@@ -503,7 +504,8 @@ it dispatches a bounded set of subagents per tier. Pin any agent's `model:` in `
 Defaults are **xhigh effort + Opus 4.8** (`claude-opus-4-8`). `off` makes the next session behave as
 stock Claude Code (the SessionStart hook stops injecting the orchestration protocol). `effort`/`model`
 are written to `~/.claude/settings.json` as a **safe merge** (your other settings are preserved) and
-apply next session. The menu bar dropdown shows the current mode (`on · xhigh · opus-4-8`).
+apply next session. The **macOS menu bar dropdown** also lets you change all of this with a click — an
+**Enabled** toggle plus **Eco mode**, **Effort**, and **Model** submenus (each runs `cdt-config` for you).
 (`max` effort is session-only — `/effort max` — and intentionally can't be persisted; xhigh is the cap.)
 
 **Budget-aware Eco mode + status line** (also via `cdt-config`):
