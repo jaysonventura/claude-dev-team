@@ -38,9 +38,9 @@ func runOnce() {
         print("  Tokens today: \(byModel)  (total \(formatTokens(snap.local.todayTotal)) · week \(formatTokens(snap.local.weekTotal)))")
     }
 
-    if !snap.team.tasksByTier.isEmpty || !snap.team.agentRuns.isEmpty {
+    if snap.team.sessions > 0 || !snap.team.tasksByTier.isEmpty || !snap.team.agentRuns.isEmpty {
         let tiers = snap.team.tasksByTier.map { "\($0.tier)×\($0.count)" }.joined(separator: " ")
         let agents = snap.team.agentRuns.prefix(5).map { "\($0.role)×\($0.count)" }.joined(separator: " ")
-        print("  Team (7d): tasks \(tiers.isEmpty ? "-" : tiers) · agents \(agents.isEmpty ? "-" : agents)")
+        print("  Team (7d): sessions \(snap.team.sessions) · tasks \(tiers.isEmpty ? "-" : tiers) · agents \(agents.isEmpty ? "-" : agents)")
     }
 }

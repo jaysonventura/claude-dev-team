@@ -10,7 +10,8 @@ All notable changes to claude-dev-team. Versions follow semver.
 - README: menu-bar section + screenshot updated for the stacked **CDT** layout (session % over weekly %).
 ### Fixed
 - No more stray **`unknown`** agent row — the `SubagentStop` hook skips runs with no identifiable agent
-  type (takes effect in any session started on ≥1.4.6).
+  type, **and** the menu bar filters `unknown`/empty rows out at query time, so it never displays even
+  if an older in-session hook logged one.
 
 ## [1.4.6] — 2026-06-15
 ### Changed

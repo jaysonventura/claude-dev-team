@@ -107,8 +107,10 @@ func readTeamActivity() -> TeamActivity {
 
     activity.sessions = Int(query(
         "SELECT COUNT(*) FROM sessions WHERE started >= '\(cutoff)';").first ?? "") ?? 0
+    // Exclude any stray 'unknown'/empty rows (a SubagentStop with no identifiable agent type) so the
+    // display is always clean, even if an older in-session hook logged one before the skip-unknown fix.
     activity.agentRuns = pairs(query(
-        "SELECT agent || '|' || COUNT(*) FROM agent_runs WHERE started >= '\(cutoff)' GROUP BY agent ORDER BY COUNT(*) DESC;"))
+        "SELECT agent || '|' || COUNT(*) FROM agent_runs WHERE started >= '\(cutoff)' AND agent NOT IN ('unknown','') GROUP BY agent ORDER BY COUNT(*) DESC;"))
     activity.tasksByTier = pairs(query(
         "SELECT COALESCE(tier,'?') || '|' || COUNT(*) FROM tasks WHERE started >= '\(cutoff)' GROUP BY tier ORDER BY tier;"))
     return activity
