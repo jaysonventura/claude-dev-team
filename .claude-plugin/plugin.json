@@ -1,7 +1,7 @@
 {
   "name": "claude-dev-team",
   "description": "An orchestrated software team for Claude Code: triage -> contract -> parallel specialists -> quality gates -> completion mandate. Role-based agents, a gated Bug Council, a bounded Task Loop, SQLite cost analytics, and Discord/Telegram status notifications.",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "author": {
     "name": "Jayson Ventura",
     "email": "jgventura03business@gmail.com"
@@ -20,9 +20,21 @@
     "cost-analytics"
   ],
   "dependencies": [
-    { "name": "superpowers", "marketplace": "claude-plugins-official" },
-    { "name": "code-review", "marketplace": "claude-plugins-official" },
-    { "name": "frontend-design", "marketplace": "claude-plugins-official" },
-    { "name": "context7", "marketplace": "claude-plugins-official" }
+    {
+      "name": "superpowers",
+      "marketplace": "claude-plugins-official"
+    },
+    {
+      "name": "code-review",
+      "marketplace": "claude-plugins-official"
+    },
+    {
+      "name": "frontend-design",
+      "marketplace": "claude-plugins-official"
+    },
+    {
+      "name": "context7",
+      "marketplace": "claude-plugins-official"
+    }
   ]
 }

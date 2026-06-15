@@ -2,6 +2,12 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.3.4] — 2026-06-15
+### Added
+- **Code signing.** The menu bar build signs the app with an available identity (Developer ID > Apple
+  Development; override via `CDT_SIGN_IDENTITY`). A stable signature makes the macOS Keychain "Always
+  Allow" persist across rebuilds (no re-prompt). Builds unsigned — still works locally — if no cert.
+
 ## [1.3.3] — 2026-06-15
 ### Fixed
 - **HTTP 429 from the usage endpoint.** Polling was every 60s (too aggressive for the undocumented

@@ -25,6 +25,21 @@ find_src() {
   return 1
 }
 
+# Code-sign with a stable identity if one exists, so the Keychain approval persists across rebuilds
+# (an ad-hoc signature changes every build and re-prompts). Override with CDT_SIGN_IDENTITY.
+sign_app() {
+  local id="${CDT_SIGN_IDENTITY:-}"
+  if [ -z "$id" ]; then
+    id=$(security find-identity -v -p codesigning 2>/dev/null | grep -m1 "Developer ID Application" | sed -E 's/^.*"([^"]+)".*$/\1/')
+    [ -z "$id" ] && id=$(security find-identity -v -p codesigning 2>/dev/null | grep -m1 -E "Apple Development|Apple Distribution|Developer ID" | sed -E 's/^.*"([^"]+)".*$/\1/')
+  fi
+  if [ -n "$id" ]; then
+    codesign --force --sign "$id" "$APP" 2>/dev/null && echo "Signed: $id" || echo "Sign failed — running unsigned."
+  else
+    echo "Unsigned (no code-signing identity found; works locally, but Keychain may re-prompt on rebuilds)."
+  fi
+}
+
 build() {
   if ! command -v swift >/dev/null 2>&1; then
     echo "Swift toolchain not found. Install it with:  xcode-select --install"; return 1
@@ -33,7 +48,9 @@ build() {
   echo "Building cdt-menubar (swift build -c release)…"
   ( cd "$SRC" && swift build -c release ) || { echo "Build failed."; return 1; }
   mkdir -p "$BIN"
-  cp "$SRC/.build/release/cdt-menubar" "$APP" && chmod +x "$APP" && echo "Built: $APP"
+  cp "$SRC/.build/release/cdt-menubar" "$APP" && chmod +x "$APP"
+  sign_app
+  echo "Built: $APP"
 }
 
 start() {
