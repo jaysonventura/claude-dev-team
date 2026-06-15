@@ -1,10 +1,14 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Claude Dev Team" width="180">
+</p>
+
 # claude-dev-team
 
 > An orchestrated software team for Claude Code. One **tech-lead orchestrator** triages every request,
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.4.2-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.4.3-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -337,6 +341,10 @@ A native Swift app (`menubar/`) puts your usage in the menu bar as **`CDT <sessi
 % color-coded 80/90) — the **real subscription %** (current session, weekly all-models, weekly Sonnet,
 with reset countdowns) from Anthropic's `oauth/usage` endpoint, **plus** accurate local token usage by
 model and dev-team activity in the dropdown.
+
+<p align="center">
+  <img src="assets/menubar-screenshot.png" alt="CDT Usage menu bar dropdown" width="440">
+</p>
 
 **On macOS it auto-installs** on your first session after the plugin is installed — it builds, launches,
 and enables login auto-start automatically (set `CDT_MENUBAR_AUTO=0` in `~/.claude/claude-dev-team.env`

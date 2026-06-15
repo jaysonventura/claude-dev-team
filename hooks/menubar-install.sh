@@ -28,6 +28,7 @@ find_src() {
   if [ -n "$cand" ] && [ -f "$cand/Package.swift" ]; then
     mkdir -p "$SRC" && cp -R "$cand/Package.swift" "$cand/Sources" "$SRC/" 2>/dev/null
     [ -f "$cand/Info.plist" ] && cp "$cand/Info.plist" "$SRC/" 2>/dev/null
+    [ -f "$cand/AppIcon.icns" ] && cp "$cand/AppIcon.icns" "$SRC/" 2>/dev/null
     return 0
   fi
   return 1
@@ -58,6 +59,7 @@ build() {
   mkdir -p "$APPS" "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
   cp "$SRC/.build/release/cdt-menubar" "$APP" && chmod +x "$APP"
   [ -f "$SRC/Info.plist" ] && sed "s/__VERSION__/$(plugin_version)/g" "$SRC/Info.plist" > "$APP_BUNDLE/Contents/Info.plist"
+  [ -f "$SRC/AppIcon.icns" ] && cp "$SRC/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
   sign_app
   echo "Installed: $APP_BUNDLE"
 }

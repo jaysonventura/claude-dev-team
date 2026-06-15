@@ -2,6 +2,11 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.4.3] — 2026-06-15
+### Added
+- App icon: **CDT Usage.app** now uses the Claude Dev Team logo (`menubar/AppIcon.icns`). README shows the
+  logo + a screenshot of the menu bar dropdown. The menu bar itself stays the "CDT <session%> <weekly%>" text.
+
 ## [1.4.2] — 2026-06-15
 ### Fixed
 - The menu bar app installs to **/Applications** (was ~/Applications, which isn't where users look),

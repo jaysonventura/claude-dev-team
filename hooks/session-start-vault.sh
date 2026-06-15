@@ -31,6 +31,7 @@ if [ -f "$MENUBAR_SRC/Package.swift" ]; then
   cp "$MENUBAR_SRC/Package.swift" "$CDT_HOME/claude-dev-team-menubar/" 2>/dev/null
   cp -R "$MENUBAR_SRC/Sources" "$CDT_HOME/claude-dev-team-menubar/" 2>/dev/null
   cp "$MENUBAR_SRC/Info.plist" "$CDT_HOME/claude-dev-team-menubar/" 2>/dev/null
+  cp "$MENUBAR_SRC/AppIcon.icns" "$CDT_HOME/claude-dev-team-menubar/" 2>/dev/null
 fi
 
 # Auto-install the menu bar app on macOS (once, in the background) unless disabled.
