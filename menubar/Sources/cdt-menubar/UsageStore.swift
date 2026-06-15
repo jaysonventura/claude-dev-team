@@ -49,17 +49,18 @@ final class UsageStore {
     }
 
     private func fetchSubscription() {
-        Task {
+        Task { [weak self] in
+            guard let self = self else { return }   // don't keep the store alive via the in-flight task
             let nextDelay: TimeInterval
             do {
                 let sub = try await fetchSubscriptionUsage()
                 await MainActor.run { self.applySubscription(sub, error: nil) }
-                nextDelay = subNormal
+                nextDelay = self.subNormal
             } catch let e as NSError {
                 let rateLimited = e.code == 429
                 let msg = rateLimited ? "rate limited — retrying in 15m" : e.localizedDescription
                 await MainActor.run { self.applySubscription(nil, error: msg) }
-                nextDelay = rateLimited ? subBackoff : subNormal   // back off 15 min on 429
+                nextDelay = rateLimited ? self.subBackoff : self.subNormal   // back off 15 min on 429
             }
             await MainActor.run { self.scheduleSubscription(after: nextDelay) }
         }

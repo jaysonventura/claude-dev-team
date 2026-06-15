@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.4.8-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.5.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -169,8 +169,10 @@ session; the bare `/command` form won't match).
 
 ## Installation
 
-**Prerequisites:** Claude Code **≥ 2.1.110**; `git`; macOS/Linux; and the official marketplace
-registered (it ships by default — if not, `claude plugin marketplace add anthropics/claude-plugins-official`).
+**Prerequisites:** Claude Code **≥ 2.1.143** (needed for dependencies to auto-**enable**, not just
+install; on 2.1.110–2.1.142 the companions install but you may need to enable them once); `git`;
+macOS/Linux; and the official marketplace registered (it ships by default — if not,
+`claude plugin marketplace add anthropics/claude-plugins-official`).
 
 **Install this plugin** — the companions (`superpowers`, `code-review`, `frontend-design`, `context7`)
 **auto-install** as dependencies:
@@ -395,7 +397,7 @@ from `~/.claude/CLAUDE.md` — you're back to stock Claude Code.
 .claude-plugin/   plugin.json, marketplace.json
 agents/           10 core role agents + 5 Bug Council agents (flat)
 skills/           orchestration (brain) + 7 quality skills
-commands/         ship, triage, bug-council, stats, notify-setup
+commands/         ship, triage, bug-council, stats, notify-setup, menubar
 hooks/            hooks.json + scripts (vault/db/format/notify/setup/stats/guard) + vault-template
 docs/             architecture.md, examples.md
 ```

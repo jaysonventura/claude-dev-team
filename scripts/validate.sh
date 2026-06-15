@@ -35,12 +35,14 @@ if command -v shellcheck >/dev/null 2>&1; then
   for f in hooks/*.sh scripts/*.sh; do
     if shellcheck -S warning -e SC1090,SC1091 "$f" >/dev/null 2>&1; then ok "$(basename "$f")"; else err "shellcheck: $f"; shellcheck -S warning -e SC1090,SC1091 "$f" | head -15; fi
   done
+elif [ -n "${CI:-}" ]; then
+  err "shellcheck is required in CI but not installed"
 else
-  echo "  skip: shellcheck not installed"
+  echo "  skip: shellcheck not installed (local)"
 fi
 
 echo "== plugin.json <-> marketplace.json version/name sanity =="
-python3 - <<'PY'
+if ! python3 - <<'PY'
 import json,sys
 p=json.load(open('.claude-plugin/plugin.json'))
 m=json.load(open('.claude-plugin/marketplace.json'))
@@ -51,7 +53,7 @@ if 'claude-dev-team' not in names: errs.append('marketplace missing plugin entry
 for e in errs: print('  FAIL:', e)
 sys.exit(1 if errs else 0)
 PY
-[ $? -ne 0 ] && fail=1
+then fail=1; fi
 
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "VALIDATION FAILED"; exit 1; fi

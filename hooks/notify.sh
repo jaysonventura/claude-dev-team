@@ -50,18 +50,22 @@ TEXT="$ICON [$TYPE] $MSG"
 
 json_escape() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | tr '\n\r' '  '; }
 
+# The webhook URL / bot token are secrets — pass them via a stdin curl-config (-K -) so they never
+# appear in the process argument list (visible to any local user via `ps`/`/proc`).
 push_discord() {
   [ -n "$CDT_DISCORD_WEBHOOK_URL" ] || return 0
   local body; body="$(json_escape "$TEXT")"
-  curl -sf -m 10 -H "Content-Type: application/json" \
-       -d "{\"content\":\"$body\"}" "$CDT_DISCORD_WEBHOOK_URL" >/dev/null 2>&1 || true
+  printf 'url = "%s"\n' "$CDT_DISCORD_WEBHOOK_URL" | \
+    curl -sf -m 10 -K - -H "Content-Type: application/json" \
+         -d "{\"content\":\"$body\"}" >/dev/null 2>&1 || true
 }
 
 push_telegram() {
   [ -n "$CDT_TELEGRAM_BOT_TOKEN" ] && [ -n "$CDT_TELEGRAM_CHAT_ID" ] || return 0
-  curl -sf -m 10 "https://api.telegram.org/bot${CDT_TELEGRAM_BOT_TOKEN}/sendMessage" \
-       --data-urlencode "chat_id=${CDT_TELEGRAM_CHAT_ID}" \
-       --data-urlencode "text=${TEXT}" >/dev/null 2>&1 || true
+  printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$CDT_TELEGRAM_BOT_TOKEN" | \
+    curl -sf -m 10 -K - \
+         --data-urlencode "chat_id=${CDT_TELEGRAM_CHAT_ID}" \
+         --data-urlencode "text=${TEXT}" >/dev/null 2>&1 || true
 }
 
 case "$PROVIDER" in

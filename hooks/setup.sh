@@ -31,6 +31,18 @@ set_var() {
 get_var() { grep -E "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2-; }
 mask() { local v="$1"; [ -z "$v" ] && { echo "(unset)"; return; }; echo "${v:0:6}…${v: -4}"; }
 
+# --- Input validation (security) -----------------------------------------------------------------
+# Only store values matching the expected shape. The env file is later `source`-d by the hooks, so a
+# pasted secret containing $(...), backticks, ';', whitespace, or a NEWLINE must never reach it.
+# We use bash `[[ =~ ]]` (anchors the WHOLE string — unlike `grep`, which matches line-by-line and
+# would let "0\n<payload>" slip a second env line through), plus an explicit control-char reject.
+_safe_oneline() { case "$1" in ''|*[[:cntrl:]]*) return 1 ;; *) return 0 ;; esac; }   # no empty/newline/ctrl
+valid_discord()  { _safe_oneline "$1" && [[ "$1" =~ ^https://(discord|discordapp)\.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]+$ ]]; }
+valid_tg_token() { _safe_oneline "$1" && [[ "$1" =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]]; }
+valid_chat_id()  { _safe_oneline "$1" && [[ "$1" =~ ^-?[0-9]+$ ]]; }
+valid_provider() { case "$1" in discord|telegram|both|off) return 0 ;; *) return 1 ;; esac; }
+valid_level()    { case "$1" in all|milestones|off) return 0 ;; *) return 1 ;; esac; }
+
 # Set the provider additively: if both channels end up configured, use "both" (don't clobber the other).
 set_provider_additive() {
   if [ -n "$(get_var CDT_DISCORD_WEBHOOK_URL)" ] && [ -n "$(get_var CDT_TELEGRAM_BOT_TOKEN)" ]; then
@@ -59,7 +71,8 @@ send_test() {
 fetch_telegram_chat_id() {
   local token="$1" resp
   command -v curl >/dev/null 2>&1 || return 0
-  resp="$(curl -sf -m 10 "https://api.telegram.org/bot${token}/getUpdates" 2>/dev/null)" || return 0
+  # Pass the secret token via a stdin curl-config (-K -) so it never appears in argv (ps/proc-visible).
+  resp="$(printf 'url = "https://api.telegram.org/bot%s/getUpdates"\n' "$token" | curl -sf -m 10 -K - 2>/dev/null)" || return 0
   if command -v python3 >/dev/null 2>&1; then
     printf '%s' "$resp" | python3 -c "import sys,json
 try:
@@ -77,21 +90,30 @@ except Exception:
 }
 
 case "$1" in
-  --discord)  [ -n "$2" ] && { set_var CDT_DISCORD_WEBHOOK_URL "$2"; set_provider_additive discord; echo "Discord webhook saved (provider: $(get_var CDT_NOTIFY_PROVIDER))."; }; exit 0 ;;
+  --discord)
+    if valid_discord "$2"; then
+      set_var CDT_DISCORD_WEBHOOK_URL "$2"; set_provider_additive discord
+      echo "Discord webhook saved (provider: $(get_var CDT_NOTIFY_PROVIDER))."
+    else
+      echo "Invalid Discord webhook URL — expected https://discord.com/api/webhooks/<id>/<token>. Not saved."
+    fi
+    exit 0 ;;
   --telegram)
-    if [ -n "$2" ]; then
+    if valid_tg_token "$2"; then
       set_var CDT_TELEGRAM_BOT_TOKEN "$2"
       chat="$3"; [ -z "$chat" ] && chat="$(fetch_telegram_chat_id "$2")"
-      if [ -n "$chat" ]; then
+      if valid_chat_id "$chat"; then
         set_var CDT_TELEGRAM_CHAT_ID "$chat"; set_provider_additive telegram
         echo "Telegram saved (chat id: $chat, provider: $(get_var CDT_NOTIFY_PROVIDER))."
       else
-        echo "Token saved, but no chat id found — message your bot in Telegram, then re-run: cdt-setup --telegram <token>"
+        echo "Token saved, but no valid chat id — message your bot in Telegram, then re-run: cdt-setup --telegram <token>"
       fi
+    elif [ -n "$2" ]; then
+      echo "Invalid Telegram bot token — expected <digits>:<token>. Not saved."
     fi
     exit 0 ;;
-  --provider) [ -n "$2" ] && { set_var CDT_NOTIFY_PROVIDER "$2"; echo "provider=$2"; }; exit 0 ;;
-  --level)    [ -n "$2" ] && { set_var CDT_NOTIFY_LEVEL "$2"; echo "level=$2"; }; exit 0 ;;
+  --provider) if valid_provider "$2"; then set_var CDT_NOTIFY_PROVIDER "$2"; echo "provider=$2"; else echo "Invalid provider (discord|telegram|both|off)."; fi; exit 0 ;;
+  --level)    if valid_level "$2"; then set_var CDT_NOTIFY_LEVEL "$2"; echo "level=$2"; else echo "Invalid level (all|milestones|off)."; fi; exit 0 ;;
   --test)     send_test; exit 0 ;;
   --show)     show; exit 0 ;;
 esac
@@ -104,21 +126,25 @@ printf "Choose [1-4]: "; read -r choice
 case "$choice" in
   1|3)
     printf "Paste Discord webhook URL: "; read -r url
-    [ -n "$url" ] && set_var CDT_DISCORD_WEBHOOK_URL "$url" ;;
+    if valid_discord "$url"; then set_var CDT_DISCORD_WEBHOOK_URL "$url"
+    elif [ -n "$url" ]; then echo "  Invalid webhook URL — not saved."; fi ;;
 esac
 case "$choice" in
   2|3)
     echo "  (First, send any message to your bot in Telegram so it can auto-detect your chat id.)"
     printf "Paste Telegram bot token (hidden): "; read -rs tok; echo
-    if [ -n "$tok" ]; then
+    if valid_tg_token "$tok"; then
       set_var CDT_TELEGRAM_BOT_TOKEN "$tok"
       chat="$(fetch_telegram_chat_id "$tok")"
-      if [ -n "$chat" ]; then
+      if valid_chat_id "$chat"; then
         echo "  Auto-detected chat id: $chat"
       else
         printf "  Could not auto-detect — enter chat id manually: "; read -r chat
       fi
-      [ -n "$chat" ] && set_var CDT_TELEGRAM_CHAT_ID "$chat"
+      if valid_chat_id "$chat"; then set_var CDT_TELEGRAM_CHAT_ID "$chat"
+      elif [ -n "$chat" ]; then echo "  Invalid chat id (must be a number) — not saved."; fi
+    elif [ -n "$tok" ]; then
+      echo "  Invalid bot token — not saved."
     fi ;;
 esac
 case "$choice" in

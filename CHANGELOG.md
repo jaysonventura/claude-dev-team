@@ -2,6 +2,24 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.5.0] — 2026-06-15
+Production-grade hardening pass (full T3 audit: security, devops, content, native, distribution).
+### Security
+- **Notifier input validation** — `cdt-setup` now strictly validates every pasted secret
+  (Discord webhook / Telegram token / chat id) with whole-string anchoring + a control-char/newline
+  reject, closing a shell-injection vector (the env file is `source`d, so a crafted value could have
+  executed code on session start).
+- **Secrets out of `argv`** — Discord/Telegram URLs are passed to `curl` via a stdin config (`-K -`),
+  so tokens are no longer visible in the process list (`ps`/`/proc`).
+### Fixed
+- **Menu-bar auto-install churn** — guarded on a real success marker instead of a legacy plist that the
+  SMAppService path never creates, so the app is no longer killed/relaunched on every session/clear/compact.
+- **Retain cycle** in the menu bar's subscription poller (`[weak self]` on the refresh task).
+- **CI no longer rots to a green no-op** — installs `shellcheck` + pinned Python explicitly, and
+  `validate.sh` now fails (not skips) when `shellcheck` is missing under CI.
+- **Docs↔reality** — README project layout lists the `menubar` command; prerequisite bumped to
+  Claude Code ≥ 2.1.143 (dependency auto-enable); `menubar` command hint includes `restart`.
+
 ## [1.4.8] — 2026-06-15
 ### Fixed
 - Agent-run labels no longer truncate to `claude-dev-team:ba` — the menu bar and `cdt-stats` now strip

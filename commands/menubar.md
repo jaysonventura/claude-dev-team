@@ -1,6 +1,6 @@
 ---
 description: Build, launch, or manage the claude-dev-team macOS menu bar usage monitor (real subscription % + local token usage).
-argument-hint: [install|build|start|stop|status|install-login|uninstall]
+argument-hint: [install|build|start|stop|restart|status|install-login|uninstall]
 allowed-tools: Bash
 ---
 

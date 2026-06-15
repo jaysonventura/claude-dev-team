@@ -82,6 +82,7 @@ install_login() {
   pkill -f "$APP" 2>/dev/null
   # The app registers itself for launch-at-login via SMAppService (shown as "CDT Usage"), so just launch it.
   open "$APP_BUNDLE" 2>/dev/null && echo "Launched + registered for login as CDT Usage."
+  touch "$CDT_HOME/.cdt-menubar-installed" 2>/dev/null   # marker so SessionStart won't reinstall every session
 }
 
 uninstall() {
@@ -90,6 +91,7 @@ uninstall() {
   pkill -f "$APP" 2>/dev/null
   rm -rf "$APP_BUNDLE"
   rm -f "$BIN/cdt-menubar-app" 2>/dev/null
+  rm -f "$CDT_HOME/.cdt-menubar-installed" 2>/dev/null   # clear the install marker so a later install re-runs
   touch "$CDT_HOME/.cdt-menubar-disabled" 2>/dev/null
   echo "Uninstalled (login item + CDT Usage.app removed). Re-enable: cdt-menubar install"
 }

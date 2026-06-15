@@ -39,8 +39,9 @@ if [ "$(uname)" = "Darwin" ] && command -v swift >/dev/null 2>&1; then
   AUTO=1
   [ -f "$CDT_HOME/claude-dev-team.env" ] && . "$CDT_HOME/claude-dev-team.env" 2>/dev/null
   AUTO="${CDT_MENUBAR_AUTO:-$AUTO}"
-  PLIST="$HOME/Library/LaunchAgents/com.jaysonventura.claude-dev-team.menubar.plist"
-  if [ "$AUTO" != "0" ] && [ ! -f "$CDT_HOME/.cdt-menubar-disabled" ] && [ ! -f "$PLIST" ] && [ -x "$BIN/cdt-menubar" ]; then
+  # Install once: guard on a success marker the installer writes (not a legacy plist that the
+  # SMAppService path never creates) — otherwise every session/clear/compact would kill+relaunch the app.
+  if [ "$AUTO" != "0" ] && [ ! -f "$CDT_HOME/.cdt-menubar-disabled" ] && [ ! -f "$CDT_HOME/.cdt-menubar-installed" ] && [ -x "$BIN/cdt-menubar" ]; then
     ( "$BIN/cdt-menubar" install-login >/dev/null 2>&1 ) &
   fi
 fi
