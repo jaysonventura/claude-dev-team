@@ -22,6 +22,15 @@ cp "$HOOKS_DIR/setup.sh"  "$BIN/cdt-setup"    2>/dev/null && chmod +x "$BIN/cdt-
 cp "$HOOKS_DIR/stats.sh"  "$BIN/cdt-stats"    2>/dev/null && chmod +x "$BIN/cdt-stats"  2>/dev/null
 cp "$HOOKS_DIR/task.sh"   "$BIN/cdt-task"     2>/dev/null && chmod +x "$BIN/cdt-task"   2>/dev/null
 cp "$HOOKS_DIR/db.sh"     "$BIN/cdt-db.sh"    2>/dev/null
+cp "$HOOKS_DIR/menubar-install.sh" "$BIN/cdt-menubar" 2>/dev/null && chmod +x "$BIN/cdt-menubar" 2>/dev/null
+
+# Stage the menu bar Swift source to a stable, buildable location (source only — not .build).
+MENUBAR_SRC="$(cd "$HOOKS_DIR/.." 2>/dev/null && pwd)/menubar"
+if [ -f "$MENUBAR_SRC/Package.swift" ]; then
+  mkdir -p "$CDT_HOME/claude-dev-team-menubar" 2>/dev/null
+  cp "$MENUBAR_SRC/Package.swift" "$CDT_HOME/claude-dev-team-menubar/" 2>/dev/null
+  cp -R "$MENUBAR_SRC/Sources" "$CDT_HOME/claude-dev-team-menubar/" 2>/dev/null
+fi
 
 # 3) Initialize the state DB.
 [ -f "$BIN/cdt-db.sh" ] && . "$BIN/cdt-db.sh" 2>/dev/null && db_init 2>/dev/null

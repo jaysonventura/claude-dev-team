@@ -18,3 +18,8 @@ Thumbs.db
 
 # Node (if a consumer project nests this)
 node_modules/
+
+# Swift build artifacts (menu bar app)
+.build/
+menubar/.build/
+*.xcodeproj

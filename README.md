@@ -4,7 +4,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.2.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.3.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -159,6 +159,7 @@ session; the bare `/command` form won't match).
 | `/claude-dev-team:bug-council <symptom>` | convene the 5-agent diagnostic squad |
 | `/claude-dev-team:stats [today\|week\|all]` | cost & activity report from the state DB |
 | `/claude-dev-team:notify-setup [...]` | configure Discord/Telegram (no manual `.env`) |
+| `/claude-dev-team:menubar [install\|status\|...]` | macOS menu bar usage monitor (subscription % + local tokens) |
 
 ---
 
@@ -321,9 +322,26 @@ stops after `CDT_MAX_ITERATIONS` (default 5) and notifies you — protecting you
 ## State & cost analytics
 
 A local SQLite DB (`~/.claude/claude-dev-team.db`) records `sessions`, `tasks`, `agent_runs`, `events`,
-and `usage`. Run `/claude-dev-team:stats` (or `cdt-stats today|week|all`) for activity by tier/agent, iteration counts,
-and blocker rate. Activity/timing is precise; **token cost is a best-effort estimate** derived from
-Claude Code's own usage data and is labeled as such.
+and `usage`. Run `/claude-dev-team:stats` (or `cdt-stats today|week|all`) for activity by tier/agent,
+iteration counts, and blocker rate. Activity/timing is precise. "Cost" here means **token / rate-limit
+budget** (Claude subscription session + weekly limits, not money); for exact tokens used, see Claude
+Code's `/cost`.
+
+## Menu bar usage monitor (macOS)
+
+A native Swift app (`menubar/`) puts your usage in the menu bar in real time — the **real subscription %**
+(current session, weekly all-models, weekly Sonnet, with reset countdowns, color-coded 80/90) from
+Anthropic's `oauth/usage` endpoint, **plus** accurate local token usage by model and dev-team activity.
+
+```
+/claude-dev-team:menubar install     # build + auto-start at login + launch (look for the ▓ icon)
+!~/.claude/bin/cdt-menubar status     # one-shot terminal readout, no GUI
+```
+
+Requires macOS + the Swift toolchain (`xcode-select --install`); first launch shows a one-time Keychain
+approval (**Always Allow**). The subscription %s use an **undocumented** endpoint (the same one Claude
+Code calls) and may change — it **fails soft**, and your local token data always works. `cdt-menubar
+uninstall` removes the login item + binary.
 
 ## Configuration
 

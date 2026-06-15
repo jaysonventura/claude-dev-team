@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.3.0] — 2026-06-15
+### Added
+- **macOS menu bar usage monitor** (native Swift, in `menubar/`). Shows your real Claude Max
+  subscription usage (session %, weekly %, Sonnet %, reset countdowns — from the `oauth/usage`
+  endpoint) **plus** accurate local token usage by model and dev-team activity. `/claude-dev-team:menubar`
+  builds it, enables auto-start (LaunchAgent), and launches it; `cdt-menubar status` is a no-GUI readout.
+  Fail-soft: if the (undocumented) subscription endpoint is unavailable, local data still shows.
+
 ## [1.2.1] — 2026-06-15
 ### Changed
 - Analytics framing: "cost" means **token / rate-limit budget** (Claude subscription session + weekly
