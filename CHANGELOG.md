@@ -8,6 +8,9 @@ All notable changes to claude-dev-team. Versions follow semver.
   display: an **Enabled** toggle (enable/disable CDT) plus **Eco mode**, **Effort**, and **Model**
   submenus (current value checkmarked). Each selection runs `cdt-config` and the menu refreshes in place.
   effort/model apply next session, as before.
+### Changed
+- **Eco mode now defaults to `off`** (was `auto`) — full quality by default; opt in with
+  `cdt-config eco on|auto`. Keeps Opus/quality the default and only conserves when you choose to.
 
 ## [1.11.4] — 2026-06-15
 ### Added

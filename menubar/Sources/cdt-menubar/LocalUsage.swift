@@ -74,7 +74,7 @@ struct CDTConfig {
     var enabled = true
     var effort = "—"
     var model = "—"          // raw, e.g. "claude-opus-4-8"
-    var eco = "auto"
+    var eco = "off"          // off by default — opt in with cdt-config eco on|auto
 }
 
 func readCDTConfig() -> CDTConfig {

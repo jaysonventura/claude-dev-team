@@ -167,12 +167,13 @@ Do **not** invent token figures; Claude Code's `/cost` / `/usage` is the authori
     orchestration, architecture, development, testing, review, security, or debugging. Use `fast-ops`
     only when a sub-task needs *zero* judgment; it escalates the instant it doesn't. **When in doubt,
     never Haiku** — use Opus/Sonnet.
-- **Budget-aware Eco mode:** before a **T2+** dispatch, check the budget — run `~/.claude/bin/cdt-budget`
-  (eco is `auto` by default; `cdt-config eco on|off|auto`). If it returns **CONSERVE** (or eco is `on`),
-  conserve: prefer Sonnet over Opus for builders, drop to the smallest *safe* tier, and skip optional /
-  non-critical agents — then **tell the user** you're conserving and why ("ECO: weekly 84% — Sonnet, T2
-  not T3"). **Eco never weakens the risk floor** (auth/payments/infra/migrations/secrets keep the full
-  mandate) and **never skips the security review**. It also never uses Haiku for real work.
+- **Budget-aware Eco mode (opt-in; OFF by default):** eco is **off** unless the user enables it
+  (`cdt-config eco on|auto`). When **off**, do nothing here — full quality. When **on**, always conserve;
+  when **auto**, before a **T2+** dispatch run `~/.claude/bin/cdt-budget` and conserve only if it returns
+  **CONSERVE**. Conserving = prefer Sonnet over Opus for builders, drop to the smallest *safe* tier, skip
+  optional / non-critical agents — then **tell the user** why ("ECO: weekly 84% — Sonnet, T2 not T3").
+  **Eco never weakens the risk floor** (auth/payments/infra/migrations/secrets keep the full mandate),
+  **never skips the security review**, and never uses Haiku for real work.
 - **Tier-gating is the default** — most tasks are T0/T1 and need no team.
 - **Contracts cap tokens** — exclusive scope + read-list + ≤150-word reports keep agents from reading
   the whole repo or rambling.

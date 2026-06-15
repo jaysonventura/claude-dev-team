@@ -511,18 +511,19 @@ apply next session. The **macOS menu bar dropdown** also lets you change all of 
 **Budget-aware Eco mode + status line** (also via `cdt-config`):
 
 ```
-~/.claude/bin/cdt-config eco auto         # conserve when weekly usage is high (on | off | auto)
+~/.claude/bin/cdt-config eco auto         # opt in to conserve when weekly usage is high (default: off)
 ~/.claude/bin/cdt-config statusline on    # terminal status line: CDT on · Opus · xhigh · 41% wk
 ~/.claude/bin/cdt-doctor                  # health-check the whole install
 ~/.claude/bin/cdt-budget                  # current usage % + Eco recommendation
 ~/.claude/bin/cdt-learn "<lesson>"        # teach the vault a durable lesson
 ```
 
-With **Eco = auto**, before a T2+ dispatch the orchestrator checks `cdt-budget`; if your weekly usage is
-high it **conserves** — prefers Sonnet, the smallest safe tier, and skips optional agents — and tells you
-why. **Eco never weakens the risk floor or skips the security review**, and never uses Haiku for real
-work. Usage data is supplied automatically by the **macOS menu bar** (it caches each fetch); on
-**Linux/Windows**, enable the cross-platform **status line** (`cdt-config statusline on`) to feed it.
+Eco is **off by default** (full quality). Opt in with `cdt-config eco on` (always conserve) or
+`eco auto` (conserve only when your weekly usage is high). When conserving, the orchestrator prefers
+Sonnet, the smallest safe tier, and skips optional agents — and tells you why. **Eco never weakens the
+risk floor or skips the security review**, and never uses Haiku for real work. Usage data is supplied
+automatically by the **macOS menu bar** (it caches each fetch); on **Linux/Windows**, enable the
+cross-platform **status line** (`cdt-config statusline on`) to feed it.
 
 ## Security & privacy
 

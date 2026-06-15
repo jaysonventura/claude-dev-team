@@ -77,13 +77,13 @@ statusline_state() {
 }
 
 show() {
-  local en eco; en="$(get_env CDT_ENABLED)"; [ -z "$en" ] && en="1"; eco="$(get_env CDT_ECO)"; [ -z "$eco" ] && eco="auto"
+  local en eco; en="$(get_env CDT_ENABLED)"; [ -z "$en" ] && en="1"; eco="$(get_env CDT_ECO)"; [ -z "$eco" ] && eco="off"
   local eff mdl; eff="$(get_setting effortLevel)"; mdl="$(get_setting model)"
   echo "claude-dev-team config:"
   echo "  status    : $([ "$en" = "0" ] && echo DISABLED || echo enabled)"
   echo "  effort    : ${eff:-(unset)}   (default $DEFAULT_EFFORT)"
   echo "  model     : ${mdl:-(unset → Claude Code default)}   (recommended $DEFAULT_MODEL = Opus 4.8)"
-  echo "  eco       : $eco   (auto = conserve when weekly usage is high; on | off | auto)"
+  echo "  eco       : $eco   (default off; auto = conserve when weekly usage is high; on | off | auto)"
   echo "  statusline: $(statusline_state)   (terminal status line)"
   echo "  effort/model apply on the next session (restart Claude Code). Toggle CDT: cdt-config on|off"
 }
@@ -142,10 +142,10 @@ PY
       *) echo "cdt-config: usage: cdt-config statusline on|off" ;;
     esac ;;
   reset)
-    set_env CDT_ENABLED 1; set_env CDT_ECO auto
+    set_env CDT_ENABLED 1; set_env CDT_ECO off
     set_setting effortLevel "$DEFAULT_EFFORT"
     set_setting model "$DEFAULT_MODEL"
-    echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=auto)." ;;
+    echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off)." ;;
   *) echo "usage: cdt-config {show|on|off|effort <lvl>|model <m>|eco <on|off|auto>|statusline <on|off>|reset}"; exit 0 ;;
 esac
 exit 0
