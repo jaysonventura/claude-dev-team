@@ -687,9 +687,12 @@ docs/             architecture.md, examples.md, roadmap.md
 **Near-term:** more agents (`pm`, `technical-writer`, `ml-engineer`); a measured roster expansion (SRE,
 accessibility, performance auditor); media/writing skills; an opt-in Eco mode; richer cost attribution.
 
-**The bigger arc** — evolving into a *learning agent network*: an autonomous Git/CI/PR loop, semantic
-(RAG) memory, history-driven adaptive routing, and (opt-in, research) bounded swarms + federation. The
-full phased plan, with fit/risk/cost per phase, lives in **[`docs/roadmap.md`](docs/roadmap.md)**.
+**The bigger arc** — two layered tracks. A *learning* track (autonomous Git/CI/PR loop, semantic RAG
+memory, history-driven adaptive routing) and a *scaling* track that adds **opt-in, gated** parallelism on
+Claude Code's official primitives: **worktree-isolated parallel builders**, **agent-team Bug Council**
+(a debating council, not parallel monologues), and a **dynamic-workflow "Scale mode"** for repo-wide
+audits/migrations — each summoned, capped, and measured by the per-agent token telemetry, never the
+default. The full phased plan, with fit/risk/cost per phase, lives in **[`docs/roadmap.md`](docs/roadmap.md)**.
 
 **Contributing:** see **[`CONTRIBUTING.md`](CONTRIBUTING.md)**. To add an agent, drop a markdown file in
 `agents/`; to add a skill, a folder + `SKILL.md` in `skills/`. Run `bash scripts/validate.sh` before a
