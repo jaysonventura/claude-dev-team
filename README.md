@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.5.2-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.5.3-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -465,14 +465,21 @@ agents/           10 core role agents + 5 Bug Council agents (flat)
 skills/           orchestration (brain) + 7 quality skills
 commands/         ship, triage, bug-council, stats, notify-setup, menubar
 hooks/            hooks.json + scripts (vault/db/format/notify/setup/stats/guard) + vault-template
-docs/             architecture.md, examples.md
+docs/             architecture.md, examples.md, roadmap.md
 ```
 
 ## Roadmap & contributing
 
-More agents (`pm`, `technical-writer`, `ml-engineer`); a measured roster expansion (SRE, accessibility,
-performance auditor); media/writing skills; an opt-in Eco mode; richer cost attribution. To add an
-agent, drop a markdown file in `agents/`; to add a skill, a folder + `SKILL.md` in `skills/`. PRs welcome.
+**Near-term:** more agents (`pm`, `technical-writer`, `ml-engineer`); a measured roster expansion (SRE,
+accessibility, performance auditor); media/writing skills; an opt-in Eco mode; richer cost attribution.
+
+**The bigger arc** — evolving into a *learning agent network*: an autonomous Git/CI/PR loop, semantic
+(RAG) memory, history-driven adaptive routing, and (opt-in, research) bounded swarms + federation. The
+full phased plan, with fit/risk/cost per phase, lives in **[`docs/roadmap.md`](docs/roadmap.md)**.
+
+**Contributing:** see **[`CONTRIBUTING.md`](CONTRIBUTING.md)**. To add an agent, drop a markdown file in
+`agents/`; to add a skill, a folder + `SKILL.md` in `skills/`. Run `bash scripts/validate.sh` before a
+PR. PRs welcome.
 
 ## License
 

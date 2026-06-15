@@ -2,6 +2,12 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.5.3] — 2026-06-15
+### Docs
+- Added **`docs/roadmap.md`** — the phased plan toward a *learning agent network* (autonomous Git/CI/PR
+  loop, semantic/RAG memory, adaptive routing, opt-in bounded swarms, federation research), with explicit
+  fit/risk/cost notes per phase and the principles that constrain it. Linked from the README.
+
 ## [1.5.2] — 2026-06-15
 ### Docs
 - **README polish pass** — added a Table of Contents, a **Troubleshooting** table, a **Security &
