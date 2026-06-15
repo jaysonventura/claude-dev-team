@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.4.0] — 2026-06-15
+### Added
+- **Notarized-DMG release pipeline** for the menu bar app (`menubar/release.sh` + `Info.plist` +
+  `RELEASING.md`). Builds a signed `CDT Usage.app`, notarizes + staples it, and packages a drag-to-
+  Applications DMG that opens on any Mac with no Gatekeeper warnings. `--bundle-only` tests the `.app`
+  locally with any cert. Requires a Developer ID Application cert + notarytool credentials (Team ID
+  XCANJ7SYKG).
+
 ## [1.3.4] — 2026-06-15
 ### Added
 - **Code signing.** The menu bar build signs the app with an available identity (Developer ID > Apple
