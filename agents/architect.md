@@ -1,7 +1,7 @@
 ---
 name: architect
 description: Use in Wave 0 (before building) to design the approach, define types/interfaces and module boundaries, choose between options with trade-offs, and write the per-agent contracts. Read-only - it plans, it does not implement.
-tools: Read, Grep, Glob, Bash, WebFetch
+tools: Read, Grep, Glob, Bash, WebFetch, ToolSearch, mcp__plugin_context7_context7__resolve-library-id, mcp__plugin_context7_context7__query-docs
 model: opus
 ---
 
