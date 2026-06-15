@@ -78,10 +78,19 @@ final class UsageStore {
         if let sub = sub {
             snapshot.subscription = sub
             snapshot.subscriptionError = nil
+            writeUsageCache(session: sub.sessionPct, weekly: sub.weeklyPct)   // keep Eco mode's data fresh
         } else {
             snapshot.subscriptionError = error
         }
         snapshot.lastUpdated = Date()
         controller.render(snapshot)
+    }
+
+    /// Persist the latest usage % to ~/.claude/.cdt-usage.json so `cdt-budget` / Eco mode work on macOS
+    /// without needing the status line enabled (the status line writes the same file cross-platform).
+    private func writeUsageCache(session: Int, weekly: Int) {
+        let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/.cdt-usage.json")
+        let json = "{\"session\":\(session),\"weekly\":\(weekly),\"ts\":\(Int(Date().timeIntervalSince1970))}"
+        try? json.data(using: .utf8)?.write(to: url)
     }
 }

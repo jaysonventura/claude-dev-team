@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.11.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.11.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -23,7 +23,7 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - [What you get](#what-you-get) · [Why](#why)
 - [Architecture](#architecture) · [Execution model](#execution-model) · [Triage & tiers](#triage--tiers)
 - [The team](#the-team) · [Skills](#skills) · [Commands](#commands)
-- [Installation](#installation) · [Notifications (Discord + Telegram)](#notifications-discord--telegram)
+- [Installation](#installation) · [Requirements](#requirements) · [Notifications (Discord + Telegram)](#notifications-discord--telegram)
 - [Usage examples](#usage-examples) · [Autonomy & debugging](#autonomy--debugging) · [State & cost analytics](#state--cost-analytics) · [Memory & recall](#memory--recall)
 - [Menu bar usage monitor (macOS)](#menu-bar-usage-monitor-macos) · [Configuration](#configuration)
 - [Security & privacy](#security--privacy) · [Troubleshooting](#troubleshooting) · [How to review / audit](#how-to-review--audit)
@@ -201,11 +201,33 @@ session; the bare `/command` form won't match).
 
 ## Installation
 
-**Prerequisites:** Claude Code **≥ 2.1.143** (needed for dependencies to auto-**enable**, not just
-install; on 2.1.110–2.1.142 the companions install but you may need to enable them once); `git`;
-**Python 3** (for `recall`/`advise`/`config`); macOS / Linux / **Windows** (see below); and the official
-marketplace registered (it ships by default — if not,
-`claude plugin marketplace add anthropics/claude-plugins-official`).
+### Requirements
+
+**Claude Code ≥ 2.1.143** (so dependencies auto-*enable*, not just install; on 2.1.110–2.1.142 the
+companions install but you may need to enable them once). The official marketplace must be registered (it
+ships by default — else `claude plugin marketplace add anthropics/claude-plugins-official`).
+
+**System tools** — run **`~/.claude/bin/cdt-deps`** to check what's present, **`cdt-deps --install`** to
+install the missing ones via your package manager:
+
+| Tool | Required? | Used for | macOS | Debian/Ubuntu | Windows |
+|------|-----------|----------|-------|---------------|---------|
+| **python3** | **required** | recall, advise, config, status line, analytics | `brew install python3` | `apt install python3` | python.org · `winget install Python.Python.3.12` |
+| **git** | **required** | install, autopilot, version ops | `brew install git` | `apt install git` | gitforwindows.org · `winget install Git.Git` |
+| **bash** | **required** | runs the hooks & `cdt-*` CLIs | preinstalled | preinstalled | **Git for Windows** (Git Bash) |
+| **curl** | recommended | Discord / Telegram notifications | preinstalled | `apt install curl` | Git Bash |
+| **sqlite3** (CLI) | optional | analytics CLI — *python3 fallback exists* | `brew install sqlite` | `apt install sqlite3` | `winget install SQLite.SQLite` |
+| **gh** | optional | PR autopilot | `brew install gh` | `apt install gh` | `winget install GitHub.cli` |
+| **swift** (Xcode) | optional | the macOS menu bar app only | `xcode-select --install` | — | — |
+
+**No Python packages to install** — every script uses the **python3 standard library only** (`json`,
+`sqlite3`, `re`, …). There is no `pip install` step.
+
+**Companion plugins auto-install** with claude-dev-team (declared as manifest `dependencies`):
+`superpowers`, `code-review`, `frontend-design`, `context7` (`figma` is optional).
+
+**Platforms:** macOS · Linux · **Windows** (see [Windows & Linux](#windows--linux)). The **menu bar is
+macOS-only**; elsewhere use the cross-platform status line.
 
 **Install this plugin** — the companions (`superpowers`, `code-review`, `frontend-design`, `context7`)
 **auto-install** as dependencies:
@@ -219,11 +241,9 @@ the CLI, the VS Code & JetBrains extensions, and the Claude desktop app all shar
 skills, commands, hooks, and the orchestration `CLAUDE.md`). Non–Claude-Code agents (e.g. Google
 Antigravity) run a different engine and won't load it.
 
-**Prerequisites:** the **companion plugins auto-install** with the command above (they're declared as
-manifest `dependencies`), and the scripts use **only python3 stdlib — no pip packages**. For the system
-tools (python3, git, curl, optional sqlite3/gh), run **`/claude-dev-team:doctor`** to check or
-**`~/.claude/bin/cdt-deps --install`** to install the missing ones via your package manager (brew / apt /
-dnf / winget / …). If python3 is missing, the first session prints a one-line reminder.
+**Set up the system tools** (see [Requirements](#requirements)): run **`/claude-dev-team:doctor`** to check
+or **`~/.claude/bin/cdt-deps --install`** to install any missing ones. If python3 is missing, the first
+session prints a one-line reminder.
 
 **After install → just prompt (zero config).** Restart your Claude Code session (or `/reload-plugins`)
 once so it loads. From then on, describe any task normally — the `orchestration` skill auto-triggers,
@@ -499,8 +519,8 @@ apply next session. The menu bar dropdown shows the current mode (`on · xhigh �
 With **Eco = auto**, before a T2+ dispatch the orchestrator checks `cdt-budget`; if your weekly usage is
 high it **conserves** — prefers Sonnet, the smallest safe tier, and skips optional agents — and tells you
 why. **Eco never weakens the risk floor or skips the security review**, and never uses Haiku for real
-work. Usage data comes from the **status line** (cross-platform, enable with `cdt-config statusline on`)
-or the macOS menu bar. The **status line** also works great on Linux/Windows where there's no menu bar.
+work. Usage data is supplied automatically by the **macOS menu bar** (it caches each fetch); on
+**Linux/Windows**, enable the cross-platform **status line** (`cdt-config statusline on`) to feed it.
 
 ## Security & privacy
 

@@ -2,6 +2,15 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.11.1] — 2026-06-15
+### Changed
+- **Documentation:** a single, complete **Requirements** section — a per-OS table of every system tool
+  (required vs optional), the "no pip packages — python3 stdlib only" note, and the auto-installed
+  companion plugins. Added to the table of contents.
+- **Eco mode works on macOS out of the box:** the menu bar app now caches each usage fetch to
+  `~/.claude/.cdt-usage.json`, so `cdt-budget`/Eco have fresh data without the status line (Windows/Linux
+  still use the status line). Verified end-to-end on macOS.
+
 ## [1.11.0] — 2026-06-15
 ### Added
 - **Prerequisite installer (`cdt-deps` + `/claude-dev-team:deps`)** — checks the system tools CDT uses
