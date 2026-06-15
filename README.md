@@ -170,11 +170,17 @@ registered (it ships by default — if not, `claude plugin marketplace add anthr
 claude plugin marketplace add jaysonventura/claude-dev-team
 claude plugin install claude-dev-team
 ```
-On first session the plugin bootstraps `~/.claude/vault/`, the SQLite DB, and the `~/.claude/bin/`
-CLIs, and injects your vault learnings. The `orchestration` skill auto-triggers on software tasks.
+Install **auto-enables** the plugin (and its companions) — no manual enable step.
 
-**Power-user (always-on) layer:** drop the `orchestration` summary into your global `~/.claude/CLAUDE.md`
-so the orchestrator behavior is guaranteed in **every** session (see `docs/architecture.md`).
+**After install → just prompt (zero config).** Restart your Claude Code session (or `/reload-plugins`)
+once so it loads. From then on, describe any task normally — the `orchestration` skill auto-triggers,
+the SessionStart hook bootstraps `~/.claude/vault/` + the SQLite DB + the `~/.claude/bin/` CLIs, skills
+auto-apply, and `/ship` `/triage` `/bug-council` `/stats` are available. Nothing else to set up.
+
+- **Notifications are optional** — run `/notify-setup` only if you want Discord/Telegram pushes.
+- **Power-user (guaranteed every session):** installers get orchestration via the auto-triggering skill
+  + hook. For a hard always-on guarantee, drop the `orchestration` summary into your global
+  `~/.claude/CLAUDE.md` (see `docs/architecture.md`). Most users don't need this.
 
 ---
 
