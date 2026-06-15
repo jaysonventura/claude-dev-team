@@ -15,6 +15,8 @@ ENV_FILE="$HOME/.claude/claude-dev-team.env"
 mkdir -p "$HOME/.claude" 2>/dev/null
 [ -f "$ENV_FILE" ] || { : > "$ENV_FILE"; }
 chmod 600 "$ENV_FILE" 2>/dev/null
+# Seed a sane default verbosity on first touch so --show is never blank.
+grep -q '^CDT_NOTIFY_LEVEL=' "$ENV_FILE" 2>/dev/null || printf 'CDT_NOTIFY_LEVEL=milestones\n' >> "$ENV_FILE"
 
 # Upsert KEY=VALUE in the env file.
 set_var() {
@@ -57,8 +59,6 @@ esac
 echo "=== claude-dev-team notifier setup ==="
 echo "1) Discord   2) Telegram   3) Both   4) Off"
 printf "Choose [1-4]: "; read -r choice
-[ -z "${CDT_NOTIFY_LEVEL_SET:-}" ] && set_var CDT_NOTIFY_LEVEL "$(get_var CDT_NOTIFY_LEVEL || echo milestones)"
-[ -z "$(get_var CDT_NOTIFY_LEVEL)" ] && set_var CDT_NOTIFY_LEVEL "milestones"
 
 case "$choice" in
   1|3)
