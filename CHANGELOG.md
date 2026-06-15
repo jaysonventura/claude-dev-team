@@ -2,6 +2,20 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.18.0] — 2026-06-15
+### Security / hardening (full agent-system audit)
+- **Least-privilege tools** — the 7 builders (`backend/frontend/mobile/data/devops/qa/diagrams`) now
+  declare an explicit `tools:` allowlist (`Read, Grep, Glob, Bash, Write, Edit`) instead of inheriting
+  **all tools**. They can no longer spawn subagents (`Task`/`Agent` → cost runaway), `WebFetch`, or
+  `NotebookEdit` — only the orchestrator fans out.
+- **Anti-hallucination block** added to the 7 agents that lacked it (5 Bug Council + `ui-ux-engineer` +
+  `security-reviewer`): ground every claim in real files/output, never fake "done/passing".
+- **No same-file collisions** — the contract rule now forbids two agents on the same *file* in one wave
+  (e.g. `technical-writer` + `diagrams` on one `.md` run sequentially).
+- `ui-ux-engineer` Wave 2 review is now **strictly read-only** (writes only during Wave 0 design).
+- `security-reviewer` gains **context7 + WebFetch** to verify CVEs / library security during review.
+- `qa-engineer` notes that hard diagnosis warrants Opus / the Bug Council.
+
 ## [1.17.1] — 2026-06-15
 ### Docs
 - **README installation overhaul** — a guide-style, production-grade flow: **Step 1 (install, all

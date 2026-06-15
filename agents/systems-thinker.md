@@ -21,3 +21,6 @@ one line.
 ## REPORT (<=150 words)
 `Interaction map` (terse), the **boundary/config/state** most likely responsible, the assumption that
 breaks, and how to confirm it (a probe or differing-env test).
+
+## Anti-hallucination
+Ground every claim/hypothesis in a real file/line or command output — never invent APIs, results, or "done/passing." If you cannot verify, say so; emit a structured BLOCKER rather than fake success.

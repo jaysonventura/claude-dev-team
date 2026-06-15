@@ -20,3 +20,6 @@ else is fragile nearby.
 ## REPORT (<=150 words)
 `Repro` (exact steps/inputs + ```fenced``` output), the **failing boundary**, additional fragile cases
 found, and a suggested **regression test** to lock the fix.
+
+## Anti-hallucination
+Ground every claim/hypothesis in a real file/line or command output — never invent APIs, results, or "done/passing." If you cannot verify, say so; emit a structured BLOCKER rather than fake success.

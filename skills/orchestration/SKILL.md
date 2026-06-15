@@ -43,7 +43,9 @@ critical work (raises model + gates only; does not change effort or engine).
 
 Never dispatch a vague task. Each agent gets a 6-part contract:
 1. **Types & signatures** — the exact interfaces/shapes to produce or consume.
-2. **EXCLUSIVE file ownership** — the files this agent may write. **No two agents share a path.**
+2. **EXCLUSIVE file ownership** — the files this agent may write. **No two agents share a path** — and
+   **never two agents on the same *file* in one wave**. (E.g. if a single `.md` needs both prose and a
+   diagram, run `technical-writer` then `diagrams` **sequentially**, not in parallel.)
 3. **Files you may READ** — context, read-only.
 4. **DONE WHEN** — a *verifiable* condition (a command that passes, a test that goes green).
 5. **DO NOT** — explicit guardrails (don't touch X, don't add deps, don't change the schema…).
