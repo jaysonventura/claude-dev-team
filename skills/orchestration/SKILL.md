@@ -60,7 +60,8 @@ Dispatch agents for a wave in **one message with multiple Agent tool calls** so 
   the review's scope check.
 - **Wave 1 — build (exclusive file scope):** the engineers needed — `backend-engineer`,
   `frontend-engineer`, `mobile-engineer`, `data-engineer`, `devops-engineer`, `qa-engineer` — each on
-  disjoint paths.
+  disjoint paths. Add **`technical-writer`** (owns `docs/*` prose, README/CHANGELOG) when the change is
+  user-facing or needs docs/release notes — it runs in parallel on its own paths.
 - **Quality-gate chain (10):** `1 fmt · 2 lint · 3 typecheck · 4 unit · 5 integration · 6 e2e · 7 build ·
   8 smoke · 9 review · 10 close`. Run what the project supports; skip absent gates explicitly (say so).
   **e2e is required when the change is user-facing** (web UI / mobile / an API flow) and the project has
@@ -203,6 +204,7 @@ come from the auto-installed companions. Don't make the user request them.
 | When the work is… | Auto-invoke |
 |---|---|
 | A vague / user-facing **feature request** | `product-manager` (Wave 0) — requirements + acceptance criteria — then `superpowers:brainstorming` |
+| **Docs / release notes / CHANGELOG / PR description / ADR** | `technical-writer` + the `technical-writing` skill |
 | Web UI / components / styling | `ui-ux-engineer` (UX/design + a11y) with `web-design-guidelines` → `ui-ux-pro-max` (+ `frontend-design`); `frontend-engineer` builds |
 | Mobile UI | `ui-ux-engineer` + `ui-ux-pro-max` + platform conventions; `mobile-engineer` builds |
 | TypeScript / JavaScript | `clean-code-typescript` |

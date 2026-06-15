@@ -2,6 +2,15 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.17.0] — 2026-06-15
+### Added
+- **`technical-writer` agent + `technical-writing` skill** — a docs specialist for user-facing
+  documentation (README, guides, **release notes**, **CHANGELOG**, **ADRs**, **PR descriptions**). Owns
+  `docs/*` prose (not diagram blocks); grounds every claim in real code/output; keeps docs↔reality in
+  sync. Wired into Wave 1 (parallel, for user-facing changes) + SKILL routing. Roster is now **14 core
+  agents**; **8 quality skills**. (Closes the 'writer' gap vs. the reference architecture; media/video
+  intentionally skipped as off-mission.)
+
 ## [1.16.0] — 2026-06-15
 ### Changed
 - **Notifications now report the cost of *that task*, not cumulative budget.** The Discord/Telegram

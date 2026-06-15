@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.16.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.17.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -38,16 +38,16 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - **Tiered triage (T0–T3)** — trivial edits run solo; features escalate to a parallel team.
 - **Contract-driven dispatch** — every agent gets exclusive file ownership, a read-list, a verifiable
   done-condition, guardrails, and a ≤150-word structured report. (This is the anti-hallucination engine.)
-- **13 role agents** (product-manager → architect → ui-ux-engineer → builders → reviewers, incl. a Haiku
-  `fast-ops` tier) + a gated **5-agent Bug Council** for stuck bugs.
+- **14 role agents** (product-manager → architect → ui-ux-engineer → builders → technical-writer →
+  reviewers, incl. a Haiku `fast-ops` tier) + a gated **5-agent Bug Council** for stuck bugs.
 - **10-gate quality chain** (incl. **e2e** for user-facing flows) + a bounded **Task Loop** (iterate to
   green, anti-abandonment, capped, then notify).
 - **Completion mandate** (tier-scaled) — simplify, review, reuse-audit, dead-code scan, learn, ship.
 - **SQLite cost analytics** (`/cdt:stats`) so you can see and tune spend on Max.
 - **Discord / Telegram notifications** for every milestone — delivered, deferred, blocker, ship.
 - **A markdown vault** for durable memory (learnings, ADRs, session logs).
-- **7 quality skills** (karpathy guidelines, clean TS, code-splitting, gauge-improvements, RCA, web
-  design, ui/ux pro-max) plus first-class reuse of the official `superpowers`, `code-review`,
+- **8 quality skills** (karpathy guidelines, clean TS, code-splitting, gauge-improvements, RCA, web
+  design, ui/ux pro-max, technical-writing) plus first-class reuse of the official `superpowers`, `code-review`,
   `frontend-design`, `figma`, and `context7` plugins.
 
 ---
@@ -131,7 +131,7 @@ Orchestrator, specialists, and skills (Diagram D):
 ```mermaid
 flowchart LR
     O(("Orchestrator")) --> RES["product-manager / architect / ui-ux-engineer / Explore"]
-    O --> BUILD["backend / frontend / mobile / data / devops / qa"]
+    O --> BUILD["backend / frontend / mobile / data / devops / qa / writer"]
     O --> REV["code-reviewer / security-reviewer / ui-ux-engineer"]
     O -.->|"stuck bug"| BC["Bug Council x5"]
     O --> SK["skills: karpathy, clean-ts, code-splitting,<br/>gauge, rca, web-design, ui-ux"]
@@ -151,6 +151,7 @@ flowchart LR
 | `devops-engineer` | inherit | CI/CD, Docker, infra (`ci/* infra/*`) |
 | `diagrams` | inherit | mermaid / figma visuals |
 | `data-engineer` | inherit | schema, migrations, queries (`db/*`) |
+| `technical-writer` | inherit | user-facing docs — README/guides/release notes/ADRs (`docs/*` prose) |
 | **Bug Council** (gated ×5) | inherit | root-cause-analyst · code-archaeologist · pattern-matcher · systems-thinker · adversarial-tester |
 | `fast-ops` | **Haiku** | the cheap "hands" tier — trivial mechanical ops **only** (gather, literal find/replace, rename, template fill); **never** dev/test/review/security |
 
@@ -174,6 +175,7 @@ a task needs judgment. Run Sonnet for routine work; **Opus** (or `FULL:`) for an
 | `root-cause-analysis` | debug to the cause, not the symptom |
 | `web-design-guidelines` | UI fundamentals + a11y |
 | `ui-ux-pro-max` | polish, motion, micro-interactions |
+| `technical-writing` | accurate, scannable, current docs — READMEs, guides, release notes, ADRs |
 
 Reused official plugins: `superpowers`, `code-review`, `frontend-design`, `context7` — these
 **auto-install as dependencies** when you install claude-dev-team (see Installation). `figma` is optional.
@@ -619,8 +621,8 @@ step 1 you're back to stock Claude Code.
 
 ```
 .claude-plugin/   plugin.json, marketplace.json
-agents/           13 core role agents (incl. product-manager, ui-ux-engineer, Haiku fast-ops) + 5 Bug Council agents (flat)
-skills/           orchestration (brain) + 7 quality skills
+agents/           14 core role agents (incl. product-manager, ui-ux-engineer, technical-writer, Haiku fast-ops) + 5 Bug Council agents (flat)
+skills/           orchestration (brain) + 8 skills (quality, design, debug, technical-writing)
 commands/         ship, triage, bug-council, autopilot, stats, notify-setup, menubar, recall, advise, config, doctor, budget, learn, deps
 hooks/            hooks.json + scripts (vault/db/recall/advise/pr/config/doctor/learn/budget/statusline/deps/format/notify/setup/stats/guard) + vault-template
 docs/             architecture.md, examples.md, roadmap.md
