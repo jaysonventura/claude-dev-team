@@ -51,9 +51,11 @@ opt-in, dry-run-able, and never force-push without confirmation. **Cost:** bound
 
 **Goal:** turn the vault from "dump 4 KB of markdown every session" into *retrieve what's relevant*.
 
-- Embed `vault/learnings.md` + ADRs + (optionally) the repo into a local vector index.
-- At SessionStart / per task, retrieve **top-k relevant** learnings instead of the whole file.
-- Persistent task queue so long-running/deferred work survives session boundaries.
+- ✅ **Shipped (v1.6.0) — lexical recall first cut:** `cdt-recall "<task>"` ranks learnings by term
+  overlap (pure stdlib, no deps) and returns only the top matches; SessionStart now injects just the most
+  recent lessons + a recall pointer; the orchestration skill recalls on T2+.
+- ⏳ **Next:** optional local embeddings for semantic (not just lexical) matching, extend recall over
+  `sessions/` + ADRs + the repo, and a persistent task queue so deferred work survives session boundaries.
 
 **Fit:** strictly improves memory quality *and* cost (smaller, sharper context). **Risk:** keep it
 local + optional (no cloud embedding service required); fall back to today's markdown if unavailable.

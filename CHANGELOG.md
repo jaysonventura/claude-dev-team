@@ -2,6 +2,15 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.6.0] — 2026-06-15
+### Added
+- **Targeted memory recall (`cdt-recall`)** — roadmap **Phase 2, first cut**. Instead of dumping the
+  whole learnings file, the orchestrator retrieves only the lessons relevant to the current task via a
+  lexically-ranked recall (pure stdlib — **no embedding model or network**). New `/claude-dev-team:recall`
+  command; the orchestration skill now recalls relevant memory on T2+; the SessionStart hook injects only
+  the most recent lessons + a recall pointer. Net effect: **context stays lean and sharp as the vault
+  grows** (cost-effective memory that scales).
+
 ## [1.5.3] — 2026-06-15
 ### Docs
 - Added **`docs/roadmap.md`** — the phased plan toward a *learning agent network* (autonomous Git/CI/PR

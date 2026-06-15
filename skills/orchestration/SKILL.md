@@ -20,8 +20,9 @@ Score the request: `complexity = files + domains + keyword + risk`.
 - **files**: how many files likely change. **domains**: api / ui / mobile / data / infra / docs.
 - **risk override (hard):** if the task touches **auth, payments, infra, migrations, or secrets**,
   force tier **T2 or higher** regardless of size, and run the FULL completion mandate.
-- On **T2+**, read the vault first: `~/.claude/vault/learnings.md` and the project `README` (avoid
-  repeating past mistakes; reuse known patterns).
+- On **T2+**, recall relevant memory first: run `~/.claude/bin/cdt-recall "<task description>"` to pull
+  only the lessons relevant to *this* task (cheaper and sharper than re-reading the whole file), and skim
+  the project `README` (avoid repeating past mistakes; reuse known patterns).
 
 Pick a tier:
 

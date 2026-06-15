@@ -55,6 +55,15 @@ pasting output. Library/API questions -> context7 first. Report milestones via
 
 All hooks are **fail-open** — any error exits 0 so they never interrupt your session.
 
+## Memory (vault + recall)
+
+Durable memory lives in `~/.claude/vault/` as plain markdown — `learnings.md` (curated lessons),
+`sessions/` (per-task notes), `adrs/`, `log.md`, `status-log.md`. The completion mandate appends a lesson
+after meaningful work. To keep context **cost-effective as the vault grows**, memory is *retrieved, not
+dumped*: SessionStart injects only the most recent lessons, and on T2+ the orchestrator runs
+`cdt-recall "<task>"` to pull just the lessons relevant to the current task (lexical ranking, pure stdlib —
+no embedding model or network). See `docs/roadmap.md` Phase 2 for the planned semantic upgrade.
+
 ## State DB schema
 
 `sessions(id,cwd,started,ended,tier,outcome)` · `tasks(session_id,description,tier,status,iterations,

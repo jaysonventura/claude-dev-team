@@ -23,6 +23,7 @@ cp "$HOOKS_DIR/stats.sh"  "$BIN/cdt-stats"    2>/dev/null && chmod +x "$BIN/cdt-
 cp "$HOOKS_DIR/task.sh"   "$BIN/cdt-task"     2>/dev/null && chmod +x "$BIN/cdt-task"   2>/dev/null
 cp "$HOOKS_DIR/db.sh"     "$BIN/cdt-db.sh"    2>/dev/null
 cp "$HOOKS_DIR/menubar-install.sh" "$BIN/cdt-menubar" 2>/dev/null && chmod +x "$BIN/cdt-menubar" 2>/dev/null
+cp "$HOOKS_DIR/recall.sh"  "$BIN/cdt-recall"   2>/dev/null && chmod +x "$BIN/cdt-recall"  2>/dev/null
 
 # Stage the menu bar Swift source to a stable, buildable location (source only — not .build).
 MENUBAR_SRC="$(cd "$HOOKS_DIR/.." 2>/dev/null && pwd)/menubar"
@@ -49,11 +50,13 @@ fi
 # 3) Initialize the state DB.
 [ -f "$BIN/cdt-db.sh" ] && . "$BIN/cdt-db.sh" 2>/dev/null && db_init 2>/dev/null
 
-# 4) Inject context: recent learnings (kept small to stay token-cheap).
+# 4) Inject context: only the most RECENT lessons (cheap + scales as the vault grows). For lessons
+#    relevant to a SPECIFIC task, the orchestrator runs `cdt-recall "<task>"` during triage instead of
+#    re-reading the whole file — targeted recall keeps context lean and cost-effective.
 echo "## claude-dev-team — vault learnings (operate as the tech-lead orchestrator)"
 if [ -f "$VAULT/learnings.md" ]; then
-  head -c 4000 "$VAULT/learnings.md" 2>/dev/null
+  grep '^- \[' "$VAULT/learnings.md" 2>/dev/null | tail -n 6
 fi
 echo
-echo "_Triage every task (T0–T3); delegate under contracts; gate; ship; persist. Report milestones via cdt-notify._"
+echo "_Triage every task (T0–T3); delegate under contracts; gate; ship; persist. For lessons relevant to a specific task, run \`~/.claude/bin/cdt-recall \"<task>\"\`. Report milestones via cdt-notify._"
 exit 0

@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.5.3-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.6.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -24,7 +24,7 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - [Architecture](#architecture) · [Execution model](#execution-model) · [Triage & tiers](#triage--tiers)
 - [The team](#the-team) · [Skills](#skills) · [Commands](#commands)
 - [Installation](#installation) · [Notifications (Discord + Telegram)](#notifications-discord--telegram)
-- [Usage examples](#usage-examples) · [Autonomy & debugging](#autonomy--debugging) · [State & cost analytics](#state--cost-analytics)
+- [Usage examples](#usage-examples) · [Autonomy & debugging](#autonomy--debugging) · [State & cost analytics](#state--cost-analytics) · [Memory & recall](#memory--recall)
 - [Menu bar usage monitor (macOS)](#menu-bar-usage-monitor-macos) · [Configuration](#configuration)
 - [Security & privacy](#security--privacy) · [Troubleshooting](#troubleshooting) · [How to review / audit](#how-to-review--audit)
 - [Uninstall](#uninstall) · [Project layout](#project-layout) · [Roadmap & contributing](#roadmap--contributing) · [License](#license)
@@ -180,6 +180,7 @@ session; the bare `/command` form won't match).
 | `/claude-dev-team:ship` | run the completion mandate on the current work and ship |
 | `/claude-dev-team:bug-council <symptom>` | convene the 5-agent diagnostic squad |
 | `/claude-dev-team:stats [today\|week\|all]` | cost & activity report from the state DB |
+| `/claude-dev-team:recall <task>` | recall the most relevant past lessons from the vault for a task |
 | `/claude-dev-team:notify-setup [...]` | configure Discord/Telegram (no manual `.env`) |
 | `/claude-dev-team:menubar [install\|status\|...]` | macOS menu bar usage monitor (subscription % + local tokens) |
 
@@ -355,6 +356,22 @@ iteration counts, and blocker rate. Activity/timing is precise. "Cost" here mean
 budget** (Claude subscription session + weekly limits, not money); for exact tokens used, see Claude
 Code's `/cost`.
 
+## Memory & recall
+
+The orchestrator keeps **durable memory** in a markdown vault (`~/.claude/vault/`): `learnings.md`
+(lessons), `sessions/` (per-task notes), `adrs/`, and `log.md` / `status-log.md`. The completion mandate
+appends a lesson after meaningful work, so it gets smarter over time.
+
+To stay **cost-effective as the vault grows**, memory is *retrieved, not dumped*: each session injects
+only the few most recent lessons, and for a specific task the orchestrator runs **targeted recall** —
+
+```
+~/.claude/bin/cdt-recall "<task or topic>"        # or: /claude-dev-team:recall <task>
+```
+
+— which lexically ranks the lessons and returns just the top matches (pure stdlib — **no embedding model
+or network**). Context stays lean and sharp no matter how large the vault grows.
+
 ## Menu bar usage monitor (macOS)
 
 A native Swift app (`menubar/`) puts your usage in the menu bar as a compact **`CDT`** badge with the
@@ -463,8 +480,8 @@ step 1 you're back to stock Claude Code.
 .claude-plugin/   plugin.json, marketplace.json
 agents/           10 core role agents + 5 Bug Council agents (flat)
 skills/           orchestration (brain) + 7 quality skills
-commands/         ship, triage, bug-council, stats, notify-setup, menubar
-hooks/            hooks.json + scripts (vault/db/format/notify/setup/stats/guard) + vault-template
+commands/         ship, triage, bug-council, stats, notify-setup, menubar, recall
+hooks/            hooks.json + scripts (vault/db/recall/format/notify/setup/stats/guard) + vault-template
 docs/             architecture.md, examples.md, roadmap.md
 ```
 
