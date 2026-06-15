@@ -38,7 +38,7 @@ Much of the "nervous system" vision already exists; the gaps below build *on* it
 
 **Goal:** extend the Task Loop from *local gates* to the *real VCS*.
 
-- ✅ **Shipped (v1.8.0) — `/claude-dev-team:autopilot <PR#> [--live]`:** a `gh`-driven loop (read CI →
+- ✅ **Shipped (v1.8.0) — `/cdt:autopilot <PR#> [--live]`:** a `gh`-driven loop (read CI →
   diagnose → focused fix → push → re-check, capped by `CDT_MAX_ITERATIONS`), merge-conflict resolution on
   the branch, and a `code-reviewer` + `security-reviewer` synthesis posted as a PR comment. Backed by a
   read-mostly wrapper (`cdt-pr`) whose only write is a comment. **Safe by design:** dry-run by default,

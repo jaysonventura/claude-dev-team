@@ -69,7 +69,7 @@ if [ "${1:-}" = "--install" ]; then
   fi
   echo "Installing via $PM:$missing"
   for p in $missing; do echo "  → $PMI $p"; $PMI $p; done
-  echo "Done. Re-run 'cdt-deps' to verify, then /claude-dev-team:doctor."
+  echo "Done. Re-run 'cdt-deps' to verify, then /cdt:doctor."
 else
   echo
   echo "Run 'cdt-deps --install' to install the missing required/recommended tools."

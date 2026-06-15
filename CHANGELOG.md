@@ -2,6 +2,13 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.15.0] — 2026-06-15
+### Changed
+- **Plugin renamed to `cdt`** — slash commands are now **`/cdt:*`** (e.g. `/cdt:ship`, `/cdt:doctor`,
+  `/cdt:autopilot`) instead of `/claude-dev-team:*`, matching the `cdt-*` CLIs. The marketplace / repo /
+  brand stays **claude-dev-team**; install with `claude plugin install cdt@claude-dev-team`. Existing
+  installs should reinstall under the new id (`claude plugin uninstall claude-dev-team` → install `cdt`).
+
 ## [1.14.0] — 2026-06-15
 ### Changed
 - **Notifications are now rich + detailed.** Discord uses a **colored embed** (green delivered / red
@@ -74,7 +81,7 @@ All notable changes to claude-dev-team. Versions follow semver.
 
 ## [1.11.0] — 2026-06-15
 ### Added
-- **Prerequisite installer (`cdt-deps` + `/claude-dev-team:deps`)** — checks the system tools CDT uses
+- **Prerequisite installer (`cdt-deps` + `/cdt:deps`)** — checks the system tools CDT uses
   (python3, git, curl, sqlite3, gh) and, with `--install`, installs the missing ones via the detected
   package manager (brew / apt / dnf / pacman / zypper / winget / choco / scoop). Companion **plugins**
   already auto-install via the manifest; scripts use **python3 stdlib only** (no pip packages). First
@@ -102,14 +109,14 @@ All notable changes to claude-dev-team. Versions follow semver.
 - **Status line** (`cdt-statusline` + `cdt-config statusline on`) — a terminal status line
   (`CDT on · Opus · xhigh · 41% wk`) that works **cross-platform** (Linux/Windows, no menu bar needed) and
   caches your usage % so Eco mode can read it.
-- **`/claude-dev-team:doctor`** (`cdt-doctor`) — one-command install health check (hooks, CLIs, DB, gh,
+- **`/cdt:doctor`** (`cdt-doctor`) — one-command install health check (hooks, CLIs, DB, gh,
   notifier, menu bar, companion deps) with a fix hint for anything not green.
-- **`cdt-learn "<lesson>"`** + `/claude-dev-team:learn` — teach the vault a durable lesson on demand
+- **`cdt-learn "<lesson>"`** + `/cdt:learn` — teach the vault a durable lesson on demand
   (surfaced later by `cdt-recall`).
 
 ## [1.9.0] — 2026-06-15
 ### Added
-- **`cdt-config` + `/claude-dev-team:config`** — a control surface to **enable/disable** the whole
+- **`cdt-config` + `/cdt:config`** — a control surface to **enable/disable** the whole
   orchestration layer and set its **defaults (effort, model)**. `off` makes the next session behave as
   stock Claude Code (the SessionStart hook stops injecting the protocol). `effort`/`model` are written to
   `~/.claude/settings.json` as a **safe merge** (all other settings preserved) and apply next session.
@@ -125,7 +132,7 @@ All notable changes to claude-dev-team. Versions follow semver.
 
 ## [1.8.0] — 2026-06-15
 ### Added
-- **PR autopilot (`/claude-dev-team:autopilot <PR#>`)** — roadmap **Phase 1**. Drives a real GitHub PR
+- **PR autopilot (`/cdt:autopilot <PR#>`)** — roadmap **Phase 1**. Drives a real GitHub PR
   toward green: read CI → diagnose → focused fix → push to the branch → re-check (capped by
   `CDT_MAX_ITERATIONS`), resolve merge conflicts on the branch, and post a `code-reviewer` +
   `security-reviewer` synthesis as a PR comment. Backed by `cdt-pr`, a read-mostly `gh` wrapper whose
@@ -139,7 +146,7 @@ All notable changes to claude-dev-team. Versions follow semver.
 - **Adaptive routing (`cdt-advise`)** — roadmap **Phase 3**. Matches a new task against past `tasks`
   history and returns an **advisory** tier/iteration prior (typical tier, iteration budget, blocker
   rate). The orchestration skill consults it on T2+ but still decides — transparent and overridable,
-  never a hidden policy. New `/claude-dev-team:advise` command. Pure stdlib (python3's built-in
+  never a hidden policy. New `/cdt:advise` command. Pure stdlib (python3's built-in
   `sqlite3`), no new dependencies. Adapted from `ruflo`'s trajectory-learning idea, kept on-ethos.
 
 ## [1.6.1] — 2026-06-15
@@ -156,7 +163,7 @@ All notable changes to claude-dev-team. Versions follow semver.
 ### Added
 - **Targeted memory recall (`cdt-recall`)** — roadmap **Phase 2, first cut**. Instead of dumping the
   whole learnings file, the orchestrator retrieves only the lessons relevant to the current task via a
-  lexically-ranked recall (pure stdlib — **no embedding model or network**). New `/claude-dev-team:recall`
+  lexically-ranked recall (pure stdlib — **no embedding model or network**). New `/cdt:recall`
   command; the orchestration skill now recalls relevant memory on T2+; the SessionStart hook injects only
   the most recent lessons + a recall pointer. Net effect: **context stays lean and sharp as the vault
   grows** (cost-effective memory that scales).
@@ -290,7 +297,7 @@ Production-grade hardening pass (full T3 audit: security, devops, content, nativ
 ### Added
 - **macOS menu bar usage monitor** (native Swift, in `menubar/`). Shows your real Claude Max
   subscription usage (session %, weekly %, Sonnet %, reset countdowns — from the `oauth/usage`
-  endpoint) **plus** accurate local token usage by model and dev-team activity. `/claude-dev-team:menubar`
+  endpoint) **plus** accurate local token usage by model and dev-team activity. `/cdt:menubar`
   builds it, enables auto-start (LaunchAgent), and launches it; `cdt-menubar status` is a no-GUI readout.
   Fail-soft: if the (undocumented) subscription endpoint is unavailable, local data still shows.
 
@@ -319,7 +326,7 @@ Production-grade hardening pass (full T3 audit: security, devops, content, nativ
 
 ## [1.1.1] — 2026-06-15
 ### Fixed
-- Docs now use the correct **namespaced** slash commands (`/claude-dev-team:notify-setup`, etc.) — the
+- Docs now use the correct **namespaced** slash commands (`/cdt:notify-setup`, etc.) — the
   bare `/notify-setup` form does not resolve.
 ### Changed
 - README Notifications rewritten: leads with the fastest path (`!cdt-setup` wizard), step-by-step Discord

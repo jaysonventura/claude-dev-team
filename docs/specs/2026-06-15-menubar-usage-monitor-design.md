@@ -58,7 +58,7 @@ Small, single-purpose units:
   `stop`, `status`, `install-login` (write a LaunchAgent plist to
   `~/Library/LaunchAgents/com.jaysonventura.claude-dev-team.menubar.plist` → auto-start at login),
   `uninstall` (remove LaunchAgent + binary). **Auto-start LaunchAgent: yes** (default on install).
-- **`commands/menubar.md` → `/claude-dev-team:menubar`** — drives the installer (build + start +
+- **`commands/menubar.md` → `/cdt:menubar`** — drives the installer (build + start +
   install-login) and reports status.
 - **README + CHANGELOG** — document install, the undocumented-endpoint caveat, and Quit/uninstall.
 - Requires: macOS, Swift toolchain (`swift` / Xcode CLT). The installer checks and instructs if missing.

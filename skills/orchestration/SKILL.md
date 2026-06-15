@@ -92,7 +92,7 @@ to implement. Post the verdict via `cdt-notify`.
 
 ## STEP 3d · PR AUTOPILOT (opt-in — Git/CI loop, bounded & safe)
 
-Invoked by `/claude-dev-team:autopilot <PR#> [--live]`. Drive a real GitHub PR toward green using `gh`
+Invoked by `/cdt:autopilot <PR#> [--live]`. Drive a real GitHub PR toward green using `gh`
 via `~/.claude/bin/cdt-pr`. This writes to a remote, so **SAFETY is non-negotiable**:
 
 - **Dry-run by default.** Without `--live`, only read + report (CI status, diagnosis, the exact plan).
@@ -149,7 +149,7 @@ Report **DELIVERED / DEFERRED / BLOCKER** as they happen; post a **SHIP** digest
 ## STATE LOGGING (accurate analytics)
 
 Mostly automatic: the SessionStart hook records sessions, `cdt-notify` records milestone events, and a
-**SubagentStop hook records every agent dispatch by role** — so `/claude-dev-team:stats` shows an
+**SubagentStop hook records every agent dispatch by role** — so `/cdt:stats` shows an
 accurate agent-run breakdown with zero effort.
 
 **One manual step at ship** — log the task's tier + Task Loop iteration count so `/stats` reflects the

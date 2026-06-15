@@ -47,9 +47,9 @@ import json,sys
 p=json.load(open('.claude-plugin/plugin.json'))
 m=json.load(open('.claude-plugin/marketplace.json'))
 errs=[]
-if p.get('name')!='claude-dev-team': errs.append('plugin name')
+if p.get('name')!='cdt': errs.append('plugin name')
 names=[x.get('name') for x in m.get('plugins',[])]
-if 'claude-dev-team' not in names: errs.append('marketplace missing plugin entry')
+if 'cdt' not in names: errs.append('marketplace missing plugin entry')
 for e in errs: print('  FAIL:', e)
 sys.exit(1 if errs else 0)
 PY

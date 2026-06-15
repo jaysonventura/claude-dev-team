@@ -24,7 +24,7 @@ throwaway sandbox and exercises the full chain (CLIs, doctor, recall, stats, eco
   session model. Reference it from `skills/orchestration/SKILL.md` if the orchestrator should dispatch it.
 - **A skill** — add a folder + `SKILL.md` in `skills/` with a `name` and an auto-trigger `description`.
 - **A command** — add a markdown file in `commands/` with a `description` (and optional `argument-hint`,
-  `allowed-tools`). It becomes `/claude-dev-team:<file>`.
+  `allowed-tools`). It becomes `/cdt:<file>`.
 - **A hook** — add the script to `hooks/`, wire it in `hooks/hooks.json` with `${CLAUDE_PLUGIN_ROOT}`.
 
 ## House rules

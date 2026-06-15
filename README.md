@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.14.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.15.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -43,7 +43,7 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - **10-gate quality chain** (incl. **e2e** for user-facing flows) + a bounded **Task Loop** (iterate to
   green, anti-abandonment, capped, then notify).
 - **Completion mandate** (tier-scaled) — simplify, review, reuse-audit, dead-code scan, learn, ship.
-- **SQLite cost analytics** (`/claude-dev-team:stats`) so you can see and tune spend on Max.
+- **SQLite cost analytics** (`/cdt:stats`) so you can see and tune spend on Max.
 - **Discord / Telegram notifications** for every milestone — delivered, deferred, blocker, ship.
 - **A markdown vault** for durable memory (learnings, ADRs, session logs).
 - **7 quality skills** (karpathy guidelines, clean TS, code-splitting, gauge-improvements, RCA, web
@@ -180,25 +180,25 @@ Reused official plugins: `superpowers`, `code-review`, `frontend-design`, `conte
 
 ## Commands
 
-Plugin commands are **namespaced** — invoke them as `/claude-dev-team:<command>` (auto-loaded in a fresh
+Plugin commands are **namespaced** — invoke them as `/cdt:<command>` (auto-loaded in a fresh
 session; the bare `/command` form won't match).
 
 | Command | Does |
 |---------|------|
-| `/claude-dev-team:triage <task>` | preview the tier + proposed dispatch **without** executing |
-| `/claude-dev-team:ship` | run the completion mandate on the current work and ship |
-| `/claude-dev-team:bug-council <symptom>` | convene the 5-agent diagnostic squad |
-| `/claude-dev-team:autopilot <PR#> [--live]` | drive a GitHub PR toward green — CI fixes, conflicts, review (dry-run by default) |
-| `/claude-dev-team:stats [today\|week\|all]` | cost & activity report from the state DB |
-| `/claude-dev-team:recall <task>` | recall the most relevant past lessons from the vault for a task |
-| `/claude-dev-team:advise <task>` | advisory tier/effort prior learned from how similar past tasks went |
-| `/claude-dev-team:config [...]` | enable/disable CDT + set defaults (effort, model, eco, statusline); defaults xhigh + Opus 4.8 |
-| `/claude-dev-team:doctor` | health-check the install (hooks, CLIs, DB, gh, notifier, menu bar, deps) |
-| `/claude-dev-team:deps [--install]` | check / install system prerequisites (python3, git, curl, sqlite3, gh) |
-| `/claude-dev-team:budget` | show usage % + the Eco (conserve-when-low) recommendation |
-| `/claude-dev-team:learn <lesson>` | teach the vault a durable lesson (surfaced later by recall) |
-| `/claude-dev-team:notify-setup [...]` | configure Discord/Telegram (no manual `.env`) |
-| `/claude-dev-team:menubar [install\|status\|...]` | macOS menu bar usage monitor (subscription % + local tokens) |
+| `/cdt:triage <task>` | preview the tier + proposed dispatch **without** executing |
+| `/cdt:ship` | run the completion mandate on the current work and ship |
+| `/cdt:bug-council <symptom>` | convene the 5-agent diagnostic squad |
+| `/cdt:autopilot <PR#> [--live]` | drive a GitHub PR toward green — CI fixes, conflicts, review (dry-run by default) |
+| `/cdt:stats [today\|week\|all]` | cost & activity report from the state DB |
+| `/cdt:recall <task>` | recall the most relevant past lessons from the vault for a task |
+| `/cdt:advise <task>` | advisory tier/effort prior learned from how similar past tasks went |
+| `/cdt:config [...]` | enable/disable CDT + set defaults (effort, model, eco, statusline); defaults xhigh + Opus 4.8 |
+| `/cdt:doctor` | health-check the install (hooks, CLIs, DB, gh, notifier, menu bar, deps) |
+| `/cdt:deps [--install]` | check / install system prerequisites (python3, git, curl, sqlite3, gh) |
+| `/cdt:budget` | show usage % + the Eco (conserve-when-low) recommendation |
+| `/cdt:learn <lesson>` | teach the vault a durable lesson (surfaced later by recall) |
+| `/cdt:notify-setup [...]` | configure Discord/Telegram (no manual `.env`) |
+| `/cdt:menubar [install\|status\|...]` | macOS menu bar usage monitor (subscription % + local tokens) |
 
 ---
 
@@ -236,25 +236,29 @@ macOS-only**; elsewhere use the cross-platform status line.
 **auto-install** as dependencies:
 ```
 claude plugin marketplace add jaysonventura/claude-dev-team
-claude plugin install claude-dev-team
+claude plugin install cdt@claude-dev-team
 ```
+> The marketplace/repo is **`claude-dev-team`** (the project), but the plugin installs as **`cdt`** — so
+> its slash commands are short and namespaced: **`/cdt:ship`**, **`/cdt:doctor`**, etc. (matching the
+> `cdt-*` CLIs).
+
 Install **auto-enables** the plugin (and its companions) — no manual enable step. It's a **user-scope**
 install in `~/.claude/`, so it works automatically across **every Claude Code surface** on this machine —
 the CLI, the VS Code & JetBrains extensions, and the Claude desktop app all share that same config (agents,
 skills, commands, hooks, and the orchestration `CLAUDE.md`). Non–Claude-Code agents (e.g. Google
 Antigravity) run a different engine and won't load it.
 
-**Set up the system tools** (see [Requirements](#requirements)): run **`/claude-dev-team:doctor`** to check
+**Set up the system tools** (see [Requirements](#requirements)): run **`/cdt:doctor`** to check
 or **`~/.claude/bin/cdt-deps --install`** to install any missing ones. If python3 is missing, the first
 session prints a one-line reminder.
 
 **After install → just prompt (zero config).** Restart your Claude Code session (or `/reload-plugins`)
 once so it loads. From then on, describe any task normally — the `orchestration` skill auto-triggers,
 the SessionStart hook bootstraps `~/.claude/vault/` + the SQLite DB + the `~/.claude/bin/` CLIs, skills
-auto-apply, and the `/claude-dev-team:*` commands (`ship`, `triage`, `bug-council`, `stats`) are
+auto-apply, and the `/cdt:*` commands (`ship`, `triage`, `bug-council`, `stats`) are
 available. Nothing else to set up.
 
-- **Notifications are optional** — run `/claude-dev-team:notify-setup` only if you want Discord/Telegram pushes.
+- **Notifications are optional** — run `/cdt:notify-setup` only if you want Discord/Telegram pushes.
 - **Power-user (guaranteed every session):** installers get orchestration via the auto-triggering skill
   + hook. For a hard always-on guarantee, drop the `orchestration` summary into your global
   `~/.claude/CLAUDE.md` (see `docs/architecture.md`). Most users don't need this.
@@ -271,7 +275,7 @@ instead for the same usage display: `~/.claude/bin/cdt-config statusline on`.
    ```json
    { "env": { "CLAUDE_CODE_GIT_BASH_PATH": "C:\\Program Files\\Git\\bin\\bash.exe" } }
    ```
-3. Open a fresh session, then run **`/claude-dev-team:doctor`** to confirm everything's wired. (Shell scripts ship with enforced LF line endings via `.gitattributes`, so Git's autocrlf won't break them.)
+3. Open a fresh session, then run **`/cdt:doctor`** to confirm everything's wired. (Shell scripts ship with enforced LF line endings via `.gitattributes`, so Git's autocrlf won't break them.)
 
 **Linux** works out of the box (bash + Python 3 are standard). The menu bar is skipped; use the status line.
 
@@ -293,15 +297,15 @@ Pick Discord / Telegram / Both, paste the secret; it auto-detects the chat id an
 > drop the `!` (zsh reads a leading `!` as history expansion → `event not found`). Use the full path
 > either way: `~/.claude/bin/cdt-setup …`
 
-Prefer a single command? Use the slash command **`/claude-dev-team:notify-setup`** (all plugin commands
-use the `/claude-dev-team:` prefix), or the `cdt-setup` CLI directly.
+Prefer a single command? Use the slash command **`/cdt:notify-setup`** (all plugin commands
+use the `/cdt:` prefix), or the `cdt-setup` CLI directly.
 
 ### Discord — step by step
 1. In Discord: **Server Settings → Integrations → Webhooks → New Webhook**.
 2. Pick a channel, click **Copy Webhook URL**.
 3. Configure it (one line):
    ```
-   /claude-dev-team:notify-setup discord https://discord.com/api/webhooks/XXXXXX/YYYYYY
+   /cdt:notify-setup discord https://discord.com/api/webhooks/XXXXXX/YYYYYY
    ```
    …or via CLI: `!~/.claude/bin/cdt-setup --discord "<url>"`
 4. A test message lands in that channel. Done.
@@ -313,7 +317,7 @@ use the `/claude-dev-team:` prefix), or the `cdt-setup` CLI directly.
    chat id after you message it first.)*
 3. Configure it — the chat id is **auto-detected** from the token, so you don't need to find it:
    ```
-   /claude-dev-team:notify-setup telegram <your-bot-token>
+   /cdt:notify-setup telegram <your-bot-token>
    ```
    …or via CLI: `!~/.claude/bin/cdt-setup --telegram <your-bot-token>` → `Telegram saved (chat id: …)`
 4. Send a test: `!~/.claude/bin/cdt-setup --test` → you should get a Telegram message.
@@ -418,7 +422,7 @@ flowchart TD
 Anti-abandonment: agents must emit a structured `BLOCKER` rather than quit or fake success. The loop
 stops after `CDT_MAX_ITERATIONS` (default 5) and notifies you — protecting your Max rate limits.
 
-**PR autopilot (opt-in).** `/claude-dev-team:autopilot <PR#>` drives a real GitHub PR toward green: read
+**PR autopilot (opt-in).** `/cdt:autopilot <PR#>` drives a real GitHub PR toward green: read
 CI status → diagnose + dispatch a focused fix → push to the branch → re-check → and, once green, post a
 `code-reviewer` + `security-reviewer` synthesis as a PR comment. It's deliberately **safe**: **dry-run by
 default** (add `--live` to act), **never force-pushes, never auto-merges, never closes** — merging stays
@@ -430,7 +434,7 @@ authenticated. Uses a read-mostly wrapper (`cdt-pr`) whose only write is posting
 ## State & cost analytics
 
 A local SQLite DB (`~/.claude/claude-dev-team.db`) records `sessions`, `tasks`, `agent_runs`, `events`,
-and `usage`. Run `/claude-dev-team:stats` (or `cdt-stats today|week|all`) for activity by tier/agent,
+and `usage`. Run `/cdt:stats` (or `cdt-stats today|week|all`) for activity by tier/agent,
 iteration counts, and blocker rate. Activity/timing is precise. "Cost" here means **token / rate-limit
 budget** (Claude subscription session + weekly limits, not money); for exact tokens used, see Claude
 Code's `/cost`.
@@ -450,7 +454,7 @@ To stay **cost-effective as the vault grows**, memory is *retrieved, not dumped*
 only the few most recent lessons, and for a specific task the orchestrator runs **targeted recall** —
 
 ```
-~/.claude/bin/cdt-recall "<task or topic>"        # or: /claude-dev-team:recall <task>
+~/.claude/bin/cdt-recall "<task or topic>"        # or: /cdt:recall <task>
 ```
 
 — which lexically ranks the lessons and returns just the top matches (pure stdlib — **no embedding model
@@ -480,7 +484,7 @@ to opt out). Manage it any time:
 
 ```
 !~/.claude/bin/cdt-menubar status      # one-shot terminal readout, no GUI
-/claude-dev-team:menubar restart       # or: install | start | stop | uninstall
+/cdt:menubar restart       # or: install | start | stop | uninstall
 ```
 
 Requires macOS + the Swift toolchain (`xcode-select --install`); first launch shows a one-time Keychain
@@ -507,7 +511,7 @@ certificate + `notarytool` credentials, then `cd menubar && ./release.sh`.
 Effort runs at your session level and the orchestration never uses heavy multi-agent fan-out engines —
 it dispatches a bounded set of subagents per tier. Pin any agent's `model:` in `agents/*.md` to taste.
 
-**Enable/disable + defaults — `cdt-config` (or `/claude-dev-team:config`):**
+**Enable/disable + defaults — `cdt-config` (or `/cdt:config`):**
 
 ```
 ~/.claude/bin/cdt-config                 # show current config
@@ -562,7 +566,7 @@ cross-platform **status line** (`cdt-config statusline on`) to feed it.
 
 | Symptom | Fix |
 |---------|-----|
-| Commands/agents don't show up | Restart the session or run `/reload-plugins`; confirm `claude plugin list` shows `claude-dev-team` enabled. Commands are **namespaced**: `/claude-dev-team:<cmd>`. |
+| Commands/agents don't show up | Restart the session or run `/reload-plugins`; confirm `claude plugin list` shows `claude-dev-team` enabled. Commands are **namespaced**: `/cdt:<cmd>`. |
 | Companion plugins didn't enable | You're on Claude Code &lt; 2.1.143 — update, or enable `superpowers` / `code-review` / `frontend-design` / `context7` once manually. |
 | Notifications never arrive | `~/.claude/bin/cdt-setup --show` — provider must not be `off`, level not `off`. Re-run `--test`. Discord: webhook still valid? Telegram: did you message the bot **first**? Is `curl` installed? |
 | `cdt-*: command not found` | In a **plain terminal** use the full path `~/.claude/bin/cdt-…` (the `!cdt-…` shorthand only works **inside** Claude Code's input box). |
@@ -570,13 +574,13 @@ cross-platform **status line** (`cdt-config statusline on`) to feed it.
 | Subscription shows "unavailable" | The undocumented usage endpoint or your login is unavailable — it **fails soft**; local token counts still work. Try **Refresh now** (⌘R). |
 | "Orchestration isn't dispatching agents" | By design — only **T2+** (multi-domain or risk) fans out; small tasks stay solo. See [Triage & tiers](#triage--tiers). Force it with a multi-domain/risk task or the `FULL:` prefix. |
 | No vault / DB / CLIs after install | The SessionStart hook bootstraps them — **restart your session once** after installing. |
-| Hooks/CLIs not running on **Windows** | Install **Git for Windows** + **Python 3**; if WSL is also present, pin `CLAUDE_CODE_GIT_BASH_PATH` (see [Windows & Linux](#windows--linux)). Then run `/claude-dev-team:doctor`. The menu bar is macOS-only — use `cdt-config statusline on`. |
+| Hooks/CLIs not running on **Windows** | Install **Git for Windows** + **Python 3**; if WSL is also present, pin `CLAUDE_CODE_GIT_BASH_PATH` (see [Windows & Linux](#windows--linux)). Then run `/cdt:doctor`. The menu bar is macOS-only — use `cdt-config statusline on`. |
 
 ## How to review / audit
 
 Everything is plain files. Check: agents honoring exclusive scope (the diffs), gates actually run
 (pasted output in reports), `~/.claude/vault/` session notes + learnings, `status-log.md`, and the DB
-(`/claude-dev-team:stats`).
+(`/cdt:stats`).
 
 **Run the test flow yourself** (all three run in CI on every push/PR):
 
@@ -594,7 +598,7 @@ To remove the plugin entirely, see [Uninstall](#uninstall).
 
 ```bash
 # 1) remove the plugin (stops the hooks / agents / skills / commands)
-claude plugin uninstall claude-dev-team
+claude plugin uninstall cdt
 
 # 2) remove the macOS menu bar app + its login item (macOS only)
 ~/.claude/bin/cdt-menubar uninstall

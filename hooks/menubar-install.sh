@@ -25,7 +25,7 @@ PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 find_src() {
   [ -f "$SRC/Package.swift" ] && return 0
   local cand
-  cand=$(ls -d "$CDT_HOME"/plugins/cache/claude-dev-team/claude-dev-team/*/menubar 2>/dev/null | sort -V | tail -1)
+  cand=$(ls -d "$CDT_HOME"/plugins/cache/claude-dev-team/cdt/*/menubar 2>/dev/null | sort -V | tail -1)
   if [ -n "$cand" ] && [ -f "$cand/Package.swift" ]; then
     mkdir -p "$SRC" && cp -R "$cand/Package.swift" "$cand/Sources" "$SRC/" 2>/dev/null
     [ -f "$cand/Info.plist" ] && cp "$cand/Info.plist" "$SRC/" 2>/dev/null
@@ -37,7 +37,7 @@ find_src() {
 
 plugin_version() {
   local pj
-  pj=$(ls -d "$CDT_HOME"/plugins/cache/claude-dev-team/claude-dev-team/*/.claude-plugin/plugin.json 2>/dev/null | sort -V | tail -1)
+  pj=$(ls -d "$CDT_HOME"/plugins/cache/claude-dev-team/cdt/*/.claude-plugin/plugin.json 2>/dev/null | sort -V | tail -1)
   { [ -f "$pj" ] && python3 -c "import json;print(json.load(open('$pj'))['version'])" 2>/dev/null; } || echo "1.0.0"
 }
 
