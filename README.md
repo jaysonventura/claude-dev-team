@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.10.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.11.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -191,6 +191,7 @@ session; the bare `/command` form won't match).
 | `/claude-dev-team:advise <task>` | advisory tier/effort prior learned from how similar past tasks went |
 | `/claude-dev-team:config [...]` | enable/disable CDT + set defaults (effort, model, eco, statusline); defaults xhigh + Opus 4.8 |
 | `/claude-dev-team:doctor` | health-check the install (hooks, CLIs, DB, gh, notifier, menu bar, deps) |
+| `/claude-dev-team:deps [--install]` | check / install system prerequisites (python3, git, curl, sqlite3, gh) |
 | `/claude-dev-team:budget` | show usage % + the Eco (conserve-when-low) recommendation |
 | `/claude-dev-team:learn <lesson>` | teach the vault a durable lesson (surfaced later by recall) |
 | `/claude-dev-team:notify-setup [...]` | configure Discord/Telegram (no manual `.env`) |
@@ -217,6 +218,12 @@ install in `~/.claude/`, so it works automatically across **every Claude Code su
 the CLI, the VS Code & JetBrains extensions, and the Claude desktop app all share that same config (agents,
 skills, commands, hooks, and the orchestration `CLAUDE.md`). Non–Claude-Code agents (e.g. Google
 Antigravity) run a different engine and won't load it.
+
+**Prerequisites:** the **companion plugins auto-install** with the command above (they're declared as
+manifest `dependencies`), and the scripts use **only python3 stdlib — no pip packages**. For the system
+tools (python3, git, curl, optional sqlite3/gh), run **`/claude-dev-team:doctor`** to check or
+**`~/.claude/bin/cdt-deps --install`** to install the missing ones via your package manager (brew / apt /
+dnf / winget / …). If python3 is missing, the first session prints a one-line reminder.
 
 **After install → just prompt (zero config).** Restart your Claude Code session (or `/reload-plugins`)
 once so it loads. From then on, describe any task normally — the `orchestration` skill auto-triggers,
@@ -557,8 +564,8 @@ step 1 you're back to stock Claude Code.
 .claude-plugin/   plugin.json, marketplace.json
 agents/           11 core role agents (incl. Haiku fast-ops) + 5 Bug Council agents (flat)
 skills/           orchestration (brain) + 7 quality skills
-commands/         ship, triage, bug-council, autopilot, stats, notify-setup, menubar, recall, advise, config, doctor, budget, learn
-hooks/            hooks.json + scripts (vault/db/recall/advise/pr/config/doctor/learn/budget/statusline/format/notify/setup/stats/guard) + vault-template
+commands/         ship, triage, bug-council, autopilot, stats, notify-setup, menubar, recall, advise, config, doctor, budget, learn, deps
+hooks/            hooks.json + scripts (vault/db/recall/advise/pr/config/doctor/learn/budget/statusline/deps/format/notify/setup/stats/guard) + vault-template
 docs/             architecture.md, examples.md, roadmap.md
 ```
 

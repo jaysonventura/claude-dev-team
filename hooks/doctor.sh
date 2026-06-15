@@ -12,13 +12,13 @@ jval(){ command -v python3 >/dev/null 2>&1 && python3 -c "import json,os;print(j
 echo "claude-dev-team — doctor"
 
 missing=""
-for c in cdt-notify cdt-setup cdt-stats cdt-task cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline; do
+for c in cdt-notify cdt-setup cdt-stats cdt-task cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps; do
   [ -x "$BIN/$c" ] || missing="$missing $c"
 done
 [ -z "$missing" ] && P "CLIs installed" || W "CLIs missing:$missing" "open a new Claude Code session (the SessionStart hook installs them)"
 
 [ -f "$CDT_HOME/claude-dev-team.db" ] && P "state DB present" || W "state DB missing" "it populates as you complete tasks"
-command -v python3 >/dev/null 2>&1 && P "python3 available" || F "python3 missing" "required for recall/advise/config — install python3"
+command -v python3 >/dev/null 2>&1 && P "python3 available" || F "python3 missing" "required for recall/advise/config — run: cdt-deps --install"
 
 if command -v gh >/dev/null 2>&1; then
   gh auth status >/dev/null 2>&1 && P "gh authenticated (autopilot ready)" || W "gh not authenticated" "gh auth login — only needed for /autopilot"

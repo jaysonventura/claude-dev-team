@@ -31,6 +31,7 @@ cp "$HOOKS_DIR/doctor.sh"  "$BIN/cdt-doctor"   2>/dev/null && chmod +x "$BIN/cdt
 cp "$HOOKS_DIR/learn.sh"   "$BIN/cdt-learn"    2>/dev/null && chmod +x "$BIN/cdt-learn"   2>/dev/null
 cp "$HOOKS_DIR/budget.sh"  "$BIN/cdt-budget"   2>/dev/null && chmod +x "$BIN/cdt-budget"  2>/dev/null
 cp "$HOOKS_DIR/statusline.sh" "$BIN/cdt-statusline" 2>/dev/null && chmod +x "$BIN/cdt-statusline" 2>/dev/null
+cp "$HOOKS_DIR/deps.sh"    "$BIN/cdt-deps"     2>/dev/null && chmod +x "$BIN/cdt-deps"     2>/dev/null
 
 # Stage the menu bar Swift source to a stable, buildable location (source only — not .build).
 MENUBAR_SRC="$(cd "$HOOKS_DIR/.." 2>/dev/null && pwd)/menubar"
@@ -68,6 +69,9 @@ fi
 # Inject only the most RECENT lessons (cheap + scales as the vault grows). For lessons relevant to a
 # SPECIFIC task, the orchestrator runs `cdt-recall "<task>"` during triage instead of re-reading the file.
 echo "## claude-dev-team — vault learnings (operate as the tech-lead orchestrator)"
+# One-time prerequisite nudge: if python3 (required for recall/advise/config/analytics) is missing, tell
+# the user to run the installer. Companion plugins auto-install; this only covers system tools.
+command -v python3 >/dev/null 2>&1 || echo "⚠ python3 not found — tell the user to run \`~/.claude/bin/cdt-deps --install\` to set up prerequisites (recall/advise/config/analytics need it)."
 if [ -f "$VAULT/learnings.md" ]; then
   grep '^- \[' "$VAULT/learnings.md" 2>/dev/null | tail -n 6
 fi

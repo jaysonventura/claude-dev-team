@@ -4,12 +4,20 @@
 
 CDT_DB="${CDT_DB:-$HOME/.claude/claude-dev-team.db}"
 
-_cdt_have_sqlite() { command -v sqlite3 >/dev/null 2>&1; }
+# We can do SQLite via the sqlite3 CLI OR python3's built-in sqlite3 module — the latter makes state
+# logging work on Windows / anywhere python3 is present but the CLI isn't.
+_cdt_have_sqlite() { command -v sqlite3 >/dev/null 2>&1 || command -v python3 >/dev/null 2>&1; }
 
-# Run a SQL statement, swallowing all errors.
+# Run a SQL script, swallowing all errors. Prefer the sqlite3 CLI; fall back to python3.
 _cdt_sql() {
-  _cdt_have_sqlite || return 0
-  sqlite3 "$CDT_DB" "$1" >/dev/null 2>&1 || true
+  if command -v sqlite3 >/dev/null 2>&1; then
+    sqlite3 "$CDT_DB" "$1" >/dev/null 2>&1 || true
+  elif command -v python3 >/dev/null 2>&1; then
+    CDT_DB="$CDT_DB" _CDT_SQL="$1" python3 -c 'import os,sqlite3
+try:
+    c=sqlite3.connect(os.environ["CDT_DB"]); c.executescript(os.environ["_CDT_SQL"]); c.commit(); c.close()
+except Exception: pass' >/dev/null 2>&1 || true
+  fi
 }
 
 # Make a value safe inside a SQLite '...' string literal: double single quotes, and flatten

@@ -2,6 +2,19 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.11.0] — 2026-06-15
+### Added
+- **Prerequisite installer (`cdt-deps` + `/claude-dev-team:deps`)** — checks the system tools CDT uses
+  (python3, git, curl, sqlite3, gh) and, with `--install`, installs the missing ones via the detected
+  package manager (brew / apt / dnf / pacman / zypper / winget / choco / scoop). Companion **plugins**
+  already auto-install via the manifest; scripts use **python3 stdlib only** (no pip packages). First
+  session prints a one-line nudge if python3 is missing; `/doctor` points here.
+### Changed
+- **Cross-platform analytics** — `db.sh` and `cdt-stats` now fall back to **python3's built-in sqlite3**
+  when the `sqlite3` CLI is absent (common on Windows), so state logging / stats work everywhere python3
+  is present. Independent portability audit across all hooks: **PORTABLE** on macOS / Linux / Windows
+  (Git Bash) — every macOS command guarded, `date` has a GNU fallback, all bash-3.2 safe.
+
 ## [1.10.1] — 2026-06-15
 ### Added
 - **Windows support** — the orchestration layer (agents, skills, commands, `cdt-*` CLIs, hooks, vault,
