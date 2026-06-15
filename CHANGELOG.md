@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.7.0] — 2026-06-15
+### Added
+- **Adaptive routing (`cdt-advise`)** — roadmap **Phase 3**. Matches a new task against past `tasks`
+  history and returns an **advisory** tier/iteration prior (typical tier, iteration budget, blocker
+  rate). The orchestration skill consults it on T2+ but still decides — transparent and overridable,
+  never a hidden policy. New `/claude-dev-team:advise` command. Pure stdlib (python3's built-in
+  `sqlite3`), no new dependencies. Adapted from `ruflo`'s trajectory-learning idea, kept on-ethos.
+
 ## [1.6.1] — 2026-06-15
 ### Added
 - **Haiku tier (`fast-ops` agent)** — a cheap, fast "hands" tier for **trivial, mechanical,

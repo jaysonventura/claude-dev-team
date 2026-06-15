@@ -65,10 +65,12 @@ local + optional (no cloud embedding service required); fall back to today's mar
 
 **Goal:** close the learning loop — let outcomes tune the process.
 
-- Mine the SQLite history (tier, agent, iterations, blocker rate) for "what usually works for this kind
-  of task."
-- Nudge triage/model-routing accordingly (e.g. a task class that repeatedly needs a security pass gets
-  it earlier).
+- ✅ **Shipped (v1.7.0) — `cdt-advise`:** lexically matches a new task against past `tasks` history and
+  returns an **advisory** prior (typical tier, iteration budget, blocker rate). The orchestrator consults
+  it on T2+ but still decides — transparent and overridable, never a hidden policy. Pure local DB read,
+  no deps. (Adapted from the "ReasoningBank / trajectory learning" idea in `ruflo`, kept on-ethos.)
+- ⏳ **Next:** richer signals (which agent roles helped), confidence weighting by sample size, and an
+  optional `--explain`.
 
 **Fit:** uses data we already collect. **Risk:** keep nudges transparent and overridable — never a hidden
 policy. **Cost:** negligible (reads the local DB).
