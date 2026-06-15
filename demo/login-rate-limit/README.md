@@ -8,7 +8,7 @@ only** — no third-party dependencies.
 
 ```bash
 python3 -m unittest discover -s demo/login-rate-limit/tests -t demo/login-rate-limit
-# Ran 20 tests ... OK
+# Ran 26 tests ... OK   (20 unit + 6 real end-to-end)
 ```
 
 ## What it does
@@ -17,7 +17,9 @@ python3 -m unittest discover -s demo/login-rate-limit/tests -t demo/login-rate-l
 |------|----------------|
 | `auth/rate_limit.py` | `RateLimiter` — in-memory sliding window with an **injectable clock** (deterministic tests, no real sleeping). `check(key)` records + allows/denies. |
 | `auth/login.py` | `AuthService.login(username, password, ip) -> LoginResult` with reasons `OK` / `BAD_CREDENTIALS` / `RATE_LIMITED`. PBKDF2-HMAC-SHA256 hashing, constant-time verify, anti-enumeration. |
+| `api/server.py` | A tiny stdlib HTTP API (`POST /login`) wrapping the auth — maps `ok`/`bad_credentials`/`rate_limited` → `200`/`401`/`429`. |
 | `tests/test_login.py` | 20 unit tests written **to the contract** (success, wrong-password, unknown-user, lockout, window reset via fake clock, no-validity-leak). |
+| `tests/test_e2e.py` | **6 real end-to-end tests** — boot the HTTP server on a free port and drive the full user journey with live `urllib` requests (200 login, 401 wrong/unknown, 429 lockout, 429-while-locked). This is the **e2e quality gate** in action. |
 
 ## Security properties
 

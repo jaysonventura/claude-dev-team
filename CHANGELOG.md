@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.11.4] — 2026-06-15
+### Added
+- **Worked e2e example** in `demo/login-rate-limit/`: a stdlib HTTP API (`api/server.py`, `POST /login`)
+  + **6 real end-to-end tests** (`tests/test_e2e.py`) that boot the server on a free port and drive the
+  full journey with live `urllib` requests (200 login · 401 wrong/unknown · 429 lockout · 429-while-locked).
+  Produced by the orchestrator (backend ∥ qa in parallel; security review PASS). The demo suite is now
+  **26 tests** and the e2e runs in CI — a concrete demonstration of the e2e quality gate (v1.11.3).
+
 ## [1.11.3] — 2026-06-15
 ### Changed
 - **e2e is now a first-class quality gate.** The qa-engineer's playbook and the orchestration gate chain
