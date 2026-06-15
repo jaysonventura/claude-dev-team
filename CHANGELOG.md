@@ -2,6 +2,15 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.1.2] — 2026-06-15
+### Fixed
+- **`cdt-setup --test` now actually sends.** `cdt-notify` was re-sourcing the env file *after* an
+  explicit `CDT_NOTIFY_LEVEL=all` override, resetting it to `milestones` (which filters `INFO`), so the
+  test was silently dropped. Overrides are now preserved.
+### Changed
+- `cdt-setup --discord` / `--telegram` are **additive**: configuring a second channel auto-sets
+  `provider=both` instead of overwriting the first.
+
 ## [1.1.1] — 2026-06-15
 ### Fixed
 - Docs now use the correct **namespaced** slash commands (`/claude-dev-team:notify-setup`, etc.) — the

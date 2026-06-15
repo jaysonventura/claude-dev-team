@@ -31,6 +31,15 @@ set_var() {
 get_var() { grep -E "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2-; }
 mask() { local v="$1"; [ -z "$v" ] && { echo "(unset)"; return; }; echo "${v:0:6}…${v: -4}"; }
 
+# Set the provider additively: if both channels end up configured, use "both" (don't clobber the other).
+set_provider_additive() {
+  if [ -n "$(get_var CDT_DISCORD_WEBHOOK_URL)" ] && [ -n "$(get_var CDT_TELEGRAM_BOT_TOKEN)" ]; then
+    set_var CDT_NOTIFY_PROVIDER "both"
+  else
+    set_var CDT_NOTIFY_PROVIDER "$1"
+  fi
+}
+
 show() {
   echo "claude-dev-team notifier config ($ENV_FILE):"
   echo "  provider : $(get_var CDT_NOTIFY_PROVIDER)"
@@ -68,14 +77,14 @@ except Exception:
 }
 
 case "$1" in
-  --discord)  [ -n "$2" ] && { set_var CDT_DISCORD_WEBHOOK_URL "$2"; set_var CDT_NOTIFY_PROVIDER "discord"; echo "Discord webhook saved."; }; exit 0 ;;
+  --discord)  [ -n "$2" ] && { set_var CDT_DISCORD_WEBHOOK_URL "$2"; set_provider_additive discord; echo "Discord webhook saved (provider: $(get_var CDT_NOTIFY_PROVIDER))."; }; exit 0 ;;
   --telegram)
     if [ -n "$2" ]; then
       set_var CDT_TELEGRAM_BOT_TOKEN "$2"
       chat="$3"; [ -z "$chat" ] && chat="$(fetch_telegram_chat_id "$2")"
       if [ -n "$chat" ]; then
-        set_var CDT_TELEGRAM_CHAT_ID "$chat"; set_var CDT_NOTIFY_PROVIDER "telegram"
-        echo "Telegram saved (chat id: $chat)."
+        set_var CDT_TELEGRAM_CHAT_ID "$chat"; set_provider_additive telegram
+        echo "Telegram saved (chat id: $chat, provider: $(get_var CDT_NOTIFY_PROVIDER))."
       else
         echo "Token saved, but no chat id found — message your bot in Telegram, then re-run: cdt-setup --telegram <token>"
       fi

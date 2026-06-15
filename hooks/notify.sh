@@ -22,8 +22,13 @@ printf -- "- %s  **%s**  %s\n" "$TS" "$TYPE" "$MSG" >> "$STATUS_LOG" 2>/dev/null
 # 2) Log to the state DB if the helper is available.
 [ -f "$CDT_HOME/bin/cdt-db.sh" ] && . "$CDT_HOME/bin/cdt-db.sh" 2>/dev/null && db_event "$TYPE" "$MSG" "${CLAUDE_SESSION_ID:-}" 2>/dev/null
 
-# 3) Load config (may not exist yet — that's fine).
+# 3) Load config (may not exist yet — that's fine). Preserve any explicitly-passed overrides
+#    (e.g. CDT_NOTIFY_LEVEL=all from `--test`) so sourcing the env file doesn't clobber them.
+_LEVEL_OVERRIDE="${CDT_NOTIFY_LEVEL:-}"
+_PROVIDER_OVERRIDE="${CDT_NOTIFY_PROVIDER:-}"
 [ -f "$ENV_FILE" ] && . "$ENV_FILE" 2>/dev/null
+[ -n "$_LEVEL_OVERRIDE" ] && CDT_NOTIFY_LEVEL="$_LEVEL_OVERRIDE"
+[ -n "$_PROVIDER_OVERRIDE" ] && CDT_NOTIFY_PROVIDER="$_PROVIDER_OVERRIDE"
 
 PROVIDER="${CDT_NOTIFY_PROVIDER:-off}"
 LEVEL="${CDT_NOTIFY_LEVEL:-milestones}"
