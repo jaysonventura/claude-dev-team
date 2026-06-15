@@ -469,6 +469,12 @@ flowchart TD
 Anti-abandonment: agents must emit a structured `BLOCKER` rather than quit or fake success. The loop
 stops after `CDT_MAX_ITERATIONS` (default 5) and notifies you — protecting your Max rate limits.
 
+> **DEPTH upgrade.** With agent teams enabled (`cdt-config teams on`), the Council convenes as a
+> *debating* **agent-team** — a shared task list + mailbox so the five lenses challenge each other before
+> a verdict, instead of five parallel monologues. It's gated by the cost governor (`cdt-auto gate team`)
+> and falls back to parallel subagents when teams are off. See
+> [Autonomous orchestration](#autonomous-orchestration-router--cost-governor).
+
 **PR autopilot (opt-in).** `/cdt:autopilot <PR#>` drives a real GitHub PR toward green: read
 CI status → diagnose + dispatch a focused fix → push to the branch → re-check → and, once green, post a
 `code-reviewer` + `security-reviewer` synthesis as a PR comment. It's deliberately **safe**: **dry-run by
@@ -635,12 +641,18 @@ certificate + `notarytool` credentials, then `cd menubar && ./release.sh`.
 | session model | your choice | Sonnet = cheap throughput; Opus = max power |
 | `FULL:` / `T0:` prefixes | — | up/down-throttle a single request |
 | `CDT_MAX_ITERATIONS` | 5 | Task Loop hard cap |
+| `CDT_AUTONOMY` | assist | autonomous escalation leash: `off` / `assist` / `auto` |
+| `CDT_TEAMS` · `CDT_SCALE` | off · off | enable the DEPTH (agent-team) / BREADTH (workflow) engines |
+| `CDT_AUTONOMY_WEEKLY_CEILING` | 85 | governor pauses to ASK at/above this weekly usage % |
 | `CDT_NOTIFY_PROVIDER` | off | `discord` / `telegram` / `both` / `off` |
 | `CDT_NOTIFY_LEVEL` | milestones | `all` / `milestones` / `off` |
 | `CDT_STOP_REMINDER` | 0 | `1` = remind once to run the mandate at session end |
 
-Effort runs at your session level and the orchestration never uses heavy multi-agent fan-out engines —
-it dispatches a bounded set of subagents per tier. Pin any agent's `model:` in `agents/*.md` to taste.
+Effort runs at your session level (xhigh, never `max`). **By default** the orchestrator uses **bounded**
+subagent dispatch per tier; the heavier engines (agent teams, dynamic workflows) are **never
+auto-invoked** — they're summoned only through the gated cost governor (see
+[Autonomous orchestration](#autonomous-orchestration-router--cost-governor)). Pin any agent's `model:` in
+`agents/*.md` to taste.
 
 **Enable/disable + defaults — `cdt-config` (or `/cdt:config`):**
 
@@ -649,7 +661,10 @@ it dispatches a bounded set of subagents per tier. Pin any agent's `model:` in `
 ~/.claude/bin/cdt-config off | on        # disable / enable the whole orchestration layer
 ~/.claude/bin/cdt-config effort xhigh    # default effort: low | medium | high | xhigh
 ~/.claude/bin/cdt-config model  opus     # default model (e.g. claude-opus-4-8 / opus / sonnet)
-~/.claude/bin/cdt-config reset           # restore defaults: enabled, xhigh, Opus 4.8
+~/.claude/bin/cdt-config autonomy assist # autonomous escalation: off | assist | auto  (see /cdt:auto)
+~/.claude/bin/cdt-config teams on|off    # enable the agent-team DEPTH engine (off by default)
+~/.claude/bin/cdt-config scale on|off    # enable the dynamic-workflow BREADTH engine (off by default)
+~/.claude/bin/cdt-config reset           # restore defaults: enabled, xhigh, Opus 4.8, autonomy=assist, engines off
 ```
 
 Defaults are **xhigh effort + Opus 4.8** (`claude-opus-4-8`). `off` makes the next session behave as
@@ -765,19 +780,23 @@ docs/             architecture.md, examples.md, roadmap.md
 
 ## Roadmap & contributing
 
-**Near-term:** more agents (`pm`, `technical-writer`, `ml-engineer`); a measured roster expansion (SRE,
-accessibility, performance auditor); media/writing skills; an opt-in Eco mode; richer cost attribution.
+**Shipped recently:** the `product-manager`, `technical-writer`, and `ui-ux-engineer` agents + a Haiku
+`fast-ops` tier · **real per-agent token telemetry** · **git-worktree isolation** · the **Autonomous
+Agent Orchestration** controller (agent-team **DEPTH** + dynamic-workflow **BREADTH**, gated by a cost
+governor) · an opt-in **Eco mode** · the **PR autopilot**.
 
-**The bigger arc** — two layered tracks. A *learning* track (autonomous Git/CI/PR loop, semantic RAG
-memory, history-driven adaptive routing) and a *scaling* track that adds **opt-in, gated** parallelism on
-Claude Code's official primitives: **worktree-isolated parallel builders**, **agent-team Bug Council**
-(a debating council, not parallel monologues), and a **dynamic-workflow "Scale mode"** for repo-wide
-audits/migrations — each summoned, capped, and measured by the per-agent token telemetry, never the
-default. The full phased plan, with fit/risk/cost per phase, lives in **[`docs/roadmap.md`](docs/roadmap.md)**.
+**The bigger arc** — the **scaling track is now shipped**: worktree-isolated parallel work, the
+**agent-team Bug Council** (a *debating* council, not parallel monologues), and **dynamic-workflow Scale
+mode** — all unified under the autonomous **router + cost governor**, gated/capped/measured, never the
+default. What remains is mostly the *learning* track: the autonomous Git/CI/PR loop (partly shipped via
+`/cdt:autopilot`), **semantic (embedding) recall** on top of today's lexical recall, history-driven
+adaptive routing, a measured roster expansion (SRE / accessibility / performance auditor), and — as
+research — cross-machine federation. The full phased plan, with per-phase status + fit/risk/cost, lives
+in **[`docs/roadmap.md`](docs/roadmap.md)**.
 
 **Contributing:** see **[`CONTRIBUTING.md`](CONTRIBUTING.md)**. To add an agent, drop a markdown file in
-`agents/`; to add a skill, a folder + `SKILL.md` in `skills/`. Run `bash scripts/validate.sh` before a
-PR. PRs welcome.
+`agents/`; to add a skill, a folder + `SKILL.md` in `skills/`. Before a PR, run the full local gate
+chain: `bash scripts/validate.sh` · `bash scripts/lint-agents.sh` · `bash scripts/e2e.sh`. PRs welcome.
 
 ## License
 
