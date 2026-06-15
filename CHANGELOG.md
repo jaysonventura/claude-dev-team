@@ -2,6 +2,11 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.4.4] — 2026-06-15
+### Changed
+- Menu bar strip is now compact (**"CDT 20% 48%"** — session then weekly, color-coded) so it no longer
+  crowds out other menu bar items on narrow/notched displays. Session/Weekly labels remain in the dropdown.
+
 ## [1.4.3] — 2026-06-15
 ### Added
 - App icon: **CDT Usage.app** now uses the Claude Dev Team logo (`menubar/AppIcon.icns`). README shows the
