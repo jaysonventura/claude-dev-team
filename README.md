@@ -4,7 +4,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.1.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.1.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -149,13 +149,16 @@ Reused official plugins: `superpowers`, `code-review`, `frontend-design`, `conte
 
 ## Commands
 
+Plugin commands are **namespaced** — invoke them as `/claude-dev-team:<command>` (auto-loaded in a fresh
+session; the bare `/command` form won't match).
+
 | Command | Does |
 |---------|------|
-| `/triage <task>` | preview the tier + proposed dispatch **without** executing |
-| `/ship` | run the completion mandate on the current work and ship |
-| `/bug-council <symptom>` | convene the 5-agent diagnostic squad |
-| `/stats [today\|week\|all]` | cost & activity report from the state DB |
-| `/notify-setup [...]` | configure Discord/Telegram (no manual `.env`) |
+| `/claude-dev-team:triage <task>` | preview the tier + proposed dispatch **without** executing |
+| `/claude-dev-team:ship` | run the completion mandate on the current work and ship |
+| `/claude-dev-team:bug-council <symptom>` | convene the 5-agent diagnostic squad |
+| `/claude-dev-team:stats [today\|week\|all]` | cost & activity report from the state DB |
+| `/claude-dev-team:notify-setup [...]` | configure Discord/Telegram (no manual `.env`) |
 
 ---
 
@@ -175,9 +178,10 @@ Install **auto-enables** the plugin (and its companions) — no manual enable st
 **After install → just prompt (zero config).** Restart your Claude Code session (or `/reload-plugins`)
 once so it loads. From then on, describe any task normally — the `orchestration` skill auto-triggers,
 the SessionStart hook bootstraps `~/.claude/vault/` + the SQLite DB + the `~/.claude/bin/` CLIs, skills
-auto-apply, and `/ship` `/triage` `/bug-council` `/stats` are available. Nothing else to set up.
+auto-apply, and the `/claude-dev-team:*` commands (`ship`, `triage`, `bug-council`, `stats`) are
+available. Nothing else to set up.
 
-- **Notifications are optional** — run `/notify-setup` only if you want Discord/Telegram pushes.
+- **Notifications are optional** — run `/claude-dev-team:notify-setup` only if you want Discord/Telegram pushes.
 - **Power-user (guaranteed every session):** installers get orchestration via the auto-triggering skill
   + hook. For a hard always-on guarantee, drop the `orchestration` summary into your global
   `~/.claude/CLAUDE.md` (see `docs/architecture.md`). Most users don't need this.
@@ -187,21 +191,27 @@ auto-apply, and `/ship` `/triage` `/bug-council` `/stats` are available. Nothing
 ## Notifications (Discord + Telegram)
 
 Milestones (`DELIVERED` / `DEFERRED` / `BLOCKER` / `SHIP`) are logged to the vault and pushed to your
-channel. Configure by **pasting** your webhook/token — never hand-edit `.env`. The fastest path is the
-hidden-input wizard:
+channel(s). Secrets live in `~/.claude/claude-dev-team.env` (`chmod 600`, **never committed**) — you
+never hand-edit them.
 
+**⚡ Fastest path — the wizard** (hidden input for tokens):
 ```
-!cdt-setup        # interactive: pick Discord / Telegram / Both, paste secrets (hidden), test
+!cdt-setup
 ```
+Pick Discord / Telegram / Both, paste the secret; it auto-detects the chat id and auto-tests. Done.
+
+Prefer a single command? Use the **namespaced** slash command **`/claude-dev-team:notify-setup`**
+(plugin commands are namespaced — the bare `/notify-setup` won't match), or the `cdt-setup` CLI directly.
 
 ### Discord — step by step
 1. In Discord: **Server Settings → Integrations → Webhooks → New Webhook**.
 2. Pick a channel, click **Copy Webhook URL**.
-3. Configure it:
+3. Configure it (one line):
    ```
-   /notify-setup discord https://discord.com/api/webhooks/XXXXXX/YYYYYY
+   /claude-dev-team:notify-setup discord https://discord.com/api/webhooks/XXXXXX/YYYYYY
    ```
-4. You should get a test message in that channel. Done.
+   …or via CLI: `!~/.claude/bin/cdt-setup --discord "<url>"`
+4. A test message lands in that channel. Done.
 
 ### Telegram — step by step
 1. In Telegram, open **@BotFather** → send `/newbot` → follow prompts → **copy the bot token**
@@ -210,9 +220,9 @@ hidden-input wizard:
    chat id after you message it first.)*
 3. Configure it — the chat id is **auto-detected** from the token, so you don't need to find it:
    ```
-   !~/.claude/bin/cdt-setup --telegram <your-bot-token>
+   /claude-dev-team:notify-setup telegram <your-bot-token>
    ```
-   (or run `!cdt-setup` and choose Telegram — it auto-detects too.) You'll see `Telegram saved (chat id: …)`.
+   …or via CLI: `!~/.claude/bin/cdt-setup --telegram <your-bot-token>` → `Telegram saved (chat id: …)`
 4. Send a test: `!~/.claude/bin/cdt-setup --test` → you should get a Telegram message.
 
 ### Settings

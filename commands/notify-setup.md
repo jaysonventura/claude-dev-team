@@ -1,6 +1,6 @@
 ---
 description: Configure Discord/Telegram status notifications without hand-editing .env. Paste a webhook URL or bot token.
-argument-hint: [discord <webhook-url>] | [telegram <token> <chat_id>]
+argument-hint: [discord <webhook-url>] | [telegram <token>]
 allowed-tools: Bash
 ---
 
@@ -11,8 +11,10 @@ Arguments: $ARGUMENTS
 
 - If arguments contain a Discord webhook URL, run:
   `~/.claude/bin/cdt-setup --discord "<url>"` then `~/.claude/bin/cdt-setup --test`.
-- If they contain a Telegram token + chat id, run:
-  `~/.claude/bin/cdt-setup --telegram "<token>" "<chat_id>"` then `--test`.
+- If they contain a Telegram bot token, run:
+  `~/.claude/bin/cdt-setup --telegram "<token>"` — the chat id is **auto-detected** from `getUpdates`
+  (pass a chat id as a second argument only to override). Then `~/.claude/bin/cdt-setup --test`.
+  If no chat id is found, remind me to send my bot a message first, then re-run.
 - If **no arguments** were given (so no secret is pasted into the chat), tell me to run it securely in my
   terminal instead — it prompts with hidden input:
 

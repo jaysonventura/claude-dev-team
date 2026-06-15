@@ -2,6 +2,15 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.1.1] — 2026-06-15
+### Fixed
+- Docs now use the correct **namespaced** slash commands (`/claude-dev-team:notify-setup`, etc.) — the
+  bare `/notify-setup` form does not resolve.
+### Changed
+- README Notifications rewritten: leads with the fastest path (`!cdt-setup` wizard), step-by-step Discord
+  and Telegram with the right commands.
+- `notify-setup` command supports Telegram **token-only** (chat id auto-detected).
+
 ## [1.1.0] — 2026-06-15
 ### Added
 - `cdt-setup` **auto-detects your Telegram chat id** from the bot token (via `getUpdates`) — no manual
