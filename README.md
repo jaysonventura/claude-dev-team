@@ -196,9 +196,13 @@ never hand-edit them.
 
 **⚡ Fastest path — the wizard** (hidden input for tokens):
 ```
-!cdt-setup
+!~/.claude/bin/cdt-setup
 ```
 Pick Discord / Telegram / Both, paste the secret; it auto-detects the chat id and auto-tests. Done.
+
+> 💡 The `!` prefix runs a command from **inside Claude Code's input box**. In a **plain terminal**,
+> drop the `!` (zsh reads a leading `!` as history expansion → `event not found`). Use the full path
+> either way: `~/.claude/bin/cdt-setup …`
 
 Prefer a single command? Use the **namespaced** slash command **`/claude-dev-team:notify-setup`**
 (plugin commands are namespaced — the bare `/notify-setup` won't match), or the `cdt-setup` CLI directly.
