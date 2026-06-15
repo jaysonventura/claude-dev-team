@@ -50,10 +50,10 @@ If the Task Loop sees the same gate fail with the same signature twice, it conve
 five read-only diagnosticians run in parallel, the orchestrator synthesizes one ranked root cause + fix
 plan, an engineer implements, and the verdict is posted. You can also trigger it manually:
 
-> **You:** `/bug-council the checkout total is off by one cent intermittently`
+> **You:** `/claude-dev-team:bug-council the checkout total is off by one cent intermittently`
 
 ## Conserving Max limits
 
 - Run routine work in a **Sonnet session**; reach for `/model opus` + `FULL:` only when it matters.
 - Prefix a quick change with `T0:` to force solo mode.
-- Watch spend with `/stats week` and rebalance.
+- Watch spend with `/claude-dev-team:stats week` and rebalance.

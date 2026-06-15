@@ -20,7 +20,7 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - **9-gate quality chain** + a bounded **Task Loop** (iterate to green, anti-abandonment, capped, then
   notify).
 - **Completion mandate** (tier-scaled) — simplify, review, reuse-audit, dead-code scan, learn, ship.
-- **SQLite cost analytics** (`/stats`) so you can see and tune spend on Max.
+- **SQLite cost analytics** (`/claude-dev-team:stats`) so you can see and tune spend on Max.
 - **Discord / Telegram notifications** for every milestone — delivered, deferred, blocker, ship.
 - **A markdown vault** for durable memory (learnings, ADRs, session logs).
 - **7 quality skills** (karpathy guidelines, clean TS, code-splitting, gauge-improvements, RCA, web
@@ -204,8 +204,8 @@ Pick Discord / Telegram / Both, paste the secret; it auto-detects the chat id an
 > drop the `!` (zsh reads a leading `!` as history expansion → `event not found`). Use the full path
 > either way: `~/.claude/bin/cdt-setup …`
 
-Prefer a single command? Use the **namespaced** slash command **`/claude-dev-team:notify-setup`**
-(plugin commands are namespaced — the bare `/notify-setup` won't match), or the `cdt-setup` CLI directly.
+Prefer a single command? Use the slash command **`/claude-dev-team:notify-setup`** (all plugin commands
+use the `/claude-dev-team:` prefix), or the `cdt-setup` CLI directly.
 
 ### Discord — step by step
 1. In Discord: **Server Settings → Integrations → Webhooks → New Webhook**.
@@ -321,7 +321,7 @@ stops after `CDT_MAX_ITERATIONS` (default 5) and notifies you — protecting you
 ## State & cost analytics
 
 A local SQLite DB (`~/.claude/claude-dev-team.db`) records `sessions`, `tasks`, `agent_runs`, `events`,
-and `usage`. Run `/stats` (or `cdt-stats today|week|all`) for activity by tier/agent, iteration counts,
+and `usage`. Run `/claude-dev-team:stats` (or `cdt-stats today|week|all`) for activity by tier/agent, iteration counts,
 and blocker rate. Activity/timing is precise; **token cost is a best-effort estimate** derived from
 Claude Code's own usage data and is labeled as such.
 
@@ -343,7 +343,7 @@ it dispatches a bounded set of subagents per tier. Pin any agent's `model:` in `
 
 Everything is plain files. Check: agents honoring exclusive scope (the diffs), gates actually run
 (pasted output in reports), `~/.claude/vault/` session notes + learnings, `status-log.md`, and the DB
-(`/stats`). To uninstall, `claude plugin uninstall claude-dev-team` and remove the orchestration block
+(`/claude-dev-team:stats`). To uninstall, `claude plugin uninstall claude-dev-team` and remove the orchestration block
 from `~/.claude/CLAUDE.md` — you're back to stock Claude Code.
 
 ## Project layout
