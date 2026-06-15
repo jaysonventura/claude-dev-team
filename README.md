@@ -4,7 +4,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.3.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.3.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -174,7 +174,11 @@ registered (it ships by default — if not, `claude plugin marketplace add anthr
 claude plugin marketplace add jaysonventura/claude-dev-team
 claude plugin install claude-dev-team
 ```
-Install **auto-enables** the plugin (and its companions) — no manual enable step.
+Install **auto-enables** the plugin (and its companions) — no manual enable step. It's a **user-scope**
+install in `~/.claude/`, so it works automatically across **every Claude Code surface** on this machine —
+the CLI, the VS Code & JetBrains extensions, and the Claude desktop app all share that same config (agents,
+skills, commands, hooks, and the orchestration `CLAUDE.md`). Non–Claude-Code agents (e.g. Google
+Antigravity) run a different engine and won't load it.
 
 **After install → just prompt (zero config).** Restart your Claude Code session (or `/reload-plugins`)
 once so it loads. From then on, describe any task normally — the `orchestration` skill auto-triggers,
@@ -329,19 +333,24 @@ Code's `/cost`.
 
 ## Menu bar usage monitor (macOS)
 
-A native Swift app (`menubar/`) puts your usage in the menu bar in real time — the **real subscription %**
-(current session, weekly all-models, weekly Sonnet, with reset countdowns, color-coded 80/90) from
-Anthropic's `oauth/usage` endpoint, **plus** accurate local token usage by model and dev-team activity.
+A native Swift app (`menubar/`) puts your usage in the menu bar as **`CDT <session%> <weekly%>`** (each
+% color-coded 80/90) — the **real subscription %** (current session, weekly all-models, weekly Sonnet,
+with reset countdowns) from Anthropic's `oauth/usage` endpoint, **plus** accurate local token usage by
+model and dev-team activity in the dropdown.
+
+**On macOS it auto-installs** on your first session after the plugin is installed — it builds, launches,
+and enables login auto-start automatically (set `CDT_MENUBAR_AUTO=0` in `~/.claude/claude-dev-team.env`
+to opt out). Manage it any time:
 
 ```
-/claude-dev-team:menubar install     # build + auto-start at login + launch (look for the ▓ icon)
-!~/.claude/bin/cdt-menubar status     # one-shot terminal readout, no GUI
+!~/.claude/bin/cdt-menubar status      # one-shot terminal readout, no GUI
+/claude-dev-team:menubar restart       # or: install | start | stop | uninstall
 ```
 
 Requires macOS + the Swift toolchain (`xcode-select --install`); first launch shows a one-time Keychain
 approval (**Always Allow**). The subscription %s use an **undocumented** endpoint (the same one Claude
 Code calls) and may change — it **fails soft**, and your local token data always works. `cdt-menubar
-uninstall` removes the login item + binary.
+uninstall` removes the login item + binary (and stops auto-reinstall).
 
 ## Configuration
 

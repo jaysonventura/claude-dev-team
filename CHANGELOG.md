@@ -2,6 +2,13 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.3.1] — 2026-06-15
+### Changed
+- Menu bar now shows **`CDT <session%> <weekly%>`** (each % color-coded), instead of a single worst-%.
+- Dropdown "updated" time uses **12-hour** format.
+- The menu bar app **auto-installs on macOS** on the first session after install (build + launch + login
+  auto-start); opt out with `CDT_MENUBAR_AUTO=0`. `cdt-menubar uninstall` is now sticky.
+
 ## [1.3.0] — 2026-06-15
 ### Added
 - **macOS menu bar usage monitor** (native Swift, in `menubar/`). Shows your real Claude Max

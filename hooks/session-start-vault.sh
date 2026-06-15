@@ -32,6 +32,17 @@ if [ -f "$MENUBAR_SRC/Package.swift" ]; then
   cp -R "$MENUBAR_SRC/Sources" "$CDT_HOME/claude-dev-team-menubar/" 2>/dev/null
 fi
 
+# Auto-install the menu bar app on macOS (once, in the background) unless disabled.
+if [ "$(uname)" = "Darwin" ] && command -v swift >/dev/null 2>&1; then
+  AUTO=1
+  [ -f "$CDT_HOME/claude-dev-team.env" ] && . "$CDT_HOME/claude-dev-team.env" 2>/dev/null
+  AUTO="${CDT_MENUBAR_AUTO:-$AUTO}"
+  PLIST="$HOME/Library/LaunchAgents/com.jaysonventura.claude-dev-team.menubar.plist"
+  if [ "$AUTO" != "0" ] && [ ! -f "$CDT_HOME/.cdt-menubar-disabled" ] && [ ! -f "$PLIST" ] && [ -x "$BIN/cdt-menubar" ]; then
+    ( "$BIN/cdt-menubar" install-login >/dev/null 2>&1 ) &
+  fi
+fi
+
 # 3) Initialize the state DB.
 [ -f "$BIN/cdt-db.sh" ] && . "$BIN/cdt-db.sh" 2>/dev/null && db_init 2>/dev/null
 

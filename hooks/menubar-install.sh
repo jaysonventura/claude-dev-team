@@ -49,6 +49,7 @@ status() { [ -x "$APP" ] || build || return 1; "$APP" --once; }
 
 install_login() {
   [ -x "$APP" ] || build || return 1
+  rm -f "$CDT_HOME/.cdt-menubar-disabled" 2>/dev/null   # re-enable auto-install
   mkdir -p "$HOME/Library/LaunchAgents"
   cat > "$PLIST" <<PL
 <?xml version="1.0" encoding="UTF-8"?>
@@ -70,7 +71,8 @@ uninstall() {
   rm -f "$PLIST"
   pkill -f "$APP" 2>/dev/null
   rm -f "$APP"
-  echo "Uninstalled (LaunchAgent + app removed). The menu bar icon disappears on quit."
+  touch "$CDT_HOME/.cdt-menubar-disabled" 2>/dev/null   # don't auto-reinstall on next session
+  echo "Uninstalled (LaunchAgent + app removed; auto-install disabled). Re-enable: cdt-menubar install-login"
 }
 
 case "${1:-install}" in

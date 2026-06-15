@@ -10,24 +10,30 @@ final class MenuBarController: NSObject {
         statusItem.button?.title = "CDT …"
     }
 
-    private func color(forWorst pct: Int) -> NSColor {
+    private func color(for pct: Int) -> NSColor {
         if pct >= 90 { return .systemRed }
         if pct >= 80 { return .systemOrange }
         return .labelColor
     }
 
     func render(_ snap: UsageSnapshot) {
-        // --- compact menu bar title ---
+        // --- compact menu bar title: "CDT <session%> <weekly%>" ---
+        let brand: [NSAttributedString.Key: Any] = [
+            .foregroundColor: NSColor.secondaryLabelColor,
+            .font: NSFont.boldSystemFont(ofSize: 11)
+        ]
+        let title = NSMutableAttributedString(string: "CDT ", attributes: brand)
         if let sub = snap.subscription {
-            let worst = max(sub.sessionPct, sub.weeklyPct)
-            let title = "▓ \(worst)%"
-            statusItem.button?.attributedTitle = NSAttributedString(
-                string: title, attributes: [.foregroundColor: color(forWorst: worst)])
+            // session % then weekly %, each colored by its own threshold
+            title.append(NSAttributedString(string: "\(sub.sessionPct)%",
+                attributes: [.foregroundColor: color(for: sub.sessionPct)]))
+            title.append(NSAttributedString(string: " \(sub.weeklyPct)%",
+                attributes: [.foregroundColor: color(for: sub.weeklyPct)]))
         } else {
-            statusItem.button?.attributedTitle = NSAttributedString(
-                string: "⏱ \(formatTokens(snap.local.todayTotal))",
-                attributes: [.foregroundColor: NSColor.labelColor])
+            title.append(NSAttributedString(string: "⏱\(formatTokens(snap.local.todayTotal))",
+                attributes: [.foregroundColor: NSColor.labelColor]))
         }
+        statusItem.button?.attributedTitle = title
 
         // --- dropdown menu ---
         let menu = NSMenu()
@@ -86,7 +92,9 @@ final class MenuBarController: NSObject {
 
         menu.addItem(.separator())
         let updated = DateFormatter()
-        updated.dateFormat = "HH:mm:ss"
+        updated.dateFormat = "h:mm:ss a"   // 12-hour, e.g. 1:50:23 PM
+        updated.amSymbol = "AM"
+        updated.pmSymbol = "PM"
         line("updated \(updated.string(from: snap.lastUpdated))")
 
         let refresh = NSMenuItem(title: "Refresh now", action: #selector(refreshClicked), keyEquivalent: "r")
