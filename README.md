@@ -87,11 +87,11 @@ Parallel waves and the quality-gate chain (Diagram B):
 
 ```mermaid
 flowchart TD
-    W0["Wave 0: Explore + architect"] --> W1["Wave 1: builders on exclusive paths"]
+    W0["Wave 0: product-manager + architect + ui-ux-engineer + Explore"] --> W1["Wave 1: builders on exclusive paths"]
     W1 --> GATES["Gates: fmt, lint, type, unit, intg, e2e, build, smoke"]
     GATES -->|"fail"| FIX["Fix agent"]
     FIX --> GATES
-    GATES -->|"pass"| W2["Wave 2: code-reviewer + security-reviewer"]
+    GATES -->|"pass"| W2["Wave 2: code + security + ui-ux review"]
     W2 -->|"security risk >= medium"| VETO["VETO: block ship"]
     W2 -->|"pass"| DONE["Proceed to completion mandate"]
 ```
