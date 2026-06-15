@@ -2,6 +2,16 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.4.7] — 2026-06-15
+### Added
+- Menu bar dropdown's **claude-dev-team (7d)** panel now shows **sessions logged** (your chats), so the
+  section reflects real activity — not just the rarer specialist-subagent dispatches.
+### Changed
+- README: menu-bar section + screenshot updated for the stacked **CDT** layout (session % over weekly %).
+### Fixed
+- No more stray **`unknown`** agent row — the `SubagentStop` hook skips runs with no identifiable agent
+  type (takes effect in any session started on ≥1.4.6).
+
 ## [1.4.6] — 2026-06-15
 ### Changed
 - Menu bar keeps the **CDT** label, with the stacked session %/weekly % beside it (CDT left, percentages

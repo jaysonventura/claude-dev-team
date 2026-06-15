@@ -28,7 +28,8 @@ struct LocalUsage {
 
 // claude-dev-team activity from the SQLite DB.
 struct TeamActivity {
-    var agentRuns: [(role: String, count: Int)] = []
+    var sessions = 0                                      // chats logged in the last 7 days
+    var agentRuns: [(role: String, count: Int)] = []     // subagent dispatches (specialists), by role
     var tasksByTier: [(tier: String, count: Int)] = []
 }
 

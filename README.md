@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.4.6-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.4.7-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -337,10 +337,13 @@ Code's `/cost`.
 
 ## Menu bar usage monitor (macOS)
 
-A native Swift app (`menubar/`) puts your usage in the menu bar as **`CDT <session%> <weekly%>`** (each
-% color-coded 80/90) — the **real subscription %** (current session, weekly all-models, weekly Sonnet,
-with reset countdowns) from Anthropic's `oauth/usage` endpoint, **plus** accurate local token usage by
-model and dev-team activity in the dropdown.
+A native Swift app (`menubar/`) puts your usage in the menu bar as a compact **`CDT`** badge with the
+**current-session %** stacked over the **weekly %** (each color-coded 80/90) — a deliberately narrow,
+two-line shape that survives a crowded or notched menu bar. Click it for the full dropdown: the **real
+subscription %** (current session, weekly all-models, weekly Sonnet, with reset countdowns) from
+Anthropic's `oauth/usage` endpoint, **plus** accurate local token usage by model and a
+**`claude-dev-team (7d)`** activity panel — sessions logged, tasks by tier, and any specialist
+subagents dispatched.
 
 <p align="center">
   <img src="assets/menubar-screenshot.png" alt="CDT Usage menu bar dropdown" width="440">

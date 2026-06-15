@@ -105,6 +105,8 @@ func readTeamActivity() -> TeamActivity {
         }
     }
 
+    activity.sessions = Int(query(
+        "SELECT COUNT(*) FROM sessions WHERE started >= '\(cutoff)';").first ?? "") ?? 0
     activity.agentRuns = pairs(query(
         "SELECT agent || '|' || COUNT(*) FROM agent_runs WHERE started >= '\(cutoff)' GROUP BY agent ORDER BY COUNT(*) DESC;"))
     activity.tasksByTier = pairs(query(
