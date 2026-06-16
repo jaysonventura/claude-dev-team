@@ -11,8 +11,10 @@ final class UsageStore {
     private var subTimer: Timer?
 
     private let localInterval: TimeInterval = 60     // 1 min (local files)
-    private let subNormal: TimeInterval = 300        // 5 min (endpoint)
-    private let subBackoff: TimeInterval = 900       // 15 min after HTTP 429
+    private let subNormal: TimeInterval = 300        // 5 min (endpoint, healthy)
+    private let subError: TimeInterval = 60          // base retry after a failure (e.g. expired token) — recover fast
+    private let subBackoff: TimeInterval = 900       // 15 min after HTTP 429 (respect rate limits)
+    private var subFailures = 0                      // consecutive non-429 failures → escalating backoff
 
     init(controller: MenuBarController) {
         self.controller = controller
@@ -54,13 +56,27 @@ final class UsageStore {
             let nextDelay: TimeInterval
             do {
                 let sub = try await fetchSubscriptionUsage()
-                await MainActor.run { self.applySubscription(sub, error: nil) }
+                await MainActor.run { self.applySubscription(sub, error: nil); self.subFailures = 0 }
                 nextDelay = self.subNormal
             } catch let e as NSError {
-                let rateLimited = e.code == 429
-                let msg = rateLimited ? "rate limited — retrying in 15m" : e.localizedDescription
-                await MainActor.run { self.applySubscription(nil, error: msg) }
-                nextDelay = rateLimited ? self.subBackoff : self.subNormal   // back off 15 min on 429
+                // 429 → back off 15m. 401 (expired) / 403 (forbidden) → a clear, actionable note. Other
+                // errors (network/decode/keychain) → that error's message.
+                let msg: String
+                switch e.code {
+                case 429: msg = "rate limited — retrying in 15m"
+                case 401: msg = "token expired — open Claude Code or re-login to refresh"
+                case 403: msg = "access denied — re-login may be needed"
+                default:  msg = e.localizedDescription
+                }
+                // Recover fast on the first failure (token likely just refreshed elsewhere), but escalate
+                // 60→120→240→…(capped at 5m) so a persistently-bad token never hammers the endpoint.
+                let is429 = (e.code == 429)
+                nextDelay = await MainActor.run { () -> TimeInterval in
+                    self.applySubscription(nil, error: msg)
+                    if is429 { return self.subBackoff }
+                    self.subFailures += 1
+                    return min(self.subNormal, self.subError * pow(2, Double(self.subFailures - 1)))
+                }
             }
             await MainActor.run { self.scheduleSubscription(after: nextDelay) }
         }
@@ -78,9 +94,10 @@ final class UsageStore {
         if let sub = sub {
             snapshot.subscription = sub
             snapshot.subscriptionError = nil
+            snapshot.subscriptionAsOf = Date()                                // last good fetch (for the stale note)
             writeUsageCache(session: sub.sessionPct, weekly: sub.weeklyPct)   // keep Eco mode's data fresh
         } else {
-            snapshot.subscriptionError = error
+            snapshot.subscriptionError = error                               // keep last-good `subscription`; mark stale
         }
         snapshot.lastUpdated = Date()
         controller.render(snapshot)

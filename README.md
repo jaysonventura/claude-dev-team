@@ -211,6 +211,7 @@ session; the bare `/command` form won't match).
 | `/cdt:learn <lesson>` | teach the vault a durable lesson (surfaced later by recall) |
 | `/cdt:notify-setup [...]` | configure Discord/Telegram (no manual `.env`) |
 | `/cdt:menubar [install\|status\|...]` | macOS menu bar usage monitor (subscription % + local tokens) |
+| `/cdt:version` | show the installed version (plugin + menu bar app) |
 
 ---
 
@@ -609,6 +610,8 @@ two-line shape that survives a crowded or notched menu bar. Click it for the ful
   session), then the **7-day activity**: sessions logged, **tasks by tier** (e.g. `T2×4 T3×2`), and the
   **specialist subagents dispatched by role** (e.g. `security-reviewer ×6`). For each role's **token
   cost**, run `/cdt:stats`.
+- **Installed version** — the dropdown footer shows the running version (e.g. `v1.22.0`) alongside the
+  last refresh; check it any time without leaving the bar (or run `/cdt:version`).
 
 <p align="center">
   <img src="assets/menubar-screenshot.png" alt="CDT Usage menu bar dropdown — subscription %, local tokens, and the interactive claude-dev-team control panel" width="300">

@@ -18,11 +18,12 @@ func runOnce() {
         snap.subscriptionError = "timed out (approve Keychain access, or check network)"
     }
 
-    print("claude-dev-team — usage")
+    print("claude-dev-team — usage" + (cdtVersion().map { " · v\($0)" } ?? ""))
     if let s = snap.subscription {
         var parts = ["Session \(s.sessionPct)%" + (s.sessionResetIn.map { " (resets \($0))" } ?? ""),
                      "Weekly \(s.weeklyPct)%" + (s.weeklyResetIn.map { " (resets \($0))" } ?? "")]
         if let sonnet = s.sonnetPct { parts.append("Sonnet \(sonnet)%") }
+        // (One-shot has no retained reading, so it's never "stale" here — success XOR error below.)
         print("  Subscription: " + parts.joined(separator: " · "))
     } else {
         print("  Subscription: unavailable — \(snap.subscriptionError ?? "endpoint/login")")

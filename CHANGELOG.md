@@ -2,6 +2,31 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.22.0] — 2026-06-16
+### Added
+- **`/cdt:version`** (and the `cdt-version` CLI) — print the installed version. It reads the canonical
+  version from `.claude-plugin/plugin.json` (preferring `CLAUDE_PLUGIN_ROOT`, else the newest cached
+  install) and, on macOS, also reports the **menu bar app** version baked into `CDT Usage.app`, flagging
+  it as stale when the binary lags the plugin. `cdt-version --short` prints just the version string.
+- **Menu bar shows the installed version** — the `CDT Usage` dropdown footer now reads `v<x.y.z> · updated
+  <time>`. The Swift app resolves its version from the bundle's `CFBundleShortVersionString` (baked from
+  `plugin.json` at build) with a plugin-cache fallback for un-bundled `--once` runs; `cdt-menubar status`
+  prints it too.
+- `cdt-doctor` now checks `cdt-version` is installed alongside the other CLIs.
+
+### Fixed
+- **Menu bar no longer shows frozen subscription %s as if they were live.** The bar reads the Claude
+  Code OAuth *access* token from the Keychain; when it expires the usage endpoint returns 401 and the app
+  kept displaying the last-good reading silently, so session/weekly % appeared stuck until something
+  external (Claude Code / claude.ai) refreshed the Keychain token. Now a stale reading is shown as stale —
+  the badge numbers gray out, the dropdown header reads "— stale" with a "⚠ token expired — open Claude
+  Code or re-login to refresh (last good <time>)" note — and the failed-fetch retry drops from 5 min to
+  **60 s** (escalating 60→120→240→back toward 5 min if the token stays bad) so it self-heals quickly once
+  the token is refreshed, without hammering the endpoint (429 still backs off 15 min). The bar relies on
+  Claude Code's own token refresh — it re-reads the Keychain every poll. In-app token *minting* was
+  evaluated and **deliberately declined**: Claude Code's OAuth refresh token is single-use/rotated, so a
+  second app minting from it would invalidate the token Claude Code depends on and log the user out.
+
 ## [1.21.2] — 2026-06-15
 ### Fixed
 - **`fast-ops` can now create files from a template** — the agent advertised this but was granted only

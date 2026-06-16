@@ -4,6 +4,7 @@ final class MenuBarController: NSObject {
     private let statusItem: NSStatusItem
     var onRefresh: (() -> Void)?
     private var lastSnap: UsageSnapshot?   // so config changes can rebuild the menu in place
+    private lazy var versionString: String? = cdtVersion()   // installed version (constant per run)
 
     override init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -46,10 +47,13 @@ final class MenuBarController: NSObject {
         //     item is only as wide as "48%" and survives a crowded / notched menu bar. Labels in dropdown.
         if let sub = snap.subscription {
             statusItem.button?.title = ""
+            // When the reading is stale (last fetch failed, e.g. expired token) gray the numbers out so a
+            // frozen value never masquerades as live; otherwise color-code by threshold (80/90).
+            let stale = snap.subscriptionStale
             statusItem.button?.image = stackedImage(
                 brand: "CDT",
-                top: "\(sub.sessionPct)%", topColor: color(for: sub.sessionPct),
-                bottom: "\(sub.weeklyPct)%", bottomColor: color(for: sub.weeklyPct))
+                top: "\(sub.sessionPct)%", topColor: stale ? .tertiaryLabelColor : color(for: sub.sessionPct),
+                bottom: "\(sub.weeklyPct)%", bottomColor: stale ? .tertiaryLabelColor : color(for: sub.weeklyPct))
         } else {
             // No subscription data → a small single line with today's tokens.
             statusItem.button?.image = nil
@@ -74,7 +78,7 @@ final class MenuBarController: NSObject {
         }
 
         // Subscription section
-        header("Subscription (Claude Max)")
+        header("Subscription (Claude Max)" + (snap.subscriptionStale ? "  —  stale" : ""))
         if let sub = snap.subscription {
             line("  Session  \(textBar(sub.sessionPct)) \(sub.sessionPct)%" +
                  (sub.sessionResetIn.map { "  resets \($0)" } ?? ""))
@@ -82,6 +86,10 @@ final class MenuBarController: NSObject {
                  (sub.weeklyResetIn.map { "  resets \($0)" } ?? ""))
             if let s = sub.sonnetPct {
                 line("  Sonnet   \(textBar(s)) \(s)%")
+            }
+            if snap.subscriptionStale {
+                let asOf = snap.subscriptionAsOf.map { "  (last good \(clockTime($0)))" } ?? ""
+                line("  ⚠ \(snap.subscriptionError ?? "usage stale")\(asOf)")
             }
         } else {
             line("  unavailable — " + (snap.subscriptionError ?? "endpoint/login"))
@@ -137,11 +145,9 @@ final class MenuBarController: NSObject {
         }
 
         menu.addItem(.separator())
-        let updated = DateFormatter()
-        updated.dateFormat = "h:mm:ss a"   // 12-hour, e.g. 1:50:23 PM
-        updated.amSymbol = "AM"
-        updated.pmSymbol = "PM"
-        line("updated \(updated.string(from: snap.lastUpdated))")
+        let stamp = clockTime(snap.lastUpdated, seconds: true)
+        // Footer: installed version + last refresh (version omitted if it can't be resolved).
+        line(versionString.map { "v\($0)  ·  updated \(stamp)" } ?? "updated \(stamp)")
 
         let refresh = NSMenuItem(title: "Refresh now", action: #selector(refreshClicked), keyEquivalent: "r")
         refresh.target = self
