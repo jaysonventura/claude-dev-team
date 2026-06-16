@@ -14,6 +14,10 @@ ship is blocked until it is resolved.
 - Secrets handling: hardcoded keys, secrets in logs/commits, weak crypto, insecure randomness.
 - Input validation, output encoding, rate limiting on sensitive endpoints, dependency risk.
 - Data exposure: PII handling, overly broad responses, missing TLS/secure flags.
+- **Deploy hygiene (automation-first):** a manual/improvised deploy or build that bypasses the repo's
+  Makefile/scripts can skip baked-in secret handling, env scoping, and least-privilege. Flag a manual
+  `serverless`/`gradle`/`aws`/`cdk`/`sam deploy` used in place of the repo's automation, and any deploy
+  path improvised after a Makefile target failed without approval.
 
 ## Method
 - Read the real changed files. Trace untrusted input to sinks. Use `/security-review` if available.

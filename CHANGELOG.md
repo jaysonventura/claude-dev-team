@@ -2,6 +2,22 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.34.0] — 2026-06-16
+### Added
+- **Automation-first discipline — agents stop inventing manual deploy/build commands.** New
+  `automation-first` skill encodes the command hierarchy: **explicit user command > Makefile >
+  package/composer scripts > `scripts/` > docs/CI > manual fallback.** Before any build/deploy/run/release
+  command, agents inspect the repo and prefer its automation — **Makefile first**; dev deploy/build →
+  **`make up-dev`** when present. **Never** run a manual `serverless`/`gradle`/`npm`·`ng build`/`cap
+  sync`/AWS·CDK·SAM deploy before checking the Makefile; if a Makefile target **fails, STOP and report** —
+  no improvising another path without approval.
+  - Wired into the orchestration skill (SKILL.md STEP 3 rule + auto-apply routing table) and **every
+    command-running agent** (`backend`/`frontend`/`mobile`/`devops`/`qa`/`data`-engineer — including
+    `data`, which runs migrations directly and is a risk-floor category).
+  - **Reviewers + QA now flag manual-command usage** when an equivalent Makefile target or repo script
+    exists (`code-reviewer`, `security-reviewer` deploy-hygiene, `qa-engineer`).
+  - Also added to the global operating summary (`~/.claude/CLAUDE.md`). New `e2e.sh` doc-regression checks.
+
 ## [1.33.0] — 2026-06-16
 ### Added
 - **Adaptive advise + ship integration** — Phase 5 (final) of *Parallel Orchestration v2* (all four goals,

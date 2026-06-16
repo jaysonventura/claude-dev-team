@@ -116,6 +116,12 @@ Dispatch agents for a wave in **one message with multiple Agent tool calls** so 
   **e2e is required when the change is user-facing** (web UI / mobile / an API flow) and the project has
   (or should have) an e2e harness — `qa-engineer` writes/runs the real user journey (Playwright/Cypress,
   Detox/Maestro, supertest). If no harness exists, propose one; if e2e can't run here, say so — never fake it.
+- **Automation-first (every build/deploy/run command):** before running a build / deploy / run / release /
+  gate command, **inspect the repo and prefer its automation** — **Makefile target first** (then
+  package/composer scripts, `scripts/`, docs/CI). Dev deploy/build → **`make up-dev`** when present.
+  **Never** run a manual `serverless` / `gradle` / `npm`·`ng build` / `cap sync` / AWS·CDK·SAM deploy before
+  checking the Makefile. If a Makefile target **fails, STOP and report** — do **not** improvise another
+  deploy path without approval. (skill: `automation-first`)
 - **Wave 2 — independent review (parallel):** `code-reviewer` (correctness/scope/acceptance) +
   `security-reviewer` + `ui-ux-engineer` (UX/accessibility/polish review, for user-facing changes).
   **Security veto:** if security-reviewer flags risk >= medium, do **not** ship until resolved.
@@ -344,6 +350,7 @@ come from the auto-installed companions. Don't make the user request them.
 | TypeScript / JavaScript | `clean-code-typescript` |
 | A simplify / refactor / cleanup step | `karpathy-guidelines` + `code-splitting` + `gauge-improvements` |
 | A perf change or any "this is better" claim | `gauge-improvements` (measure before/after) |
+| **Running a build / deploy / run / release command** | `automation-first` — inspect the **Makefile** (then package/composer scripts, `scripts/`, docs/CI) and use it; never improvise a manual deploy |
 | Debugging a bug / test failure | `root-cause-analysis` (+ `superpowers:systematic-debugging`) |
 | Implementing a new feature / bugfix | `superpowers:test-driven-development` |
 | Before claiming done | `superpowers:verification-before-completion` |

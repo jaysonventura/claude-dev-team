@@ -229,6 +229,17 @@ echo "== 4j. adaptive advise (agent mix from telemetry) =="
 has "$("$BIN/cdt-advise" "sandbox task" 2>&1)" "agent mix" "advise recommends an agent mix from telemetry"
 has "$("$BIN/cdt-advise" "sandbox task" 2>&1)" "cdt-route" "advise points at cdt-route for model sizing"
 
+echo "== 4k. automation-first (prefer repo automation over manual commands) =="
+[ -f "$REPO/skills/automation-first/SKILL.md" ] && ok "automation-first skill present" || no "automation-first skill present"
+AF="$(cat "$REPO/skills/automation-first/SKILL.md" 2>/dev/null)"
+has "$AF" "make up-dev" "automation-first documents make up-dev for dev"
+has "$AF" "STOP and report" "automation-first: stop + report on Makefile failure"
+for a in backend frontend mobile devops qa data; do
+  has "$(cat "$REPO/agents/$a-engineer.md")" "automation-first" "$a-engineer carries the automation-first rule"
+done
+has "$(cat "$REPO/agents/code-reviewer.md")" "Automation usage" "code-reviewer flags manual-command usage"
+has "$(cat "$REPO/skills/orchestration/SKILL.md")" "automation-first" "orchestration skill routes to automation-first"
+
 echo "== 5. statusline -> budget (eco conserves when weekly is high) =="
 SL_JSON='{"model":{"display_name":"Opus"},"effort":{"level":"xhigh"},"rate_limits":{"seven_day":{"used_percentage":90},"five_hour":{"used_percentage":10}}}'
 has "$(printf '%s' "$SL_JSON" | "$BIN/cdt-statusline" 2>&1)" "wk" "statusline renders usage"

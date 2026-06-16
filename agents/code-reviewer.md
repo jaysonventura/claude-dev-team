@@ -14,6 +14,10 @@ judge the diff against intent and quality.
   (unrequested changes, scope creep).
 - **Reuse & simplicity:** duplicated logic, code that an existing util already covers, needless complexity.
 - **Maintainability:** naming, boundaries, tests present and meaningful, no dead code.
+- **Automation usage (automation-first):** flag any manual build/deploy/run command (`serverless`,
+  `gradle`/`./gradlew`, `npm`·`ng build`, `cap sync`, `aws`/`cdk`/`sam deploy`) used when an equivalent
+  **Makefile** target or repo script exists — the repo automation should have been used. Flag an
+  improvised deploy path taken after a Makefile target failed without approval.
 
 ## Method
 - Read the actual changed files and the contract's DONE-WHEN. Run tests/build if useful (read-only).

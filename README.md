@@ -48,6 +48,11 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - **Grounded builders (code-backed)** — the engineering builders (backend / frontend / mobile / data /
   devops / qa) natively carry the **context7** doc tools, so "look it up, don't guess the API" is
   actually possible; `lint-agents.sh` fails CI if a builder ever loses them.
+- **Automation-first (no improvised deploys)** — agents prefer existing repo automation over hand-written
+  commands: **explicit user command > Makefile > package/composer scripts > `scripts/` > docs/CI >
+  manual**. Dev deploy/build → `make up-dev`; on a Makefile-target failure they **stop and report**
+  instead of improvising another path. Reviewers + QA **flag** manual `serverless`/`gradle`/`npm`·`ng
+  build`/`cap sync`/AWS deploy commands when an equivalent target/script exists. (`automation-first` skill)
 - **14 role agents** (product-manager → architect → ui-ux-engineer → builders → technical-writer →
   reviewers, incl. a Haiku `fast-ops` tier) + a gated **5-agent Bug Council** for stuck bugs.
 - **10-gate quality chain** (incl. **e2e** for user-facing flows) + a bounded **Task Loop** (iterate to
