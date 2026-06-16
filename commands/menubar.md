@@ -4,7 +4,7 @@ argument-hint: [install|build|start|stop|restart|status|install-login|uninstall]
 allowed-tools: Bash
 ---
 
-Manage the **claude-dev-team menu bar usage monitor** (a native Swift app showing your real Claude Max
+Manage the **claude-dev-team menu bar usage monitor** (a native Swift app showing your real Claude
 subscription usage — session %, weekly %, Sonnet %, reset countdowns — plus accurate local token usage
 from your transcripts and dev-team activity).
 

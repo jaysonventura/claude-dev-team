@@ -78,7 +78,8 @@ final class MenuBarController: NSObject {
         }
 
         // Subscription section
-        header("Subscription (Claude Max)" + (snap.subscriptionStale ? "  —  stale" : ""))
+        // Plan tier (Pro/Max) isn't exposed by the usage endpoint, so don't claim one — just "Subscription".
+        header("Subscription" + (snap.subscriptionStale ? "  —  stale" : ""))
         if let sub = snap.subscription {
             line("  Session  \(textBar(sub.sessionPct)) \(sub.sessionPct)%" +
                  (sub.sessionResetIn.map { "  resets \($0)" } ?? ""))

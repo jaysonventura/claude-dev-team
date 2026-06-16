@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.22.1] — 2026-06-16
+### Fixed
+- **Menu bar no longer mislabels the plan as "Claude Max" for Pro users.** The subscription section
+  header was hardcoded to "Subscription (Claude Max)", but the `/api/oauth/usage` endpoint returns only
+  utilization buckets (`five_hour`, `seven_day`, `seven_day_sonnet`, …) — **no plan/tier field** — so the
+  app cannot actually know Pro vs Max. The header is now just "Subscription" (no tier claim); the menu-bar
+  doc was reworded to "your real Claude subscription usage". Verified against the live response shape.
+
 ## [1.22.0] — 2026-06-16
 ### Added
 - **`/cdt:version`** (and the `cdt-version` CLI) — print the installed version. It reads the canonical
