@@ -58,7 +58,7 @@ has "$("$BIN/cdt-stats" all 2>&1)" "cache)" "stats shows cache reads separately"
 echo "== 4c. verification gate (block a Stop with edits but no verify afterward) =="
 lacks() { if printf '%s' "$1" | grep -q -- "$2"; then no "$3"; else ok "$3"; fi; }
 vmark() { printf '%s/cdt-verified-%s.marker' "${TMPDIR:-/tmp}" "$1"; }
-clrm()  { rm -f "$(vmark "$1")" "${TMPDIR:-/tmp}/cdt-edits-$1.marker" "${TMPDIR:-/tmp}/cdt-verify-blocked-$1.marker" 2>/dev/null; }
+clrm()  { rm -f "$(vmark "$1")" "${TMPDIR:-/tmp}/cdt-edits-$1.marker" "${TMPDIR:-/tmp}/cdt-verify-blocked-$1.marker" "${TMPDIR:-/tmp}/cdt-scope-blocked-$1.marker" 2>/dev/null; }
 EP() { printf '{"session_id":"%s","tool_name":"Edit","tool_input":{"file_path":"%s/none.txt"},"cwd":"%s"}' "$1" "$SBX" "$SBX"; }
 BP() { printf '{"session_id":"%s","tool_name":"Bash","tool_input":{"command":"%s"},"tool_response":"%s"}' "$1" "$2" "$3"; }
 SP() { printf '{"session_id":"%s","cwd":"%s","transcript_path":"%s"}' "$1" "$SBX" "${2:-}"; }
@@ -115,6 +115,59 @@ for a in backend-engineer frontend-engineer mobile-engineer data-engineer devops
     no "$a missing context7 tools (grounding)"
   fi
 done
+
+echo "== 4e. scope/sprawl detection (contracts -> overreach/collision) =="
+CROOT="$SBX/repo"; mkdir -p "$CROOT"
+SCD() { printf '%s/.claude/.cdt/contracts/%s' "$HOME" "$1"; }
+TP() { printf '{"session_id":"%s","tool_name":"Task","tool_input":{"subagent_type":"%s","description":"d","prompt":"do it. CDT-CONTRACT: exclusive=%s ; read=types/**"},"cwd":"%s"}' "$1" "$2" "$3" "$CROOT"; }
+mksub() { printf '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Write","input":{"file_path":"%s"}}]}}\n' "$1" > "$2"; }
+astop() { printf '{"agent_type":"%s","session_id":"%s","transcript_path":"%s","cwd":"%s"}' "$1" "$2" "$3" "$CROOT" | bash "$REPO/hooks/agent-track.sh" >/dev/null 2>&1; }
+njson() { local d="$1" n=0 f; for f in "$d"/*.json; do [ -e "$f" ] && n=$((n+1)); done; echo "$n"; }
+hasjson() { local f; for f in "$1"/*.json; do [ -e "$f" ] && return 0; done; return 1; }
+
+# (a) PreToolUse(Task) captures a pending contract from the dispatch directive
+S=sc1; rm -rf "$(SCD $S)"
+TP $S "cdt:backend-engineer" "api/**" | bash "$REPO/hooks/contract-capture.sh" >/dev/null 2>&1
+hasjson "$(SCD $S)/pending" && ok "PreToolUse(Task) captured a pending contract" || no "contract capture"
+# (b) in-scope write -> claimed (atomic mv), no finding
+mksub "$CROOT/api/users.ts" "$SBX/tr-sc1.jsonl"; astop "cdt:backend-engineer" $S "$SBX/tr-sc1.jsonl"
+hasjson "$(SCD $S)/claimed" && ok "SubagentStop claimed the contract (atomic mv)" || no "contract claim"
+[ -s "$(SCD $S)/findings.jsonl" ] && no "in-scope write left no findings" || ok "in-scope write left no findings"
+# (c) out-of-scope write -> overreach
+S=sc2; rm -rf "$(SCD $S)"
+TP $S "cdt:backend-engineer" "api/**" | bash "$REPO/hooks/contract-capture.sh" >/dev/null 2>&1
+mksub "$CROOT/frontend/app.tsx" "$SBX/tr-sc2.jsonl"; astop "cdt:backend-engineer" $S "$SBX/tr-sc2.jsonl"
+has "$(cat "$(SCD $S)/findings.jsonl" 2>/dev/null)" "overreach" "out-of-scope write flagged as overreach"
+# (d) collision: backend writes into frontend's scope
+S=sc3; rm -rf "$(SCD $S)"
+TP $S "cdt:backend-engineer" "api/**" | bash "$REPO/hooks/contract-capture.sh" >/dev/null 2>&1
+TP $S "cdt:frontend-engineer" "ui/**" | bash "$REPO/hooks/contract-capture.sh" >/dev/null 2>&1
+mksub "$CROOT/ui/button.tsx" "$SBX/tr-sc3.jsonl"; astop "cdt:backend-engineer" $S "$SBX/tr-sc3.jsonl"
+has "$(cat "$(SCD $S)/findings.jsonl" 2>/dev/null)" "collision" "writing into a peer's scope flagged as collision"
+# (e) Stop gate: block vs warn (isolate from the verify gate)
+"$BIN/cdt-config" verify off >/dev/null 2>&1; "$BIN/cdt-config" scope block >/dev/null 2>&1
+edit sc2
+rm -f "${TMPDIR:-/tmp}/cdt-scope-blocked-sc2.marker"   # fresh once-per-session marker (across reruns too)
+has "$(stop sc2)" '"decision":"block"' "scope=block stops a session with findings"
+rm -f "${TMPDIR:-/tmp}/cdt-scope-blocked-sc2.marker"
+"$BIN/cdt-config" scope warn >/dev/null 2>&1
+lacks "$(stop sc2)" '"decision":"block"' "scope=warn never blocks"
+"$BIN/cdt-config" verify block >/dev/null 2>&1
+# (f) concurrency: two same-type contracts, two SubagentStops -> each claimed exactly once
+S=sc4; rm -rf "$(SCD $S)"
+TP $S "cdt:backend-engineer" "api/**" | bash "$REPO/hooks/contract-capture.sh" >/dev/null 2>&1
+TP $S "cdt:backend-engineer" "api/**" | bash "$REPO/hooks/contract-capture.sh" >/dev/null 2>&1
+[ "$(njson "$(SCD $S)/pending")" = "2" ] && ok "two contracts captured for the same agent type" || no "two-contract capture"
+mksub "$CROOT/api/a.ts" "$SBX/tr-4a.jsonl"; mksub "$CROOT/api/b.ts" "$SBX/tr-4b.jsonl"
+astop "cdt:backend-engineer" $S "$SBX/tr-4a.jsonl"; astop "cdt:backend-engineer" $S "$SBX/tr-4b.jsonl"
+{ [ "$(njson "$(SCD $S)/claimed")" = "2" ] && [ "$(njson "$(SCD $S)/pending")" = "0" ]; } \
+  && ok "each contract claimed exactly once (no double-claim)" || no "claim accounting under concurrency"
+# (g) scope events recorded
+SCEV="$(CDT_DB="$HOME/.claude/claude-dev-team.db" python3 -c 'import os,sqlite3
+try: print(sqlite3.connect(os.environ["CDT_DB"]).execute("SELECT count(*) FROM events WHERE type LIKE ?",("scope%",)).fetchone()[0])
+except Exception: print(0)' 2>/dev/null)"
+[ "${SCEV:-0}" -gt 0 ] && ok "scope events recorded to the DB" || no "scope events recorded to the DB"
+for s in sc1 sc2 sc3 sc4; do rm -rf "$(SCD $s)"; clrm $s; done
 
 echo "== 5. statusline -> budget (eco conserves when weekly is high) =="
 SL_JSON='{"model":{"display_name":"Opus"},"effort":{"level":"xhigh"},"rate_limits":{"seven_day":{"used_percentage":90},"five_hour":{"used_percentage":10}}}'

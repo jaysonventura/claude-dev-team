@@ -2,6 +2,24 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.26.0] — 2026-06-16
+### Added
+- **Scope/sprawl detection — "exclusive file ownership" is now code-checked (fixes "sprawls a simple
+  change into ten files").** Phase 3 of the enforcement track. The contract's exclusive-file scope used to
+  be prose only; nothing detected when an agent wrote outside it.
+  - A **`PreToolUse(Task)` hook** (`hooks/contract-capture.sh`) records each dispatched agent's contract
+    from a `CDT-CONTRACT: exclusive=api/**,server/** ; read=types/**` line the orchestrator now emits
+    (SKILL.md STEP 2). Contracts live under `~/.claude/.cdt/contracts/<session>/{pending,claimed}/`.
+  - **`SubagentStop`** (`hooks/agent-track.sh`) **atomically claims** the agent's contract (lock-free
+    `mv pending→claimed`, safe under concurrent waves) and diffs the files the agent **actually wrote**
+    (from its own transcript — attribution works even when parallel agents share one working tree) against
+    it. Files outside its scope → **overreach**; files in a peer's scope → **collision**. Recorded to
+    `findings.jsonl` + the events DB (`scope_overreach` / `scope_collision`).
+  - **Stop gate** surfaces findings: `cdt-config scope warn|block|off` (**default `warn`** — more moving
+    parts than the verify gate, so it starts non-blocking). New `cdt-contract` CLI (`add|list|show|
+    findings|reset`); stale per-session contracts are GC'd at SessionStart. Glob matching is lenient
+    (favours not-flagging). 10 new `e2e.sh` assertions incl. a concurrency double-claim test; fail-open.
+
 ## [1.25.0] — 2026-06-16
 ### Added
 - **Grounding is now code-backed — builders carry context7 (fixes "hallucinates APIs").** Phase 2 of the

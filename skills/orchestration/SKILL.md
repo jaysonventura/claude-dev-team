@@ -82,6 +82,17 @@ Never dispatch a vague task. Each agent gets a 6-part contract:
 5. **DO NOT** — explicit guardrails (don't touch X, don't add deps, don't change the schema…).
 6. **REPORT** — ≤150 words, plus fenced ```evidence``` (command output, diff summary). No prose dumps.
 
+**Make the contract machine-checkable.** In each dispatch prompt, include one line so the scope gate can
+verify what the agent actually touched (a `PreToolUse` hook captures it; `SubagentStop` diffs the agent's
+writes against it and flags overreach/collisions — `cdt-config scope warn|block|off`):
+
+```
+CDT-CONTRACT: exclusive=api/**,server/** ; read=types/**,shared/**
+```
+
+Use the same globs as the EXCLUSIVE / READ lists above. Disjoint `exclusive` sets across a wave are what
+make parallel dispatch collision-free.
+
 ## STEP 3 · EXECUTE (single message, parallel waves)
 
 Dispatch agents for a wave in **one message with multiple Agent tool calls** so they run concurrently.

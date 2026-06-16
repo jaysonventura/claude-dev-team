@@ -63,6 +63,25 @@ if [ "$GATE" != "off" ]; then
   fi
 fi
 
+# --- Scope gate: surface contract overreach/collision flagged by SubagentStop this session. -----------
+# Default WARN (more moving parts than the verify gate). Tune: cdt-config scope warn|block|off.
+SCOPEGATE="$(grep -E '^CDT_SCOPE_GATE=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+case "$SCOPEGATE" in block|warn|off) : ;; *) SCOPEGATE=warn ;; esac
+FINDINGS="$CDT_HOME/.cdt/contracts/${SESSION_ID:-default}/findings.jsonl"
+SBLOCK="${TMPDIR:-/tmp}/cdt-scope-blocked-${SESSION_ID:-default}.marker"
+if [ "$SCOPEGATE" != "off" ] && [ -s "$FINDINGS" ] && [ ! -f "$SBLOCK" ]; then
+  : > "$SBLOCK" 2>/dev/null   # fire at most once per session
+  SN="$(grep -c '"type"' "$FINDINGS" 2>/dev/null)"; case "$SN" in ''|*[!0-9]*) SN=0 ;; esac
+  if [ "$SCOPEGATE" = "warn" ]; then
+    db_event scope_gate "warn ($SN)" "${SESSION_ID:-}" 2>/dev/null
+    echo "claude-dev-team: ⚠ $SN scope finding(s) this session — an agent wrote outside its exclusive contract (review: cdt-contract findings)." >&2
+  else
+    db_event scope_gate "block ($SN)" "${SESSION_ID:-}" 2>/dev/null
+    printf '{"decision":"block","reason":"%s"}\n' "claude-dev-team: $SN agent scope violation(s) this session — a subagent wrote files outside its exclusive contract or into a peer's scope. Review them (run: cdt-contract findings), reconcile, then stop. (Soften: cdt-config scope warn|off.)"
+    exit 0
+  fi
+fi
+
 # Optional mandate reminder — opt in with CDT_STOP_REMINDER=1 (kept off by default for cost).
 # Read just this key (don't `source` the env file — a crafted value must never execute).
 _REMIND="$(grep -E '^CDT_STOP_REMINDER=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"

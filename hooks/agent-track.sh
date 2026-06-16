@@ -58,4 +58,29 @@ if [ -n "$SID" ] && [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
     && cdt_verify_scan_transcript "$TRANSCRIPT" \
     && : > "$(cdt_verify_marker "$SID")" 2>/dev/null
 fi
+
+# Scope/sprawl detection (Phase 3): claim this subagent's exclusive-file contract and flag any file it
+# wrote outside that contract (overreach) or into a peer's scope (collision). Fail-open — no contract,
+# no python3, or no transcript simply records nothing.
+if [ -n "$SID" ] && [ -f "$HOOKS_DIR/scope-lib.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$HOOKS_DIR/scope-lib.sh" 2>/dev/null
+  _OWN="$(cdt_scope_claim "$SID" "$AGENT" 2>/dev/null)"
+  if [ -n "$_OWN" ]; then
+    _SDIR="$(cdt_scope_dir "$SID")"
+    _CWD="$(get cwd)"
+    export CDT_TRANSCRIPT="$TRANSCRIPT" CDT_OWN="$_OWN" CDT_SESSION_DIR="$_SDIR" CDT_AGENT="$AGENT" CDT_CWD="$_CWD"
+    _FIND="$(cdt_scope_eval 2>/dev/null)"
+    unset CDT_TRANSCRIPT CDT_OWN CDT_SESSION_DIR CDT_AGENT CDT_CWD
+    if [ -n "$_FIND" ]; then
+      printf '%s\n' "$_FIND" >> "$_SDIR/findings.jsonl" 2>/dev/null
+      _NO="$(printf '%s' "$_FIND" | grep -c 'overreach')"
+      _NC="$(printf '%s' "$_FIND" | grep -c 'collision')"
+      [ "${_NO:-0}" -gt 0 ] && db_event scope_overreach "$AGENT wrote $_NO file(s) outside its contract" "$SID" 2>/dev/null
+      [ "${_NC:-0}" -gt 0 ] && db_event scope_collision "$AGENT wrote $_NC file(s) in a peer's scope" "$SID" 2>/dev/null
+    fi
+  else
+    db_event scope "no contract matched for $AGENT" "$SID" 2>/dev/null
+  fi
+fi
 exit 0

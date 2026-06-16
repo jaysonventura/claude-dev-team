@@ -112,12 +112,14 @@ show() {
   local eff mdl; eff="$(get_setting effortLevel)"; mdl="$(get_setting model)"
   local au tm sc; au="$(get_env CDT_AUTONOMY)"; [ -z "$au" ] && au="assist"; tm="$(get_env CDT_TEAMS)"; [ -z "$tm" ] && tm="off"; sc="$(get_env CDT_SCALE)"; [ -z "$sc" ] && sc="off"
   local vg; vg="$(get_env CDT_VERIFY_GATE)"; [ -z "$vg" ] && vg="block"
+  local sg; sg="$(get_env CDT_SCOPE_GATE)"; [ -z "$sg" ] && sg="warn"
   echo "claude-dev-team config:"
   echo "  status    : $([ "$en" = "0" ] && echo DISABLED || echo enabled)"
   echo "  effort    : ${eff:-(unset)}   (default $DEFAULT_EFFORT)"
   echo "  model     : ${mdl:-(unset → Claude Code default)}   (recommended $DEFAULT_MODEL = Opus 4.8)"
   echo "  eco       : $eco   (default off; auto = conserve when weekly usage is high; on | off | auto)"
   echo "  verify    : $vg   (block | warn | off — block a Stop with edits but no test/build/lint after them)"
+  echo "  scope     : $sg   (warn | block | off — flag a subagent that wrote outside its exclusive contract)"
   echo "  autonomy  : $au   (off | assist | auto — autonomous escalation; details: cdt-auto status)"
   echo "  teams     : $tm   ·  scale : $sc   (DEPTH/BREADTH engines; off by default, opt in to enable)"
   echo "  statusline: $(statusline_state)   (terminal status line)"
@@ -151,6 +153,11 @@ case "${1:-show}" in
     case "$2" in
       block|warn|off) set_env CDT_VERIFY_GATE "$2"; echo "claude-dev-team: verify gate = $2  (block = stop a session that edited files but ran no test/build/lint afterward · warn = notice only · off = disabled)." ;;
       *) echo "cdt-config: verify must be one of: block | warn | off" ;;
+    esac ;;
+  scope)
+    case "$2" in
+      warn|block|off) set_env CDT_SCOPE_GATE "$2"; echo "claude-dev-team: scope gate = $2  (flag a subagent that wrote files outside its exclusive contract or into a peer's scope; warn = notice · block = stop · off = disabled)." ;;
+      *) echo "cdt-config: scope must be one of: warn | block | off" ;;
     esac ;;
   autonomy)
     case "$2" in
@@ -207,6 +214,6 @@ PY
     set_setting effortLevel "$DEFAULT_EFFORT"
     set_setting model "$DEFAULT_MODEL"
     echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off, autonomy=assist, engines off)." ;;
-  *) echo "usage: cdt-config {show|on|off|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
+  *) echo "usage: cdt-config {show|on|off|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
 esac
 exit 0

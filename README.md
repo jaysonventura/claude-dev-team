@@ -715,6 +715,19 @@ and degrades fail-open when `python3`/markers are unavailable. Tune it:
 The allowlist is verb-anchored (`pytest`, `go test`, `npm test`, `tsc`, `eslint`, `cargo test`, … —
 but never `echo`, `git`, `ls`), so it won't false-trigger on non-verifying commands.
 
+**Scope/sprawl detection (code-backed):** the "exclusive file ownership" contract is no longer just
+prose. When the orchestrator dispatches a specialist, it emits a `CDT-CONTRACT: exclusive=…` line; a
+`PreToolUse` hook records it, and `SubagentStop` **diffs what the agent actually wrote** (from its own
+transcript — works even when parallel agents share one tree) against that contract. Anything **outside
+its scope (overreach)** or **inside a peer's scope (collision)** is flagged. Inspect with
+`cdt-contract findings`; tune with:
+
+```
+~/.claude/bin/cdt-config scope warn       # default — surface a notice at Stop
+~/.claude/bin/cdt-config scope block       # stop until the sprawl is reconciled
+~/.claude/bin/cdt-config scope off
+```
+
 ## Security & privacy
 
 `claude-dev-team` runs **entirely on your machine** and phones home to nothing.

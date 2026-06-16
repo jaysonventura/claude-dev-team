@@ -36,6 +36,10 @@ cp "$HOOKS_DIR/tokens.sh"  "$BIN/cdt-tokens"   2>/dev/null && chmod +x "$BIN/cdt
 cp "$HOOKS_DIR/worktree.sh" "$BIN/cdt-worktree" 2>/dev/null && chmod +x "$BIN/cdt-worktree" 2>/dev/null
 cp "$HOOKS_DIR/auto.sh"      "$BIN/cdt-auto"     2>/dev/null && chmod +x "$BIN/cdt-auto"     2>/dev/null
 cp "$HOOKS_DIR/version.sh"   "$BIN/cdt-version"  2>/dev/null && chmod +x "$BIN/cdt-version"  2>/dev/null
+cp "$HOOKS_DIR/contract.sh"  "$BIN/cdt-contract" 2>/dev/null && chmod +x "$BIN/cdt-contract" 2>/dev/null
+
+# Housekeeping: drop stale scope-contract dirs (>12h old) so per-session contracts never accumulate.
+find "$CDT_HOME/.cdt/contracts" -maxdepth 1 -mindepth 1 -type d -mmin +720 -exec rm -rf {} + 2>/dev/null
 
 # Stage the menu bar Swift source to a stable, buildable location (source only — not .build).
 MENUBAR_SRC="$(cd "$HOOKS_DIR/.." 2>/dev/null && pwd)/menubar"
