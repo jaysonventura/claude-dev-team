@@ -2,6 +2,16 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.34.1] — 2026-06-16
+### Docs
+- README: new **"Updating CDT (get the latest version)"** section — `claude plugin marketplace update
+  claude-dev-team` + `claude plugin update cdt@claude-dev-team` (restart to apply), `/cdt:version` to
+  check, and how to refresh the macOS menu-bar app (re-run `/cdt:menubar`, or download the notarized DMG
+  from the latest release).
+### Packaging
+- The **notarized `CDT Usage` DMG** (v1.34.1) is attached to the GitHub release so users can update the
+  menu-bar app without rebuilding from source.
+
 ## [1.34.0] — 2026-06-16
 ### Added
 - **Automation-first discipline — agents stop inventing manual deploy/build commands.** New

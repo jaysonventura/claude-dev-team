@@ -352,6 +352,24 @@ vault + SQLite DB + `cdt-*` CLIs, skills auto-apply, and the `/cdt:*` commands a
 - **Always-on (power users):** for a hard guarantee every session, drop the `orchestration` summary into
   your global `~/.claude/CLAUDE.md` (see [`docs/architecture.md`](docs/architecture.md)). Most users don't need this.
 
+### Updating CDT (get the latest version)
+
+CDT is tracked from `main`, so updating is two commands + a restart:
+
+```
+claude plugin marketplace update claude-dev-team   # refresh the marketplace from the repo
+claude plugin update cdt@claude-dev-team           # update the plugin (restart required to apply)
+```
+
+Then **restart your Claude Code session** (or `/reload-plugins`). Check your version with
+`claude plugin list` or **`/cdt:version`** — it also flags the macOS menu-bar app when it lags the plugin.
+
+**macOS menu-bar app** — the plugin update ships the new app *source*; refresh the running app one of two ways:
+- **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
+- **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
+
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.34.1**.
+
 ---
 
 ## Notifications (Discord + Telegram)
