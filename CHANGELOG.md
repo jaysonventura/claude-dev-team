@@ -2,6 +2,23 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.34.4] — 2026-06-17
+### Fixed
+- **Menu bar: subscription % no longer freezes for hours after a transient rate-limit.** Root cause
+  (live evidence): the subscription poll was a *self-re-arming one-shot* timer — it scheduled the next
+  poll only inside a fetch's completion. After one transient `429` (the endpoint rate-limits **bursts**;
+  normal 5-min polling is fine), a later fetch never completed its re-arm (a network `await` could hang up
+  to the ephemeral session's **7-day** default resource timeout), so the subscription chain **died** while
+  the independent local-token timer kept running — the % stayed stuck ~8h ("rate limited · last good 9:41
+  PM") even though the endpoint was returning 200.
+  - **Resilient scheduling:** subscription polling now runs off a single **repeating heartbeat** timer
+    (`.common` mode) with an in-flight guard that force-clears a stuck fetch — a hung/failed fetch can
+    **never** break the poll chain; it always resumes on the next backoff window.
+  - **Hard fetch timeout:** the usage session sets `timeoutIntervalForResource = 25` so a stalled request
+    can't hang for days. (Also removed a `waitsForConnectivity=false` line that caused consistent timeouts.)
+  - Backoff preserved (5 min healthy · 15 min on 429 · escalating otherwise), now driven by a `nextFetch`
+    time instead of a fragile re-arm.
+
 ## [1.34.3] — 2026-06-16
 ### Fixed
 - **Menu bar: usage now actually auto-refreshes in the background (App Nap was the real root cause).**

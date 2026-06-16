@@ -36,6 +36,8 @@ private let liveUsageSession: URLSession = {
     let cfg = URLSessionConfiguration.ephemeral          // no persistent cache/cookies
     cfg.urlCache = nil
     cfg.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+    cfg.timeoutIntervalForResource = 25                   // HARD cap on the whole fetch so a stalled
+                                                          // request can't hang for days and freeze polling
     return URLSession(configuration: cfg)
 }()
 
