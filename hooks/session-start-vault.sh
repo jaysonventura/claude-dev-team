@@ -38,6 +38,7 @@ cp "$HOOKS_DIR/auto.sh"      "$BIN/cdt-auto"     2>/dev/null && chmod +x "$BIN/c
 cp "$HOOKS_DIR/version.sh"   "$BIN/cdt-version"  2>/dev/null && chmod +x "$BIN/cdt-version"  2>/dev/null
 cp "$HOOKS_DIR/contract.sh"  "$BIN/cdt-contract" 2>/dev/null && chmod +x "$BIN/cdt-contract" 2>/dev/null
 cp "$HOOKS_DIR/context.sh"   "$BIN/cdt-context"  2>/dev/null && chmod +x "$BIN/cdt-context"  2>/dev/null
+cp "$HOOKS_DIR/route.sh"     "$BIN/cdt-route"    2>/dev/null && chmod +x "$BIN/cdt-route"    2>/dev/null
 
 # Housekeeping: drop stale per-session scope-contracts and context packs (>12h old) so they don't pile up.
 find "$CDT_HOME/.cdt/contracts" -maxdepth 1 -mindepth 1 -type d -mmin +720 -exec rm -rf {} + 2>/dev/null

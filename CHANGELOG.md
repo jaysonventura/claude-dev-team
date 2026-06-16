@@ -2,6 +2,17 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.31.0] — 2026-06-16
+### Added
+- **Production-grade model right-sizing** — Phase 3 of *Parallel Orchestration v2* (cost + production-grade;
+  additive). New `cdt-route "<subtask>"` advises **Opus vs Sonnet** by difficulty signals (risk /
+  ambiguity / architecture / review → Opus; substantive build/test/throughput → Sonnet) and **never
+  recommends Haiku for substantive work** — only explicitly trivial mechanical ops route to `fast-ops`.
+  Cost-effectiveness comes from spending Opus only where it pays, never from a model that can't do the job.
+- **Production-grade model floor is now lint-enforced** — `scripts/lint-agents.sh` fails CI if any
+  non-`fast-ops` agent is pinned to Haiku (the Sonnet+ floor for substantive agents). SKILL.md model-
+  routing section points at `cdt-route`. New `e2e.sh` route assertions + a lint negative test.
+
 ## [1.30.0] — 2026-06-16
 ### Added
 - **Shared-context packs (dedup)** — Phase 2 of *Parallel Orchestration v2* (cost + fast shipping;

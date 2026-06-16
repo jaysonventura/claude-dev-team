@@ -525,6 +525,12 @@ distills the shared files **once** into a manifest (`cdt-context pack <files…>
 signatures) that's injected into each agent's READ list and kept as a prompt-cache-friendly prefix. Fewer
 tokens, faster ramp.
 
+**Production-grade model right-sizing** — `cdt-route "<subtask>"` advises **Opus vs Sonnet** by difficulty
+(risk/ambiguity/architecture → Opus; substantive throughput → Sonnet). It **never** routes real work to
+Haiku — the production-grade floor is **lint-enforced** (`lint-agents.sh` fails CI if any non-`fast-ops`
+agent is pinned to Haiku). Cost-effectiveness comes from spending Opus only where it pays, never from a
+model that can't do the job.
+
 ```
 ~/.claude/bin/cdt-worktree new <name>     # isolated checkout at .claude/worktrees/<name> (branch worktree-<name>)
 ~/.claude/bin/cdt-worktree list           # see all worktrees

@@ -53,6 +53,10 @@ for f in agents/*.md; do
   case " $OPUS " in *" $base "*) [ "$model" = "opus" ] || err "$base: should be 'model: opus' (judgment role)" ;; esac
   [ "$base" = "fast-ops" ] && { [ "$model" = "haiku" ] || err "fast-ops must be 'model: haiku' (the only low tier)"; }
 
+  # 5b. PRODUCTION-GRADE MODEL FLOOR (Parallel Orchestration v2): only fast-ops may run on Haiku — no
+  #     substantive agent is ever pinned below the Sonnet+ floor. Cost-savings come above the floor.
+  [ "$model" = "haiku" ] && [ "$base" != "fast-ops" ] && err "$base: only fast-ops may use Haiku — substantive agents stay at the Sonnet+ production-grade floor"
+
   # 6. behavioral contract: a REPORT section + anti-hallucination/grounding language
   grep -qiE '^## REPORT|REPORT \(' "$f" || err "$base: missing a REPORT section"
   grep -qiE 'ground|never invent|never fake|hallucinat|evidence|real (file|line)|verif' "$f" || err "$base: missing anti-hallucination/grounding language"

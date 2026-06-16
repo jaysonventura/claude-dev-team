@@ -211,6 +211,12 @@ has "$PK" "gamma" "context pack extracts a Python signature (gamma)"
 lacks "$PK" "const x" "context pack omits non-signature lines"
 CDT_SESSION_ID=cx1 "$BIN/cdt-context" reset >/dev/null 2>&1
 
+echo "== 4h. production-grade model right-sizing (cdt-route) =="
+has "$("$BIN/cdt-route" "add auth token refresh" 2>&1)" "opus" "route: risk-flagged work -> Opus"
+has "$("$BIN/cdt-route" "scaffold a CRUD endpoint" 2>&1)" "sonnet" "route: substantive throughput -> Sonnet"
+has "$("$BIN/cdt-route" "rename a variable across files" 2>&1)" "haiku" "route: trivial mechanical -> fast-ops/Haiku"
+has "$("$BIN/cdt-route" "design the caching architecture" 2>&1)" "opus" "route: design/architecture -> Opus"
+
 echo "== 5. statusline -> budget (eco conserves when weekly is high) =="
 SL_JSON='{"model":{"display_name":"Opus"},"effort":{"level":"xhigh"},"rate_limits":{"seven_day":{"used_percentage":90},"five_hour":{"used_percentage":10}}}'
 has "$(printf '%s' "$SL_JSON" | "$BIN/cdt-statusline" 2>&1)" "wk" "statusline renders usage"

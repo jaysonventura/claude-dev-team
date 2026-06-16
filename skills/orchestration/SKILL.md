@@ -278,6 +278,9 @@ come from transcripts and Claude Code's `/cost` / `/usage` is the authoritative 
 
 - **Model routing (Opus is the recommended main model):** quality-critical work runs on a strong model;
   cost-effectiveness comes from **tiering + trivial-only Haiku**, never from downgrading important work.
+  Per dispatch, you may consult **`~/.claude/bin/cdt-route "<subtask>"`** — it recommends Opus vs Sonnet by
+  difficulty (risk/ambiguity/architecture → Opus; substantive throughput → Sonnet) and **never recommends
+  Haiku for substantive work**. The production-grade floor is lint-enforced: only `fast-ops` may be Haiku.
   - **Opus — judgment & main:** `product-manager`, `architect`, `ui-ux-engineer`, `code-reviewer`,
     `security-reviewer` are pinned Opus, and the orchestrator itself runs on your session model (use
     **Opus** for quality work).
