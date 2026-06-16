@@ -114,6 +114,26 @@ except Exception: print(0)' 2>/dev/null)"
   fi
 fi
 
+# --- Orchestrator overhead: how much the orchestration layer itself cost vs the work it delegated. -----
+if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ] && command -v python3 >/dev/null 2>&1; then
+  _UH="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
+  if [ -f "$_UH/usage-lib.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$_UH/usage-lib.sh" 2>/dev/null
+    read -r _MAIN _ <<EOF4
+$(cdt_usage_tokens "$TRANSCRIPT")
+EOF4
+    case "$_MAIN" in ''|*[!0-9]*) _MAIN=0 ;; esac
+    if [ "${_MAIN:-0}" -gt 0 ]; then
+      _AGG="$(CDT_DB="$CDT_HOME/claude-dev-team.db" CDT_SID="${SESSION_ID:-}" python3 -c 'import os,sqlite3
+try: print(sqlite3.connect(os.environ["CDT_DB"]).execute("SELECT COALESCE(SUM(tokens),0) FROM agent_runs WHERE task_id=?",(os.environ.get("CDT_SID",""),)).fetchone()[0])
+except Exception: print(0)' 2>/dev/null)"
+      case "$_AGG" in ''|*[!0-9]*) _AGG=0 ;; esac
+      db_event orch_overhead "main=$_MAIN delegated=$_AGG" "${SESSION_ID:-}" 2>/dev/null
+    fi
+  fi
+fi
+
 # Optional mandate reminder — opt in with CDT_STOP_REMINDER=1 (kept off by default for cost).
 # Read just this key (don't `source` the env file — a crafted value must never execute).
 _REMIND="$(grep -E '^CDT_STOP_REMINDER=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"

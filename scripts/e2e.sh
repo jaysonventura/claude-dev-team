@@ -263,7 +263,10 @@ has "$("$BIN/cdt-auto" gate scale 2>&1)" "DENY" "gate scale DENY when engine off
 "$BIN/cdt-config" scale on >/dev/null 2>&1
 fresh 20; has "$("$BIN/cdt-auto" gate scale 2>&1)" "ASK" "gate scale ASK in assist mode"
 "$BIN/cdt-config" autonomy auto >/dev/null 2>&1
-fresh 20; has "$("$BIN/cdt-auto" gate scale 2>&1)" "ALLOW" "gate scale ALLOW in auto mode within budget"
+fresh 20; has "$("$BIN/cdt-auto" gate scale 2>&1)" "ASK" "gate scale ASK without a slice baseline (slice-first required)"
+"$BIN/cdt-auto" slice record 5 >/dev/null 2>&1
+fresh 20; has "$("$BIN/cdt-auto" gate scale 2>&1)" "ALLOW" "gate scale ALLOW in auto mode after slice-first"
+rm -f "$HOME/.claude/.cdt/scale-slice.json"
 fresh 90; has "$("$BIN/cdt-auto" gate scale 2>&1)" "ASK" "gate scale ASK in auto mode over ceiling"
 rm -f "$HOME/.claude/.cdt-usage.json"
 has "$("$BIN/cdt-auto" gate scale 2>&1)" "ASK" "gate scale ASK when budget unknown (fail-safe, not ALLOW)"
@@ -276,6 +279,25 @@ has "$("$BIN/cdt-auto" explain "fix a typo in the readme" 2>&1)" "BOUNDED" "expl
 # off disables all escalation
 "$BIN/cdt-config" autonomy off >/dev/null 2>&1
 has "$("$BIN/cdt-auto" gate team 2>&1)" "DENY" "gate DENY when autonomy off"
+
+echo "== 9b. slice-first projection + orchestrator overhead (cost truthfulness) =="
+# measure a slice, add some delegated spend, then project the full fan-out vs the cap
+"$BIN/cdt-auto" slice record 2 >/dev/null 2>&1
+printf '{"agent_type":"cdt:slicer","session_id":"slc","transcript_path":"%s"}' "$TR" | bash "$REPO/hooks/agent-track.sh" >/dev/null 2>&1
+has "$("$BIN/cdt-auto" project 10 2>&1)" "ALLOW" "project: a small slice extrapolates under the cap -> ALLOW"
+has "$("$BIN/cdt-auto" project 100000000 2>&1)" "STOP" "project: a huge fan-out over the cap -> STOP"
+rm -f "$HOME/.claude/.cdt/scale-slice.json"
+# orchestrator overhead recorded at Stop (main-session tokens vs delegated)
+"$BIN/cdt-config" verify off >/dev/null 2>&1
+clrm oh1; edit oh1
+printf '{"session_id":"oh1","cwd":"%s","transcript_path":"%s"}' "$SBX" "$TR" | bash "$REPO/hooks/completion-guard.sh" >/dev/null 2>&1
+"$BIN/cdt-config" verify block >/dev/null 2>&1
+OHEV="$(CDT_DB="$HOME/.claude/claude-dev-team.db" python3 -c 'import os,sqlite3
+try: print(sqlite3.connect(os.environ["CDT_DB"]).execute("SELECT count(*) FROM events WHERE type=?",("orch_overhead",)).fetchone()[0])
+except Exception: print(0)' 2>/dev/null)"
+[ "${OHEV:-0}" -gt 0 ] && ok "orchestration overhead recorded at Stop (main vs delegated tokens)" || no "orch_overhead recorded"
+has "$("$BIN/cdt-stats" all 2>&1)" "Orchestration overhead" "stats shows the orchestration overhead line"
+clrm oh1
 
 echo
 if [ "$fail" = 0 ]; then echo "E2E PASSED"; else echo "E2E FAILED"; fi

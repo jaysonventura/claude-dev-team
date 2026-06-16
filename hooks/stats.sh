@@ -57,6 +57,10 @@ echo "Agent runs — which roles cost the most (role · runs · tokens; +cache r
 q "SELECT '  '||REPLACE(REPLACE(agent,'claude-dev-team:',''),'cdt:','')||'  ×'||COUNT(*)||'  '||$(hum "SUM(COALESCE(tokens,0))")||'  (+'||$(hum "SUM(COALESCE(cache_read,0))")||' cache)' FROM agent_runs WHERE started >= '$SINCE' AND agent NOT IN ('unknown','') GROUP BY agent ORDER BY SUM(COALESCE(tokens,0)) DESC, COUNT(*) DESC;"
 echo "Total agent tokens: $(q "SELECT $(hum "SUM(COALESCE(tokens,0))") FROM agent_runs WHERE started >= '$SINCE' AND agent NOT IN ('unknown','');")  (+ $(q "SELECT $(hum "SUM(COALESCE(cache_read,0))") FROM agent_runs WHERE started >= '$SINCE' AND agent NOT IN ('unknown','');") cache reads, discounted)"
 echo
+echo "Orchestration overhead (latest — orchestrator's own tokens vs the work it delegated):"
+_OH="$(q "SELECT message FROM events WHERE type='orch_overhead' AND ts >= '$SINCE' ORDER BY ts DESC LIMIT 1;")"
+echo "  ${_OH:-(none recorded yet — the Stop hook records main-vs-delegated tokens per session)}"
+echo
 echo "Token budget (your real 'cost' on Max = session + weekly rate-limit usage, NOT money):"
 echo "  per-agent 'tokens' above are REAL cost-relevant tokens (input + output + cache-creation); cache"
 echo "  reads are shown separately because they're heavily discounted and would otherwise swamp the ranking."

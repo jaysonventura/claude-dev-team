@@ -2,6 +2,22 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.28.0] — 2026-06-16
+### Added
+- **Cost truthfulness — orchestrator-overhead metering + slice-first as a code gate.** Phase 5 (final) of
+  the enforcement track. A new `hooks/usage-lib.sh` centralizes transcript token-summing (reused by the
+  per-agent telemetry); at `Stop`, `completion-guard.sh` records the **orchestration overhead** — the
+  orchestrator's own tokens vs the work it delegated — to the events DB, and `/cdt:stats` shows it.
+- **Slice-first BREADTH is now enforced, not just advised.** `cdt-auto slice record <n>` stamps a token
+  baseline; `cdt-auto project <total>` extrapolates per-item cost from a measured slice vs
+  `CDT_SCALE_TOKEN_CAP` (`ALLOW`/`STOP`); and `cdt-auto gate scale` now returns **ASK** in auto mode until
+  a recent slice baseline exists — so a workflow can't fan out before its cost has been measured.
+### Changed
+- **README "Why" now documents the enforced-vs-trusted boundary** with a code-backed enforcement table,
+  and a design spec lands at `docs/specs/2026-06-16-enforcement-gates.md`. The gates *detect/surface/block*;
+  the orchestrator still authors the work — stated plainly rather than over-claimed.
+- `hooks/agent-track.sh` refactored to use `usage-lib.sh` (identical token accounting; e2e-verified).
+
 ## [1.27.0] — 2026-06-16
 ### Added
 - **Memory gate + smarter recall (fixes "forgets yesterday's lesson").** Phase 4 of the enforcement

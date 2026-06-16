@@ -70,6 +70,25 @@ simple change into ten files, and forgets yesterday's lesson. `claude-dev-team` 
 that fixes those structurally — contracts force grounding, gates force verification, reviewers catch
 mistakes, the vault remembers, and tiering keeps it all affordable.
 
+### Enforcement — code-backed, not just instructed
+
+Those four failure modes are caught by **hooks and CI**, so the discipline holds even when the model
+would rather skip it. Each gate is **default-on but configurable**, fires **once per session**, and is
+**fail-open** (a missing `python3`/marker never breaks or blocks your session):
+
+| Predictable failure | Code-backed enforcement | Tune |
+|---|---|---|
+| Claims "done" without checking | **Verify gate** — a `Stop` hook blocks a session that edited files but ran no test/build/lint/typecheck afterward (subagent test runs count). | `cdt-config verify block\|warn\|off` |
+| Hallucinates APIs | **Grounding** — builder agents carry the `context7` doc tools; `lint-agents.sh` fails CI if one loses them. | always on (CI-enforced) |
+| Sprawls a change into ten files | **Scope gate** — `SubagentStop` diffs what each agent actually wrote against its exclusive-file contract; flags overreach/collisions. | `cdt-config scope warn\|block\|off` |
+| Forgets yesterday's lesson | **Memory gate** — a team-tier session that edits but records no vault lesson is nudged; `cdt-recall` ranks by recency + outcome. | `cdt-config memory warn\|block\|off` |
+| Blind expensive fan-out | **Cost governor** — escalation is budget-gated; BREADTH is **slice-first** (measure a slice, project the full cost vs the cap before fanning out); per-agent + orchestrator-overhead telemetry. | `cdt-auto`, `cdt-config eco` |
+
+**Honest scope:** the gates *detect, surface, and block* — they don't author the work. The orchestrator
+still has to write the contracts, pick the right tier, run the independent review, and emit each agent's
+`CDT-CONTRACT:` line; those remain model-driven (the strong-Opus bet), with the hooks as the backstop.
+Design notes: [`docs/specs/2026-06-16-enforcement-gates.md`](docs/specs/2026-06-16-enforcement-gates.md).
+
 ---
 
 ## Architecture

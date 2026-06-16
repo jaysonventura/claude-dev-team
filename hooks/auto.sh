@@ -20,6 +20,8 @@ set -u
 CDT_HOME="$HOME/.claude"
 ENV_FILE="${CDT_ENV_FILE:-$CDT_HOME/claude-dev-team.env}"
 CACHE="$CDT_HOME/.cdt-usage.json"
+SLICE="$CDT_HOME/.cdt/scale-slice.json"
+DB="${CDT_DB:-$CDT_HOME/claude-dev-team.db}"
 BIN="$CDT_HOME/bin"
 
 get_env() { grep -E "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2-; }
@@ -44,6 +46,56 @@ try:
     print("" if (not ts or time.time()-ts > 1800) else int(d.get("weekly",0)))
 except Exception:
     print("")' 2>/dev/null
+}
+
+# Cumulative delegated (subagent) token spend so far — a proxy for "how much has this run cost".
+agent_token_total() {
+  { [ -f "$DB" ] && command -v python3 >/dev/null 2>&1; } || { echo 0; return; }
+  CDT_DB="$DB" python3 -c 'import os,sqlite3
+try: print(sqlite3.connect(os.environ["CDT_DB"]).execute("SELECT COALESCE(SUM(tokens),0) FROM agent_runs").fetchone()[0])
+except Exception: print(0)' 2>/dev/null
+}
+
+# 0 (true) iff a slice baseline exists and is recent (< 1h) — used to require slice-first before a fan-out.
+slice_fresh() {
+  [ -f "$SLICE" ] && command -v python3 >/dev/null 2>&1 || return 1
+  SLICE="$SLICE" python3 -c 'import os,json,time
+try:
+    d=json.load(open(os.environ["SLICE"])); raise SystemExit(0 if time.time()-int(d.get("ts",0) or 0) < 3600 else 1)
+except SystemExit: raise
+except Exception: raise SystemExit(1)' 2>/dev/null
+}
+
+# Slice-first: measure a small slice, then PROJECT the full fan-out cost before committing to it.
+cmd_slice() {
+  case "${1:-}" in
+    record)
+      local n="${2:-0}"; case "$n" in ''|*[!0-9]*) n=0 ;; esac
+      command -v python3 >/dev/null 2>&1 || { echo "cdt-auto: python3 required for slice baselines"; return; }
+      mkdir -p "$CDT_HOME/.cdt" 2>/dev/null
+      local tot; tot="$(agent_token_total)"
+      SLICE="$SLICE" N="$n" TOT="$tot" python3 -c 'import os,json,time
+json.dump({"ts":int(time.time()),"items":int(os.environ["N"]),"tokens0":int(os.environ["TOT"])}, open(os.environ["SLICE"],"w"))' 2>/dev/null \
+        && echo "cdt-auto: slice baseline recorded ($n items; delegated-token mark $tot). Run the slice, then: cdt-auto project <total_items>"
+      ;;
+    *) echo "usage: cdt-auto slice record <n_items_in_the_slice>" ;;
+  esac
+}
+
+cmd_project() {
+  local total="${1:-0}"; case "$total" in ''|*[!0-9]*) total=0 ;; esac
+  [ -f "$SLICE" ] && command -v python3 >/dev/null 2>&1 || { echo "STOP  no slice baseline — measure a small slice first: cdt-auto slice record <n>"; return; }
+  local tot; tot="$(agent_token_total)"
+  SLICE="$SLICE" TOTAL="$total" NOWTOK="$tot" CAP="$SCALE_CAP" python3 -c 'import os,json
+try: d=json.load(open(os.environ["SLICE"]))
+except Exception: print("STOP  slice baseline unreadable — re-record: cdt-auto slice record <n>"); raise SystemExit(0)
+items=int(d.get("items",0) or 0); t0=int(d.get("tokens0",0) or 0)
+spent=max(0,int(os.environ["NOWTOK"])-t0); total=int(os.environ["TOTAL"]); cap=int(os.environ["CAP"])
+if items<=0 or spent<=0:
+    print("ASK   slice produced no measurable delegated spend yet — run the slice (or estimate manually) before fanning out"); raise SystemExit(0)
+per=spent/items; proj=int(per*total)
+verdict="ALLOW" if proj<=cap else "STOP"
+print("%s projected ~%d tokens for %d items (%.0f/item from a %d-item slice); cap %d" % (verdict,proj,total,per,items,cap))' 2>/dev/null
 }
 
 cmd_status() {
@@ -84,7 +136,9 @@ cmd_gate() {
       # auto mode: never self-run a fan-out without budget headroom — unknown budget fails SAFE to ASK
       if [ -z "$wk" ]; then echo "ASK   weekly budget unknown (enable status line / menu bar) — confirm the workflow spend"; return; fi
       if [ "$wk" -ge "$CEILING" ]; then echo "ASK   weekly ${wk}% >= ceiling ${CEILING}% — confirm the workflow spend"; return; fi
-      echo "ALLOW workflow within budget (slice-first, cap ${SCALE_CAP} tokens, log what's dropped)"
+      # Slice-first is now a code gate: don't fan out until a small slice has been measured + projected.
+      if ! slice_fresh; then echo "ASK   slice-first required — measure a small slice, then project, before fanning out: cdt-auto slice record <n> ; cdt-auto project <total_items>"; return; fi
+      echo "ALLOW workflow within budget (slice measured; cap ${SCALE_CAP} tokens, log what's dropped)"
       ;;
     *) echo "usage: cdt-auto gate <team|scale>" ;;
   esac
@@ -119,9 +173,11 @@ case "${1:-status}" in
   status|show|"")  cmd_status ;;
   gate)            shift; cmd_gate "$@" ;;
   explain)         shift; cmd_explain "$@" ;;
+  slice)           shift; cmd_slice "$@" ;;
+  project)         shift; cmd_project "$@" ;;
   off|assist|auto) "$BIN/cdt-config" autonomy "$1" 2>/dev/null || echo "set it via: cdt-config autonomy $1" ;;
   on)              "$BIN/cdt-config" autonomy assist 2>/dev/null || echo "set it via: cdt-config autonomy assist" ;;
-  help|-h|--help)  echo "usage: cdt-auto {status | gate <team|scale> | explain \"<task>\" | off | assist | auto}" ;;
-  *)               echo "usage: cdt-auto {status | gate <team|scale> | explain \"<task>\" | off | assist | auto}" ;;
+  help|-h|--help)  echo "usage: cdt-auto {status | gate <team|scale> | explain \"<task>\" | slice record <n> | project <total> | off | assist | auto}" ;;
+  *)               echo "usage: cdt-auto {status | gate <team|scale> | explain \"<task>\" | slice record <n> | project <total> | off | assist | auto}" ;;
 esac
 exit 0
