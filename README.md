@@ -531,6 +531,13 @@ Haiku — the production-grade floor is **lint-enforced** (`lint-agents.sh` fail
 agent is pinned to Haiku). Cost-effectiveness comes from spending Opus only where it pays, never from a
 model that can't do the job.
 
+**Quality-via-parallelism (high-stakes work)** — for risk-flagged changes or findings you must trust, CDT
+spends a few *extra* parallel agents (bounded, Opus, never the Workflow engine): **adversarial verify**
+(`/cdt:adversarial` — 2-3 independent reviewers each try to *refute* it; rework if a majority do),
+**diverse-lens Wave-2 review** (each reviewer a distinct lens), and an optional **design judge-panel**
+(2-3 architect variants → judge → synthesize). Budget-gated; it deepens the Wave-2 review + security
+veto, never replaces them.
+
 ```
 ~/.claude/bin/cdt-worktree new <name>     # isolated checkout at .claude/worktrees/<name> (branch worktree-<name>)
 ~/.claude/bin/cdt-worktree list           # see all worktrees

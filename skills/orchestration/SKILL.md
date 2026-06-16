@@ -218,6 +218,27 @@ review N changed files), run `cdt-auto gate scale` first:
 This is the deliberate, gated exception to "bounded by default" — summoned, capped, measured. The
 everyday default is untouched.
 
+## STEP 3f · QUALITY-VIA-PARALLELISM (bounded, budget-gated — high-stakes work only)
+
+When quality matters more than the cheapest path — risk-flagged changes, ambiguous design, a finding you
+must trust — spend a few *extra* parallel agents (ordinary bounded Agent calls on **production models**,
+**never** the Workflow engine). Gate on **tier + risk + `cdt-auto fanout`/`gate` budget** so it engages
+only when warranted; it **deepens** the Wave-2 review + security veto, never replaces them:
+
+- **Adversarial verify** (`/cdt:adversarial`) — for a risk-flagged change or a high-impact finding,
+  dispatch **2–3 independent reviewers in one message**, each prompted to **REFUTE** it (default to "not
+  proven" when uncertain), on **Opus**. If a majority refute, rework before ship. Catches plausible-but-
+  wrong work that a single rubber-stamp pass misses.
+- **Diverse-lens review (Wave 2)** — give each reviewer a **distinct lens** — correctness · security ·
+  performance · a11y/UX — instead of overlapping coverage, so redundancy can't hide a failure mode.
+- **Design judge-panel (Wave 0, genuinely ambiguous design only)** — generate **2–3 independent
+  `architect` variants** (e.g. MVP-first / risk-first / simplest), score them with a judge, and synthesize
+  from the winner (grafting the best of the runners-up). Use only when the design space is wide **and**
+  budget allows; otherwise a single architect pass.
+
+All bounded (a handful of agents, then dissolve), all above the production-grade floor (Opus/Sonnet,
+never Haiku).
+
 ## STEP 4 · COMPLETION MANDATE (tier-scaled, with a risk floor)
 
 Close every task — scaled to tier so trivial work stays cheap and risky work stays rigorous:

@@ -2,6 +2,20 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.32.0] — 2026-06-16
+### Added
+- **Quality-via-parallelism (bounded)** — Phase 4 of *Parallel Orchestration v2* (the quality axis;
+  additive). For high-stakes work, CDT now spends a few *extra* parallel agents — ordinary bounded `Agent`
+  calls on production models, **never** the Workflow engine — gated by tier + risk + budget:
+  - **Adversarial verify** (`/cdt:adversarial`, new command) — 2-3 independent Opus reviewers each try to
+    **refute** a risky change/finding; rework if a majority do. Catches plausible-but-wrong work a single
+    rubber-stamp pass misses.
+  - **Diverse-lens Wave-2 review** — each reviewer takes a distinct lens (correctness · security · perf ·
+    a11y/UX) so redundancy can't hide a failure mode.
+  - **Design judge-panel** (Wave 0, ambiguous design only) — 2-3 architect variants → judge → synthesize.
+  - SKILL.md STEP 3f documents the patterns + their gates; they deepen the Wave-2 review + security veto,
+    never replace them. New `e2e.sh` doc-regression checks.
+
 ## [1.31.0] — 2026-06-16
 ### Added
 - **Production-grade model right-sizing** — Phase 3 of *Parallel Orchestration v2* (cost + production-grade;
