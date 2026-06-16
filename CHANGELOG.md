@@ -2,6 +2,18 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.25.0] — 2026-06-16
+### Added
+- **Grounding is now code-backed — builders carry context7 (fixes "hallucinates APIs").** Phase 2 of the
+  enforcement track. The six engineering builders (`backend` / `frontend` / `mobile` / `data` / `devops` /
+  `qa`-engineer) were told "context7 first" but didn't actually carry the tools, so they could only guess.
+  They now natively carry `mcp__plugin_context7_context7__resolve-library-id` + `…__query-docs` (the two
+  doc tools only — least privilege; no web/toolsearch/other-mcp). Their contracts are strengthened to a
+  hard "look it up, never use an unfamiliar third-party signature you haven't queried."
+- **`lint-agents.sh` locks it in:** check #4 now allows *only* those two context7 tokens for builders
+  (any other `mcp__` still fails), and a new check **requires** the six builders to carry both — so
+  grounding can't silently regress to "guess APIs". Covered by a new `e2e.sh` assertion.
+
 ## [1.24.0] — 2026-06-16
 ### Added
 - **Verification gate — the "gates *force* verification" promise is now code-enforced (on by default).**

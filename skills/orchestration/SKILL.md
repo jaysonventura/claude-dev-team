@@ -298,7 +298,9 @@ When you dispatch a specialist, **name the skills it must apply** in its contrac
 
 1. Ground every claim in a real file/line or actual command output. No invented APIs, files, or results.
 2. Any library / framework / API question → query **context7** (resolve-library-id → query-docs) first.
-   Never answer library specifics from memory.
+   Never answer library specifics from memory. The engineering builders (backend / frontend / mobile /
+   data / devops / qa) **natively carry the context7 doc tools** — their contracts can require a lookup,
+   and `lint-agents.sh` fails CI if a builder loses them (grounding can't silently regress).
 3. Before any "done / fixed / passing" claim, **run the verifying command and paste the output**
    (use `superpowers:verification-before-completion` if available).
 4. If you are unsure, say so and stop — do not fill gaps with plausible fiction.

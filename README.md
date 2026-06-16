@@ -45,6 +45,9 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
   checkout+branch (interops with `claude --worktree`) for collision-free big features.
 - **Contract-driven dispatch** — every agent gets exclusive file ownership, a read-list, a verifiable
   done-condition, guardrails, and a ≤150-word structured report. (This is the anti-hallucination engine.)
+- **Grounded builders (code-backed)** — the engineering builders (backend / frontend / mobile / data /
+  devops / qa) natively carry the **context7** doc tools, so "look it up, don't guess the API" is
+  actually possible; `lint-agents.sh` fails CI if a builder ever loses them.
 - **14 role agents** (product-manager → architect → ui-ux-engineer → builders → technical-writer →
   reviewers, incl. a Haiku `fast-ops` tier) + a gated **5-agent Bug Council** for stuck bugs.
 - **10-gate quality chain** (incl. **e2e** for user-facing flows) + a bounded **Task Loop** (iterate to

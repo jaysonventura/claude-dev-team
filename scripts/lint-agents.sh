@@ -11,6 +11,10 @@ err() { echo "  FAIL: $*"; fail=1; }
 READONLY="architect code-reviewer security-reviewer product-manager root-cause-analyst code-archaeologist pattern-matcher systems-thinker adversarial-tester"
 BUILDERS="backend-engineer frontend-engineer mobile-engineer data-engineer devops-engineer qa-engineer diagrams"
 OPUS="architect code-reviewer security-reviewer product-manager ui-ux-engineer"
+# Builders that MUST carry the two context7 doc tools for grounding (every builder except diagrams).
+CONTEXT7_BUILDERS="backend-engineer frontend-engineer mobile-engineer data-engineer devops-engineer qa-engineer"
+C7_RESOLVE="mcp__plugin_context7_context7__resolve-library-id"
+C7_DOCS="mcp__plugin_context7_context7__query-docs"
 
 echo "== agent lint (conformance + least-privilege) =="
 for f in agents/*.md; do
@@ -31,10 +35,18 @@ for f in agents/*.md; do
     printf '%s' "$tools" | grep -qwE 'Write|Edit|NotebookEdit' && err "$base: read-only agent must not have Write/Edit" ;;
   esac
 
-  # 4. builders restricted to a safe set (Read/Grep/Glob/Bash/Write/Edit) — no web/notebook/mcp/fan-out
+  # 4. builders restricted to a safe set (Read/Grep/Glob/Bash/Write/Edit) plus the two context7 doc
+  #    tools (for grounding) — no web/notebook/toolsearch/fan-out, and no OTHER mcp tools.
   case " $BUILDERS " in *" $base "*)
     printf '%s' "$tools" | grep -qwE 'WebFetch|WebSearch|NotebookEdit|ToolSearch' && err "$base: builder has a disallowed tool (web/notebook/toolsearch)"
-    printf '%s' "$tools" | grep -q 'mcp__' && err "$base: builder should not carry mcp tools" ;;
+    rest="$(printf '%s' "$tools" | sed -e "s/$C7_RESOLVE//g" -e "s/$C7_DOCS//g")"
+    printf '%s' "$rest" | grep -q 'mcp__' && err "$base: builder may only carry context7 mcp tools (resolve-library-id + query-docs)" ;;
+  esac
+
+  # 4b. the six engineering builders MUST carry context7 (grounding can't silently regress to "guess APIs")
+  case " $CONTEXT7_BUILDERS " in *" $base "*)
+    printf '%s' "$tools" | grep -q "$C7_RESOLVE" || err "$base: builder must carry context7 $C7_RESOLVE (grounding)"
+    printf '%s' "$tools" | grep -q "$C7_DOCS" || err "$base: builder must carry context7 $C7_DOCS (grounding)" ;;
   esac
 
   # 5. model pins

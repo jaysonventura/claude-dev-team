@@ -106,6 +106,16 @@ except Exception: print(0)' 2>/dev/null)"
 [ "${EVN:-0}" -gt 0 ] && ok "verify_gate outcomes recorded to the DB" || no "verify_gate outcomes recorded to the DB"
 for s in vga vgb vgc vgw vgo vgm vgs; do clrm $s; done
 
+echo "== 4d. grounding: builder agents carry the context7 doc tools =="
+for a in backend-engineer frontend-engineer mobile-engineer data-engineer devops-engineer qa-engineer; do
+  if grep -q 'mcp__plugin_context7_context7__resolve-library-id' "$REPO/agents/$a.md" \
+     && grep -q 'mcp__plugin_context7_context7__query-docs' "$REPO/agents/$a.md"; then
+    ok "$a carries context7 (resolve-library-id + query-docs)"
+  else
+    no "$a missing context7 tools (grounding)"
+  fi
+done
+
 echo "== 5. statusline -> budget (eco conserves when weekly is high) =="
 SL_JSON='{"model":{"display_name":"Opus"},"effort":{"level":"xhigh"},"rate_limits":{"seven_day":{"used_percentage":90},"five_hour":{"used_percentage":10}}}'
 has "$(printf '%s' "$SL_JSON" | "$BIN/cdt-statusline" 2>&1)" "wk" "statusline renders usage"
