@@ -24,9 +24,11 @@ final class UsageStore {
     func start() {
         refreshLocal()
         fetchSubscription()
-        localTimer = Timer.scheduledTimer(withTimeInterval: localInterval, repeats: true) { [weak self] _ in
-            self?.refreshLocal()
-        }
+        // Add in .common mode so it also fires while a menu/tracking run-loop mode is active. (App Nap is
+        // disabled app-wide via LSAppNapIsDisabled in Info.plist so background timers aren't suspended.)
+        let lt = Timer(timeInterval: localInterval, repeats: true) { [weak self] _ in self?.refreshLocal() }
+        RunLoop.main.add(lt, forMode: .common)
+        localTimer = lt
     }
 
     /// Manual "Refresh now" — refresh local immediately and retry the subscription now.
@@ -84,9 +86,10 @@ final class UsageStore {
 
     private func scheduleSubscription(after delay: TimeInterval) {
         subTimer?.invalidate()
-        subTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
-            self?.fetchSubscription()
-        }
+        // .common mode so the next poll fires even if the menu is open (event-tracking run-loop mode).
+        let t = Timer(timeInterval: delay, repeats: false) { [weak self] _ in self?.fetchSubscription() }
+        RunLoop.main.add(t, forMode: .common)
+        subTimer = t
     }
 
     private func applySubscription(_ sub: SubscriptionUsage?, error: String?) {

@@ -12,6 +12,7 @@
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>LSUIElement</key><true/>
+  <key>LSAppNapIsDisabled</key><true/>
   <key>NSHumanReadableCopyright</key><string>© 2026 Jayson Ventura. MIT.</string>
   <key>NSPrincipalClass</key><string>NSApplication</string>
 </dict>

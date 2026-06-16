@@ -2,6 +2,17 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.34.3] — 2026-06-16
+### Fixed
+- **Menu bar: usage now actually auto-refreshes in the background (App Nap was the real root cause).**
+  The "stuck %" report's true cause: the menu-bar app is an `LSUIElement` background app, and macOS **App
+  Nap** was suspending its refresh `Timer`s — so the %s froze (observed live: stuck at **93% for ~55 min**
+  while a fresh fetch and the server both returned **7%** after the 5-hour window reset). Two targeted
+  fixes: **`LSAppNapIsDisabled`** in `Info.plist` (App Nap off app-wide so background timers aren't
+  suspended) and the local + subscription timers now run in **`.common` run-loop mode** (so they fire even
+  while the menu is open / during event tracking). The 5-min subscription poll and 1-min local poll now
+  run reliably in the background. The v1.34.2 no-cache hardening stays (correct, just not the cause).
+
 ## [1.34.2] — 2026-06-16
 ### Fixed
 - **Menu bar: usage fetch can no longer serve a stale cached read.** The `/api/oauth/usage` request used
