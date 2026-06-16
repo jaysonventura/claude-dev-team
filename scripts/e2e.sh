@@ -55,6 +55,57 @@ except Exception: print("err")' 2>/dev/null)"
 [ "$ROW" = "4000|170000" ] && ok "tokens split fresh=4000 · cache_read=170000 (cache not in the cost figure)" || no "token split wrong (got: $ROW)"
 has "$("$BIN/cdt-stats" all 2>&1)" "cache)" "stats shows cache reads separately"
 
+echo "== 4c. verification gate (block a Stop with edits but no verify afterward) =="
+lacks() { if printf '%s' "$1" | grep -q -- "$2"; then no "$3"; else ok "$3"; fi; }
+vmark() { printf '%s/cdt-verified-%s.marker' "${TMPDIR:-/tmp}" "$1"; }
+clrm()  { rm -f "$(vmark "$1")" "${TMPDIR:-/tmp}/cdt-edits-$1.marker" "${TMPDIR:-/tmp}/cdt-verify-blocked-$1.marker" 2>/dev/null; }
+EP() { printf '{"session_id":"%s","tool_name":"Edit","tool_input":{"file_path":"%s/none.txt"},"cwd":"%s"}' "$1" "$SBX" "$SBX"; }
+BP() { printf '{"session_id":"%s","tool_name":"Bash","tool_input":{"command":"%s"},"tool_response":"%s"}' "$1" "$2" "$3"; }
+SP() { printf '{"session_id":"%s","cwd":"%s","transcript_path":"%s"}' "$1" "$SBX" "${2:-}"; }
+edit() { EP "$1" | bash "$REPO/hooks/format-on-write.sh" >/dev/null 2>&1; }
+runbash() { BP "$1" "$2" "$3" | bash "$REPO/hooks/verify-track.sh" >/dev/null 2>&1; }
+stop() { SP "$1" "${2:-}" | bash "$REPO/hooks/completion-guard.sh" 2>&1; }
+
+"$BIN/cdt-config" verify block >/dev/null 2>&1
+has "$("$BIN/cdt-config" show 2>&1)" "verify    : block" "config show reports the verify gate"
+# (a) edits, no verify -> block
+clrm vga; edit vga
+has "$(stop vga)" '"decision":"block"' "blocks a Stop with edits but no verify"
+# (b) a real verifying command clears it
+clrm vgb; edit vgb; runbash vgb "pytest -q" "2 passed in 0.1s"
+[ -f "$(vmark vgb)" ] && ok "verify-track marks a real test run" || no "verify-track marks a real test run"
+lacks "$(stop vgb)" '"decision":"block"' "passes after a verifying command ran"
+# (c) edits AFTER the last verify -> block again
+clrm vgc; runbash vgc "npm run test" "ok"; touch -t 202601010000 "$(vmark vgc)" 2>/dev/null; edit vgc
+has "$(stop vgc)" '"decision":"block"' "re-blocks when edits come after the last verify"
+# (d) once-per-session: a second Stop after a block does not block again
+lacks "$(stop vgc)" '"decision":"block"' "fires at most once per session"
+# (e) warn never blocks; (f) off disables
+clrm vgw; "$BIN/cdt-config" verify warn >/dev/null 2>&1; edit vgw
+lacks "$(stop vgw)" '"decision":"block"' "warn mode never blocks"
+clrm vgo; "$BIN/cdt-config" verify off >/dev/null 2>&1; edit vgo
+lacks "$(stop vgo)" '"decision":"block"' "off mode disables the gate"
+"$BIN/cdt-config" verify block >/dev/null 2>&1
+# (g) matcher precision: echo is not a verify; a real lint is
+clrm vgm; runbash vgm "echo running tests" "running tests"
+[ -f "$(vmark vgm)" ] && no "echo is not treated as a verify" || ok "echo is not treated as a verify"
+runbash vgm "eslint ." "0 problems"
+[ -f "$(vmark vgm)" ] && ok "a real lint is treated as a verify" || no "a real lint is treated as a verify"
+# (h) a SUBAGENT that ran the tests clears the gate (the qa-engineer flow)
+clrm vgs; edit vgs
+SUBTR="$SBX/sub-vgs.jsonl"
+printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"pytest -q"}}]}}' > "$SUBTR"
+printf '{"agent_type":"cdt:qa-engineer","session_id":"vgs","transcript_path":"%s"}' "$SUBTR" | bash "$REPO/hooks/agent-track.sh" >/dev/null 2>&1
+[ -f "$(vmark vgs)" ] && ok "a subagent test run marks the session verified" || no "a subagent test run marks the session verified"
+lacks "$(stop vgs)" '"decision":"block"' "passes when a subagent ran the tests"
+# gate outcomes are recorded to the events table
+EVN="$(CDT_DB="$HOME/.claude/claude-dev-team.db" python3 -c 'import os,sqlite3
+try:
+    c=sqlite3.connect(os.environ["CDT_DB"]); print(c.execute("SELECT count(*) FROM events WHERE type=?",("verify_gate",)).fetchone()[0])
+except Exception: print(0)' 2>/dev/null)"
+[ "${EVN:-0}" -gt 0 ] && ok "verify_gate outcomes recorded to the DB" || no "verify_gate outcomes recorded to the DB"
+for s in vga vgb vgc vgw vgo vgm vgs; do clrm $s; done
+
 echo "== 5. statusline -> budget (eco conserves when weekly is high) =="
 SL_JSON='{"model":{"display_name":"Opus"},"effort":{"level":"xhigh"},"rate_limits":{"seven_day":{"used_percentage":90},"five_hour":{"used_percentage":10}}}'
 has "$(printf '%s' "$SL_JSON" | "$BIN/cdt-statusline" 2>&1)" "wk" "statusline renders usage"

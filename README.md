@@ -696,6 +696,22 @@ risk floor or skips the security review**, and never uses Haiku for real work. U
 automatically by the **macOS menu bar** (it caches each fetch); on **Linux/Windows**, enable the
 cross-platform **status line** (`cdt-config statusline on`) to feed it.
 
+**Verification gate (code-enforced — on by default):** the discipline layer's "gates *force*
+verification" promise is real, not advisory. If a session **edited files but never ran a
+test/build/lint/typecheck afterward**, a `Stop` hook blocks it from ending with a clear reason — so a
+false "done" is caught structurally. It's symmetric with how edits are tracked, so tests run **inside a
+subagent** (the qa-engineer flow) count too; it fires **at most once per session** (never traps you),
+and degrades fail-open when `python3`/markers are unavailable. Tune it:
+
+```
+~/.claude/bin/cdt-config verify block      # default — block a Stop with edits but no verify after them
+~/.claude/bin/cdt-config verify warn       # surface a notice instead of blocking
+~/.claude/bin/cdt-config verify off        # disable
+```
+
+The allowlist is verb-anchored (`pytest`, `go test`, `npm test`, `tsc`, `eslint`, `cargo test`, … —
+but never `echo`, `git`, `ls`), so it won't false-trigger on non-verifying commands.
+
 ## Security & privacy
 
 `claude-dev-team` runs **entirely on your machine** and phones home to nothing.

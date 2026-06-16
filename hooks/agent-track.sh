@@ -48,4 +48,14 @@ fi
 HOOKS_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
 # shellcheck source=/dev/null
 [ -f "$HOOKS_DIR/db.sh" ] && . "$HOOKS_DIR/db.sh" 2>/dev/null && db_agent "$AGENT" "$SID" "$TOKENS" "$CACHE_READ"
+
+# If this subagent ran a verifying command (e.g. qa-engineer's test/build), mark the session "verified"
+# so the Stop verification gate doesn't false-positive on the team-tier flow where the tests run inside a
+# subagent (whose commands never reach the main session's PostToolUse channel). Fail-open.
+if [ -n "$SID" ] && [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
+  # shellcheck source=/dev/null
+  . "$HOOKS_DIR/verify-lib.sh" 2>/dev/null \
+    && cdt_verify_scan_transcript "$TRANSCRIPT" \
+    && : > "$(cdt_verify_marker "$SID")" 2>/dev/null
+fi
 exit 0

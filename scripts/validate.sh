@@ -12,6 +12,29 @@ for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json hooks/hooks.
   python3 -m json.tool "$f" >/dev/null 2>&1 && ok "$f" || err "$f does not parse"
 done
 
+echo "== hooks.json command paths exist + executable =="
+if ! python3 - <<'PY'
+import json, os, re, sys
+d = json.load(open("hooks/hooks.json"))
+bad = 0
+for event, groups in (d.get("hooks") or {}).items():
+    for g in groups:
+        for h in (g.get("hooks") or []):
+            cmd = h.get("command", "")
+            m = re.search(r'\$\{CLAUDE_PLUGIN_ROOT\}/([^"\']+)', cmd)
+            if not m:
+                continue
+            p = m.group(1)
+            if not os.path.isfile(p):
+                print(f"  FAIL: {event}: hook file missing: {p}"); bad = 1
+            elif not os.access(p, os.X_OK):
+                print(f"  FAIL: {event}: hook not executable: {p}"); bad = 1
+            else:
+                print(f"  ok:   {event} -> {p}")
+sys.exit(1 if bad else 0)
+PY
+then fail=1; fi
+
 has_fm(){ head -12 "$1" | grep -q "^$2:"; }
 
 echo "== Agents (need name + description) =="

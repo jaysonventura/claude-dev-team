@@ -2,6 +2,24 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.24.0] — 2026-06-16
+### Added
+- **Verification gate — the "gates *force* verification" promise is now code-enforced (on by default).**
+  Previously the completion mandate was prompt-only and the optional Stop reminder was off by default, so
+  nothing structurally stopped a false "done". Now, if a session **edited files but ran no
+  test/build/lint/typecheck afterward**, the `Stop` hook blocks it once with an actionable reason. The
+  signal is **marker-based and symmetric with edit tracking** (`hooks/verify-track.sh`, a new PostToolUse
+  `Bash` hook, mirrors `format-on-write.sh`'s edit marker), so verifications run **inside a subagent**
+  (the qa-engineer flow) count too — `hooks/agent-track.sh` marks the session verified when a subagent's
+  transcript shows a verifying command. A main-transcript rescue scan keeps false-positives low; the gate
+  **fires at most once per session** and is **fail-open** (no python3/markers → never blocks).
+  - Configurable: `cdt-config verify block|warn|off` (default `block`); `CDT_VERIFY_REQUIRE_OUTPUT`
+    ignores commands that never actually ran (`command not found`).
+  - Verb-anchored allowlist (`hooks/verify-lib.sh`): `pytest`/`jest`/`go test`/`cargo test`/`swift test`/
+    `npm test`/`tsc`/`eslint`/`ruff`/`make`/… — never `echo`, `git`, `ls`, `prettier`, `npm install`.
+  - Outcomes recorded to the state DB (`events.type = verify_gate`). `validate.sh` now also checks every
+    `hooks.json` command path exists and is executable. Covered by 13 new `e2e.sh` assertions.
+
 ## [1.23.0] — 2026-06-16
 ### Added
 - **Menu bar now shows your real plan tier** — the `CDT Usage` dropdown header reads
