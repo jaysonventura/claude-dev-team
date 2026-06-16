@@ -520,6 +520,11 @@ when there's weekly budget headroom, trimmed toward the floor near the ceiling, 
 security-review + qa-verify floor**. More concurrency when it's affordable; trim only the *optional*
 agents when it isn't.
 
+**Shared context packs (dedup)** — instead of each parallel agent re-reading the codebase, Wave 0
+distills the shared files **once** into a manifest (`cdt-context pack <files…>` → file list + key
+signatures) that's injected into each agent's READ list and kept as a prompt-cache-friendly prefix. Fewer
+tokens, faster ramp.
+
 ```
 ~/.claude/bin/cdt-worktree new <name>     # isolated checkout at .claude/worktrees/<name> (branch worktree-<name>)
 ~/.claude/bin/cdt-worktree list           # see all worktrees

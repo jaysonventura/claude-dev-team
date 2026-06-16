@@ -199,6 +199,18 @@ except Exception: print(0)' 2>/dev/null)"
 [ "${MEV:-0}" -gt 0 ] && ok "memory_gate events recorded to the DB" || no "memory_gate events recorded"
 clrm mg1; clrm mg2
 
+echo "== 4g. shared-context packs (dedup) =="
+CXR="$SBX/cxrepo"; mkdir -p "$CXR"
+printf 'export function alpha(a){}\nexport class Beta {}\nconst x = 1\n' > "$CXR/a.ts"
+printf 'def gamma():\n    pass\nclass Delta:\n    pass\n' > "$CXR/b.py"
+CDT_SESSION_ID=cx1 "$BIN/cdt-context" pack "$CXR/a.ts" "$CXR/b.py" >/dev/null 2>&1
+PK="$(CDT_SESSION_ID=cx1 "$BIN/cdt-context" show 2>&1)"
+has "$PK" "a.ts" "context pack lists the files"
+has "$PK" "alpha" "context pack extracts a TS signature (alpha)"
+has "$PK" "gamma" "context pack extracts a Python signature (gamma)"
+lacks "$PK" "const x" "context pack omits non-signature lines"
+CDT_SESSION_ID=cx1 "$BIN/cdt-context" reset >/dev/null 2>&1
+
 echo "== 5. statusline -> budget (eco conserves when weekly is high) =="
 SL_JSON='{"model":{"display_name":"Opus"},"effort":{"level":"xhigh"},"rate_limits":{"seven_day":{"used_percentage":90},"five_hour":{"used_percentage":10}}}'
 has "$(printf '%s' "$SL_JSON" | "$BIN/cdt-statusline" 2>&1)" "wk" "statusline renders usage"

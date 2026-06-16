@@ -2,6 +2,16 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.30.0] — 2026-06-16
+### Added
+- **Shared-context packs (dedup)** — Phase 2 of *Parallel Orchestration v2* (cost + fast shipping;
+  additive). Parallel agents used to each re-read the same files — wasted tokens and ramp time. New
+  `cdt-context pack <files…>` distills the shared context **once** into a manifest (file list + key
+  signatures, language-agnostic) at `~/.claude/.cdt/context/<session>.md`; the orchestrator injects it
+  into each Wave-1 agent's READ list (SKILL.md STEP 3) and keeps it as the **stable prompt-cache prefix**
+  across the wave. `cdt-context show|path|reset`; stale packs GC'd at SessionStart; pure-shell, fail-open.
+  New `e2e.sh` assertions (extracts signatures, omits noise).
+
 ## [1.29.0] — 2026-06-16
 ### Added
 - **Fast parallel dispatch** — Phase 1 of the *Parallel Orchestration v2* track (faster shipping +

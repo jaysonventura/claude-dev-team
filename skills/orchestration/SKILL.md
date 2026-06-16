@@ -102,6 +102,11 @@ Dispatch agents for a wave in **one message with multiple Agent tool calls** so 
   recon) + `architect` (design, interfaces, contracts); and `ui-ux-engineer` (UX flow + design tokens)
   for any user-facing UI. Cheap, grounds everything — the PM's acceptance criteria become qa's tests and
   the review's scope check.
+  - **Shared context pack (dedup — saves tokens + ramp time):** distill the shared files Wave 0 surfaced
+    **once** into a manifest — `~/.claude/bin/cdt-context pack <files…>` (file list + key signatures) —
+    and put `~/.claude/.cdt/context/<session>.md` in each Wave-1 agent's **READ list** so agents consume
+    the distilled context instead of each re-reading the codebase. Keep the manifest the **stable prefix**
+    across the wave's dispatches so it hits the prompt cache.
 - **Wave 1 — build (exclusive file scope):** the engineers needed — `backend-engineer`,
   `frontend-engineer`, `mobile-engineer`, `data-engineer`, `devops-engineer`, `qa-engineer` — each on
   disjoint paths. Add **`technical-writer`** (owns `docs/*` prose, README/CHANGELOG) when the change is
