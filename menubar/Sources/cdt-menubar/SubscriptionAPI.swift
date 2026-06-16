@@ -30,19 +30,30 @@ private struct OAuthUsageResponse: Decodable {
     }
 }
 
+// A dedicated session that NEVER caches: usage % must be read live, so "Refresh now" always does a real
+// network round-trip and can't be served a stale response from URLSession.shared's on-disk URLCache.
+private let liveUsageSession: URLSession = {
+    let cfg = URLSessionConfiguration.ephemeral          // no persistent cache/cookies
+    cfg.urlCache = nil
+    cfg.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+    return URLSession(configuration: cfg)
+}()
+
 /// Fetches the real subscription usage. Throws on missing token / network / non-200 / decode error.
 /// The token is read from the Keychain and only sent to api.anthropic.com — never logged or persisted.
 func fetchSubscriptionUsage() async throws -> SubscriptionUsage {
     let account = try readClaudeAccount()
     let token = account.accessToken
 
-    var req = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/usage")!)
+    var req = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/usage")!,
+                         cachePolicy: .reloadIgnoringLocalAndRemoteCacheData)
     req.httpMethod = "GET"
     req.timeoutInterval = 15
     req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     req.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
+    req.setValue("no-cache", forHTTPHeaderField: "Cache-Control")   // ask any intermediary to revalidate
 
-    let (data, response) = try await URLSession.shared.data(for: req)
+    let (data, response) = try await liveUsageSession.data(for: req)
     guard let http = response as? HTTPURLResponse else {
         throw URLError(.badServerResponse)
     }

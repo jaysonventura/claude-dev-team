@@ -2,6 +2,19 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.34.2] — 2026-06-16
+### Fixed
+- **Menu bar: usage fetch can no longer serve a stale cached read.** The `/api/oauth/usage` request used
+  the default cache policy on `URLSession.shared` (which has an on-disk `URLCache`), so in principle
+  "Refresh now" could return a cached body instead of a live read. It now uses a dedicated **ephemeral,
+  no-cache session** (`reloadIgnoringLocalAndRemoteCacheData` + `Cache-Control: no-cache`) so every refresh
+  is a real network round-trip.
+  - **Honest scope (root cause likely server-side):** the endpoint returns a *fresh envelope* per call
+    (`resets_at` recomputes each time) but its utilization value appears to be a server-side aggregate that
+    only recomputes when the official usage page (`claude.ai/settings/usage`) is loaded — which the app
+    can't control. This fix removes the *client* as a cause; if a value still looks stuck at 100% until you
+    open the usage page, that's the server endpoint, not the menu bar.
+
 ## [1.34.1] — 2026-06-16
 ### Docs
 - README: new **"Updating CDT (get the latest version)"** section — `claude plugin marketplace update
