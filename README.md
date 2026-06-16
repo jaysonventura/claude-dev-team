@@ -507,11 +507,18 @@ authenticated. Uses a read-mostly wrapper (`cdt-pr`) whose only write is posting
 
 ---
 
-## Parallel isolation (git worktrees)
+## Parallel isolation (git worktrees) + budget-elastic fan-out
 
-For **large parallel work** — several features at once, or isolating each builder in a big T3 wave —
+For **parallel multi-writer waves** — several features at once, or each builder in a T2+/T3 wave —
 CDT turns its *disjoint-paths* convention into a **hard filesystem guarantee** with git worktrees: each
-strand gets its own checkout + branch, so even shared-file edits can't collide.
+strand gets its own checkout + branch, so even shared-file edits can't collide and strands run truly in
+parallel (faster shipping). This is **on by default** when ≥2 agents write concurrently
+(`CDT_WORKTREE_DEFAULT=0` to force in-place; single-writer waves and T0/T1 stay in-place).
+
+Before fanning out, the orchestrator sizes the wave with **`cdt-auto fanout <tier>`** — full tier width
+when there's weekly budget headroom, trimmed toward the floor near the ceiling, but **never below the
+security-review + qa-verify floor**. More concurrency when it's affordable; trim only the *optional*
+agents when it isn't.
 
 ```
 ~/.claude/bin/cdt-worktree new <name>     # isolated checkout at .claude/worktrees/<name> (branch worktree-<name>)

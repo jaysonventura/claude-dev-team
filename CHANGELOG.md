@@ -2,6 +2,21 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.29.0] — 2026-06-16
+### Added
+- **Fast parallel dispatch** — Phase 1 of the *Parallel Orchestration v2* track (faster shipping +
+  cost-effective tokens, **purely additive** — the full baseline flow/agents/skills/gates are untouched).
+  - **Budget-elastic fan-out:** `cdt-auto fanout <tier>` recommends how many parallel agents to dispatch
+    given remaining weekly headroom — **full tier width when there's room, trimmed toward the floor near
+    the ceiling, never below the security-review + qa-verify floor.** More concurrency when affordable
+    (faster), trim only *optional* agents when tight.
+  - **Worktrees-by-default for parallel multi-writer waves** (≥2 concurrent writers; any T2+ build wave,
+    all of T3) so writes truly can't collide and strands run in parallel — `CDT_WORKTREE_DEFAULT=0` to
+    force in-place; single-writer waves and T0/T1 stay in-place.
+  - **Low-risk fast path:** T0/T1 low-risk changes skip optional Wave-0/Wave-2 agents and ship fast — the
+    completion mandate, verify gate, and security review still run.
+  - SKILL.md STEP 3 updated; new `e2e.sh` assertions for the fan-out sizing.
+
 ## [1.28.0] — 2026-06-16
 ### Added
 - **Cost truthfulness — orchestrator-overhead metering + slice-first as a code gate.** Phase 5 (final) of

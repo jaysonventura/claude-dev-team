@@ -279,6 +279,14 @@ has "$("$BIN/cdt-auto" explain "fix a typo in the readme" 2>&1)" "BOUNDED" "expl
 # off disables all escalation
 "$BIN/cdt-config" autonomy off >/dev/null 2>&1
 has "$("$BIN/cdt-auto" gate team 2>&1)" "DENY" "gate DENY when autonomy off"
+# elastic fan-out (P1): full width with headroom, trim toward floor near ceiling, conservative if unknown
+fresh 20; has "$("$BIN/cdt-auto" fanout T3 2>&1)" "full width" "fanout T3 -> full width at low weekly usage"
+fresh 20; has "$("$BIN/cdt-auto" fanout T3 2>&1)" "10" "fanout T3 -> up to 10 agents with headroom"
+fresh 90; has "$("$BIN/cdt-auto" fanout T3 2>&1)" "trim" "fanout T3 -> trims near the weekly ceiling"
+fresh 90; has "$("$BIN/cdt-auto" fanout T3 2>&1)" "security" "fanout keeps the security + qa floor when trimming"
+rm -f "$HOME/.claude/.cdt-usage.json"
+has "$("$BIN/cdt-auto" fanout T2 2>&1)" "conservative" "fanout -> conservative when budget unknown"
+has "$("$BIN/cdt-auto" fanout T0 2>&1)" "solo" "fanout T0 -> solo (no fan-out)"
 
 echo "== 9b. slice-first projection + orchestrator overhead (cost truthfulness) =="
 # measure a slice, add some delegated spend, then project the full fan-out vs the cap

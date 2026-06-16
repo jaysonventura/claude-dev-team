@@ -115,16 +115,27 @@ Dispatch agents for a wave in **one message with multiple Agent tool calls** so 
   `security-reviewer` + `ui-ux-engineer` (UX/accessibility/polish review, for user-facing changes).
   **Security veto:** if security-reviewer flags risk >= medium, do **not** ship until resolved.
 
-**Worktree isolation (opt-in — large parallel work only).** Wave 1's *exclusive file scope* is the
-default collision guard; for a **big T3 wave** (or to run parallel sessions on different features), you
-can make it a *hard* filesystem guarantee with git worktrees — each strand in its own checkout+branch:
+**Size the wave to the budget (fast + cost-effective).** Before dispatching Wave 1, consult
+`~/.claude/bin/cdt-auto fanout <tier>` — it recommends how many parallel agents to run given remaining
+weekly headroom: **full tier width when there's room, trim toward the floor near the ceiling — but never
+below the security-review + qa-verify floor.** More concurrency when it's affordable = faster shipping;
+trim the *optional* agents (not the gates) when the budget is tight.
+
+**Worktree isolation (default for parallel multi-writer waves).** Wave 1's *exclusive file scope* is the
+logical collision guard; when **≥2 agents write concurrently (any T2+ build wave, all of T3)**, make it a
+*hard* filesystem guarantee so writes truly can't collide and strands run in parallel — each in its own
+git worktree:
 ```
 ~/.claude/bin/cdt-worktree new <name>     # isolated checkout at .claude/worktrees/<name> (branch worktree-<name>)
 claude --worktree <name>                  # …or open a parallel session in it (same checkout)
 ~/.claude/bin/cdt-worktree rm <name>      # after committing + merging back (refuses dirty without --force)
 ```
-**Do not** reach for this on T0/T1/T2 — worktree setup has real cost; it's only worth it for genuinely
-large, parallelizable work. Default stays bounded, in-place dispatch.
+Set `CDT_WORKTREE_DEFAULT=0` to force in-place. Single-writer waves and T0/T1 stay **in-place** — worktree
+setup has a small cost and only pays off when multiple agents write at once.
+
+**Low-risk fast path.** For a T0/T1 low-risk change, skip the optional Wave-0/Wave-2 agents and go
+solo/pair → ship fast. The completion mandate and the verify gate still run; the speed comes from **not**
+convening a team the change doesn't need — never from skipping the gates or the security review.
 
 ## STEP 3b · TASK LOOP (bounded autonomy)
 

@@ -144,6 +144,32 @@ cmd_gate() {
   esac
 }
 
+# Budget-elastic fan-out: how many parallel agents to dispatch for a wave at this tier, sized to remaining
+# weekly headroom. Full tier width when there's room; trim toward the floor near/over the ceiling;
+# conservative when budget is unknown. NEVER below the floor (security-review + qa verify always survive).
+cmd_fanout() {
+  local tier wk maxn floor name mid
+  tier="$(printf '%s' "${1:-}" | tr 'a-z' 'A-Z')"
+  case "$tier" in
+    T0) echo "0  T0 solo — do it yourself, no fan-out"; return ;;
+    T1) echo "1  T1 pair — 1 specialist; minimal path, no budget trimming"; return ;;
+    T2) maxn=5; floor=3; name="squad" ;;
+    T3) maxn=10; floor=6; name="full" ;;
+    *)  echo "usage: cdt-auto fanout <T0|T1|T2|T3>"; return ;;
+  esac
+  wk="$(weekly_pct)"
+  if [ -z "$wk" ]; then
+    echo "$floor  ${tier} ${name}: ~${floor} agents (conservative) — budget unknown; enable status line / menu bar for full elastic width"
+  elif [ "$wk" -ge "$CEILING" ]; then
+    echo "$floor  ${tier} ${name}: trim to ~${floor} essential agents — weekly ${wk}% >= ceiling ${CEILING}%; keep security-review + qa verify"
+  elif [ "$wk" -ge "$((CEILING-15))" ]; then
+    mid=$(( (floor + maxn + 1) / 2 ))
+    echo "$mid  ${tier} ${name}: ~${mid} agents (mid width) — weekly ${wk}% nearing ceiling ${CEILING}%; keep security-review + qa verify"
+  else
+    echo "$maxn  ${tier} ${name}: up to ${maxn} parallel agents (full width) — weekly ${wk}%, comfortable headroom"
+  fi
+}
+
 # Advisory preview only — the live router decides with full task context. Heuristic keyword classifier.
 cmd_explain() {
   local task="$*"
@@ -172,12 +198,13 @@ PY
 case "${1:-status}" in
   status|show|"")  cmd_status ;;
   gate)            shift; cmd_gate "$@" ;;
+  fanout)          shift; cmd_fanout "$@" ;;
   explain)         shift; cmd_explain "$@" ;;
   slice)           shift; cmd_slice "$@" ;;
   project)         shift; cmd_project "$@" ;;
   off|assist|auto) "$BIN/cdt-config" autonomy "$1" 2>/dev/null || echo "set it via: cdt-config autonomy $1" ;;
   on)              "$BIN/cdt-config" autonomy assist 2>/dev/null || echo "set it via: cdt-config autonomy assist" ;;
-  help|-h|--help)  echo "usage: cdt-auto {status | gate <team|scale> | explain \"<task>\" | slice record <n> | project <total> | off | assist | auto}" ;;
-  *)               echo "usage: cdt-auto {status | gate <team|scale> | explain \"<task>\" | slice record <n> | project <total> | off | assist | auto}" ;;
+  help|-h|--help)  echo "usage: cdt-auto {status | gate <team|scale> | fanout <tier> | explain \"<task>\" | slice record <n> | project <total> | off | assist | auto}" ;;
+  *)               echo "usage: cdt-auto {status | gate <team|scale> | fanout <tier> | explain \"<task>\" | slice record <n> | project <total> | off | assist | auto}" ;;
 esac
 exit 0
