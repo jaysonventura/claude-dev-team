@@ -2,6 +2,19 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.23.0] — 2026-06-16
+### Added
+- **Menu bar now shows your real plan tier** — the `CDT Usage` dropdown header reads
+  `Subscription · Max 5x` (or `Pro`, `Free`, …) instead of a bare `Subscription`. 1.22.1 correctly
+  noted the `/api/oauth/usage` endpoint carries no plan field, but the tier *is* available locally: the
+  Keychain item `Claude Code-credentials` includes `claudeAiOauth.subscriptionType` (`max`/`pro`/…) and
+  `rateLimitTier` (e.g. `default_claude_max_5x`, which encodes the 5x/20x multiplier). The app already
+  reads that Keychain item for the OAuth token, so this adds **no new network call or permission** — it
+  just stops discarding the plan fields. The label is only ever rendered from the real field; an unknown
+  tier is title-cased verbatim and a missing one falls back to a neutral `Subscription` (never a guess —
+  the rule that drove the 1.22.1 fix still holds). Covered by unit tests on the label mapping
+  (`Tests/cdt-menubarTests/PlanLabelTests.swift`).
+
 ## [1.22.1] — 2026-06-16
 ### Fixed
 - **Menu bar no longer mislabels the plan as "Claude Max" for Pro users.** The subscription section

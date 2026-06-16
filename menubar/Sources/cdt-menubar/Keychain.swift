@@ -18,14 +18,27 @@ enum KeychainError: LocalizedError {
     }
 }
 
-// The Keychain item "Claude Code-credentials" stores JSON: {"claudeAiOauth":{"accessToken":"...", ...}}
+// The Keychain item "Claude Code-credentials" stores JSON:
+//   {"claudeAiOauth":{"accessToken":"…","subscriptionType":"max","rateLimitTier":"default_claude_max_5x", …}}
 private struct ClaudeCredentials: Decodable {
-    struct OAuth: Decodable { let accessToken: String }
+    struct OAuth: Decodable {
+        let accessToken: String
+        let subscriptionType: String?   // "max" | "pro" | "free" | … (absent on older logins)
+        let rateLimitTier: String?      // e.g. "default_claude_max_5x" — encodes the 5x/20x multiplier
+    }
     let claudeAiOauth: OAuth
 }
 
-/// Reads the Claude Code OAuth access token from the macOS Keychain. Never logs it.
-func readClaudeOAuthToken() throws -> String {
+/// The Claude Code account from the Keychain: the OAuth token plus the plan fields.
+/// Plan fields are optional — never assume a tier that isn't present (see the 1.22.1 mislabel fix).
+struct ClaudeAccount {
+    let accessToken: String
+    let subscriptionType: String?
+    let rateLimitTier: String?
+}
+
+/// Reads the Claude Code OAuth credentials from the macOS Keychain. Never logs the token.
+func readClaudeAccount() throws -> ClaudeAccount {
     let query: [String: Any] = [
         kSecClass as String: kSecClassGenericPassword,
         kSecAttrService as String: "Claude Code-credentials",
@@ -38,7 +51,9 @@ func readClaudeOAuthToken() throws -> String {
         throw KeychainError.notFound(status)
     }
     if let creds = try? JSONDecoder().decode(ClaudeCredentials.self, from: data) {
-        return creds.claudeAiOauth.accessToken
+        return ClaudeAccount(accessToken: creds.claudeAiOauth.accessToken,
+                             subscriptionType: creds.claudeAiOauth.subscriptionType,
+                             rateLimitTier: creds.claudeAiOauth.rateLimitTier)
     }
     // Defensive fallback: scan for an "accessToken":"..." field if the shape ever changes.
     if let json = String(data: data, encoding: .utf8),
@@ -46,8 +61,13 @@ func readClaudeOAuthToken() throws -> String {
         let match = String(json[range])
         if let q = match.range(of: ":\\s*\"", options: .regularExpression) {
             let token = match[q.upperBound...].dropLast()
-            if !token.isEmpty { return String(token) }
+            if !token.isEmpty {
+                return ClaudeAccount(accessToken: String(token), subscriptionType: nil, rateLimitTier: nil)
+            }
         }
     }
     throw KeychainError.noToken
 }
+
+/// Reads just the OAuth access token (for callers that don't need the plan fields).
+func readClaudeOAuthToken() throws -> String { try readClaudeAccount().accessToken }

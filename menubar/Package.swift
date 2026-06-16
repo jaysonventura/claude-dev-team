@@ -9,6 +9,11 @@ let package = Package(
         .executableTarget(
             name: "cdt-menubar",
             path: "Sources/cdt-menubar"
+        ),
+        .testTarget(
+            name: "cdt-menubarTests",
+            dependencies: ["cdt-menubar"],
+            path: "Tests/cdt-menubarTests"
         )
     ]
 )

@@ -7,6 +7,29 @@ struct SubscriptionUsage {
     let sonnetPct: Int?          // seven_day_sonnet
     let sessionResetIn: String?  // formatted countdown, e.g. "33m"
     let weeklyResetIn: String?
+    let planLabel: String?       // e.g. "Max 5x" / "Pro" (from the Keychain plan fields); nil when unknown
+}
+
+/// Human-readable plan label from the Keychain credential fields (`subscriptionType` + `rateLimitTier`).
+/// Returns nil when the tier isn't present — never guess a tier that isn't in the data (the 1.22.1
+/// regression hardcoded "Claude Max" and mislabeled Pro users; this only ever reports the real field).
+func planLabel(subscriptionType: String?, rateLimitTier: String?) -> String? {
+    guard let raw = subscriptionType?.trimmingCharacters(in: .whitespaces), !raw.isEmpty else { return nil }
+    let base: String
+    switch raw.lowercased() {
+    case "max":        base = "Max"
+    case "pro":        base = "Pro"
+    case "free":       base = "Free"
+    case "team":       base = "Team"
+    case "enterprise": base = "Enterprise"
+    default:           base = raw.prefix(1).uppercased() + raw.dropFirst()   // title-case an unknown tier verbatim
+    }
+    // Append the rate multiplier only when the tier string clearly encodes one (e.g. "…_5x", "…_20x").
+    if let tier = rateLimitTier?.lowercased(),
+       let m = tier.range(of: "[0-9]+x", options: .regularExpression) {
+        return "\(base) \(tier[m])"
+    }
+    return base
 }
 
 // Accurate local token usage, summed from ~/.claude/projects/*/*.jsonl.

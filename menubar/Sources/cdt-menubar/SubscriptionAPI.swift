@@ -33,7 +33,8 @@ private struct OAuthUsageResponse: Decodable {
 /// Fetches the real subscription usage. Throws on missing token / network / non-200 / decode error.
 /// The token is read from the Keychain and only sent to api.anthropic.com — never logged or persisted.
 func fetchSubscriptionUsage() async throws -> SubscriptionUsage {
-    let token = try readClaudeOAuthToken()
+    let account = try readClaudeAccount()
+    let token = account.accessToken
 
     var req = URLRequest(url: URL(string: "https://api.anthropic.com/api/oauth/usage")!)
     req.httpMethod = "GET"
@@ -56,6 +57,7 @@ func fetchSubscriptionUsage() async throws -> SubscriptionUsage {
         weeklyPct: Int((r.sevenDay?.utilization ?? 0).rounded()),
         sonnetPct: r.sevenDaySonnet.map { Int($0.utilization.rounded()) },
         sessionResetIn: r.fiveHour?.resetDate.map { formatCountdown(to: $0) },
-        weeklyResetIn: r.sevenDay?.resetDate.map { formatCountdown(to: $0) }
+        weeklyResetIn: r.sevenDay?.resetDate.map { formatCountdown(to: $0) },
+        planLabel: planLabel(subscriptionType: account.subscriptionType, rateLimitTier: account.rateLimitTier)
     )
 }

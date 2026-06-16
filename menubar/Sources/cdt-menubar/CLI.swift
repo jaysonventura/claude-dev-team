@@ -24,7 +24,8 @@ func runOnce() {
                      "Weekly \(s.weeklyPct)%" + (s.weeklyResetIn.map { " (resets \($0))" } ?? "")]
         if let sonnet = s.sonnetPct { parts.append("Sonnet \(sonnet)%") }
         // (One-shot has no retained reading, so it's never "stale" here — success XOR error below.)
-        print("  Subscription: " + parts.joined(separator: " · "))
+        let plan = s.planLabel.map { " · \($0)" } ?? ""
+        print("  Subscription\(plan): " + parts.joined(separator: " · "))
     } else {
         print("  Subscription: unavailable — \(snap.subscriptionError ?? "endpoint/login")")
     }

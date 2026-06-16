@@ -78,8 +78,10 @@ final class MenuBarController: NSObject {
         }
 
         // Subscription section
-        // Plan tier (Pro/Max) isn't exposed by the usage endpoint, so don't claim one — just "Subscription".
-        header("Subscription" + (snap.subscriptionStale ? "  —  stale" : ""))
+        // Plan tier (Pro/Max) comes from the Keychain credential fields, not the usage endpoint; show it
+        // when present ("Subscription · Max 5x"), else a neutral "Subscription" — never a guessed tier.
+        let planSuffix = snap.subscription?.planLabel.map { " · \($0)" } ?? ""
+        header("Subscription\(planSuffix)" + (snap.subscriptionStale ? "  —  stale" : ""))
         if let sub = snap.subscription {
             line("  Session  \(textBar(sub.sessionPct)) \(sub.sessionPct)%" +
                  (sub.sessionResetIn.map { "  resets \($0)" } ?? ""))
