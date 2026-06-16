@@ -595,8 +595,13 @@ only the few most recent lessons, and for a specific task the orchestrator runs 
 ~/.claude/bin/cdt-recall "<task or topic>"        # or: /cdt:recall <task>
 ```
 
-— which lexically ranks the lessons and returns just the top matches (pure stdlib — **no embedding model
-or network**). Context stays lean and sharp no matter how large the vault grows.
+— which ranks the lessons by relevance and returns just the top matches (pure stdlib — **no embedding
+model or network**). Among relevant lessons it re-ranks by **recency** (newer wins) and **outcome**
+(lessons whose terms appear in painful past tasks — high iterations / blocked — surface first), so
+hard-won lessons rank higher. Context stays lean and sharp no matter how large the vault grows.
+
+Persisting a lesson is also **gate-checked**: a team-tier session that edits files but records none is
+nudged at Stop (`cdt-config memory warn|block|off`, default `warn`; solo work is exempt).
 
 ## Menu bar usage monitor (macOS)
 

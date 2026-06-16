@@ -212,7 +212,10 @@ Close every task — scaled to tier so trivial work stays cheap and risky work s
 - **Risk floor:** auth / payments / infra / migrations / secrets get the **full mandate regardless of
   tier**.
 - **Persist:** append a session note to `~/.claude/vault/sessions/`, a one-liner to `vault/log.md`,
-  and any reusable lesson to `vault/learnings.md`.
+  and any reusable lesson to `vault/learnings.md`. This step is now **gate-checked** — a team-tier session
+  (it dispatched ≥1 specialist) that ends with edits but no fresh lesson gets a memory-gate nudge at Stop
+  (`cdt-config memory warn|block|off`). Use `cdt-learn "<lesson>"`. Future tasks recall it ranked by
+  relevance + **recency + outcome** (lessons from high-iteration/blocked work surface first).
 
 ## STATUS REPORTING (keep the human in the loop)
 

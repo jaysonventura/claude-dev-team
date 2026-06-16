@@ -12,7 +12,8 @@ scaled to its tier (full mandate if it touched auth/payments/infra/migrations/se
 4. **dead-code scan** — remove anything now unused.
 5. **verify** — run the build/tests and paste the output. Do not claim done otherwise.
 6. **vault-learning** — append a session note to `~/.claude/vault/sessions/`, a line to `vault/log.md`,
-   and any reusable lesson to `vault/learnings.md`.
+   and any reusable lesson via `cdt-learn "<lesson>"`. Gate-checked: a team-tier session that edited
+   files but recorded no lesson is nudged at Stop (`cdt-config memory warn|block|off`).
 7. **notify** — `~/.claude/bin/cdt-notify SHIP "<digest: what shipped / deferred / blockers>"`.
 
 Report a short SHIP summary. $ARGUMENTS

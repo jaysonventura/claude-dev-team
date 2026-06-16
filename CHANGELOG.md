@@ -2,6 +2,21 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.27.0] — 2026-06-16
+### Added
+- **Memory gate + smarter recall (fixes "forgets yesterday's lesson").** Phase 4 of the enforcement
+  track. Persisting a vault lesson was a prompt-only checklist step; nothing nudged you when it was
+  skipped. Now a **team-tier** session (it dispatched ≥1 specialist — solo T0/T1 work is exempt) that
+  ended with edits but recorded **no fresh lesson** gets a Stop-time nudge: `cdt-config memory
+  warn|block|off` (**default `warn`**). Detected from the state DB (`agent_runs` for the session) + the
+  `learnings.md` mtime vs the edit marker; once per session; fail-open.
+### Changed
+- **`cdt-recall` now re-ranks by recency + outcome, not just lexical overlap.** Among the lessons that
+  match a query, newer ones win (exponential decay, ~180-day half-life) and lessons whose terms appear in
+  **painful past tasks** (high iterations / blocked, from the `tasks` table) surface first — so hard-won
+  lessons rank higher. Still pure-stdlib, grep fallback, fail-open. Weights tunable via
+  `CDT_RECALL_RECENCY_WEIGHT` / `CDT_RECALL_OUTCOME_WEIGHT` / `CDT_RECALL_HALFLIFE_DAYS`.
+
 ## [1.26.0] — 2026-06-16
 ### Added
 - **Scope/sprawl detection — "exclusive file ownership" is now code-checked (fixes "sprawls a simple

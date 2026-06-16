@@ -82,6 +82,38 @@ if [ "$SCOPEGATE" != "off" ] && [ -s "$FINDINGS" ] && [ ! -f "$SBLOCK" ]; then
   fi
 fi
 
+# --- Memory gate: a substantial (team-tier) session that edited files should persist a vault lesson. ---
+# Only fires when the session dispatched >=1 specialist (T0/T1 solo work is exempt). Default WARN.
+MEMGATE="$(grep -E '^CDT_MEMORY_GATE=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+case "$MEMGATE" in block|warn|off) : ;; *) MEMGATE=warn ;; esac
+MBLOCK="${TMPDIR:-/tmp}/cdt-memory-blocked-${SESSION_ID:-default}.marker"
+if [ "$MEMGATE" != "off" ] && [ ! -f "$MBLOCK" ]; then
+  _NAG=0
+  if command -v python3 >/dev/null 2>&1 && [ -f "$CDT_HOME/claude-dev-team.db" ]; then
+    _NAG="$(CDT_DB="$CDT_HOME/claude-dev-team.db" CDT_SID="${SESSION_ID:-}" python3 -c 'import os,sqlite3
+try: print(sqlite3.connect(os.environ["CDT_DB"]).execute("SELECT count(*) FROM agent_runs WHERE task_id=?",(os.environ.get("CDT_SID",""),)).fetchone()[0])
+except Exception: print(0)' 2>/dev/null)"
+  fi
+  case "$_NAG" in ''|*[!0-9]*) _NAG=0 ;; esac
+  if [ "$_NAG" -gt 0 ]; then
+    LEARNF="$CDT_HOME/vault/learnings.md"
+    # "persisted a lesson" iff learnings.md is at least as new as the edit-marker (tie -> learned).
+    if [ ! -f "$LEARNF" ] || [ "$MARK" -nt "$LEARNF" ]; then
+      : > "$MBLOCK" 2>/dev/null
+      if [ "$MEMGATE" = "warn" ]; then
+        db_event memory_gate "warn" "${SESSION_ID:-}" 2>/dev/null
+        echo "claude-dev-team: ⚠ team-tier session — capture a durable lesson before finishing: cdt-learn \"<lesson>\" (or cdt-config memory off)." >&2
+      else
+        db_event memory_gate "block" "${SESSION_ID:-}" 2>/dev/null
+        printf '{"decision":"block","reason":"%s"}\n' "claude-dev-team: this session dispatched specialists and edited files but recorded no vault lesson. Capture what was non-obvious so it's not relearned: cdt-learn \"<lesson>\". (Soften: cdt-config memory warn|off.) Then stop."
+        exit 0
+      fi
+    else
+      db_event memory_gate "pass" "${SESSION_ID:-}" 2>/dev/null
+    fi
+  fi
+fi
+
 # Optional mandate reminder — opt in with CDT_STOP_REMINDER=1 (kept off by default for cost).
 # Read just this key (don't `source` the env file — a crafted value must never execute).
 _REMIND="$(grep -E '^CDT_STOP_REMINDER=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"

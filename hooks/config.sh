@@ -113,6 +113,7 @@ show() {
   local au tm sc; au="$(get_env CDT_AUTONOMY)"; [ -z "$au" ] && au="assist"; tm="$(get_env CDT_TEAMS)"; [ -z "$tm" ] && tm="off"; sc="$(get_env CDT_SCALE)"; [ -z "$sc" ] && sc="off"
   local vg; vg="$(get_env CDT_VERIFY_GATE)"; [ -z "$vg" ] && vg="block"
   local sg; sg="$(get_env CDT_SCOPE_GATE)"; [ -z "$sg" ] && sg="warn"
+  local mg; mg="$(get_env CDT_MEMORY_GATE)"; [ -z "$mg" ] && mg="warn"
   echo "claude-dev-team config:"
   echo "  status    : $([ "$en" = "0" ] && echo DISABLED || echo enabled)"
   echo "  effort    : ${eff:-(unset)}   (default $DEFAULT_EFFORT)"
@@ -120,6 +121,7 @@ show() {
   echo "  eco       : $eco   (default off; auto = conserve when weekly usage is high; on | off | auto)"
   echo "  verify    : $vg   (block | warn | off — block a Stop with edits but no test/build/lint after them)"
   echo "  scope     : $sg   (warn | block | off — flag a subagent that wrote outside its exclusive contract)"
+  echo "  memory    : $mg   (warn | block | off — nudge a team-tier session to persist a vault lesson)"
   echo "  autonomy  : $au   (off | assist | auto — autonomous escalation; details: cdt-auto status)"
   echo "  teams     : $tm   ·  scale : $sc   (DEPTH/BREADTH engines; off by default, opt in to enable)"
   echo "  statusline: $(statusline_state)   (terminal status line)"
@@ -158,6 +160,11 @@ case "${1:-show}" in
     case "$2" in
       warn|block|off) set_env CDT_SCOPE_GATE "$2"; echo "claude-dev-team: scope gate = $2  (flag a subagent that wrote files outside its exclusive contract or into a peer's scope; warn = notice · block = stop · off = disabled)." ;;
       *) echo "cdt-config: scope must be one of: warn | block | off" ;;
+    esac ;;
+  memory)
+    case "$2" in
+      warn|block|off) set_env CDT_MEMORY_GATE "$2"; echo "claude-dev-team: memory gate = $2  (a team-tier session that edited files but recorded no vault lesson; warn = nudge · block = stop · off = disabled)." ;;
+      *) echo "cdt-config: memory must be one of: warn | block | off" ;;
     esac ;;
   autonomy)
     case "$2" in
@@ -214,6 +221,6 @@ PY
     set_setting effortLevel "$DEFAULT_EFFORT"
     set_setting model "$DEFAULT_MODEL"
     echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off, autonomy=assist, engines off)." ;;
-  *) echo "usage: cdt-config {show|on|off|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
+  *) echo "usage: cdt-config {show|on|off|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
 esac
 exit 0

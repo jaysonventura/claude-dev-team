@@ -58,7 +58,7 @@ has "$("$BIN/cdt-stats" all 2>&1)" "cache)" "stats shows cache reads separately"
 echo "== 4c. verification gate (block a Stop with edits but no verify afterward) =="
 lacks() { if printf '%s' "$1" | grep -q -- "$2"; then no "$3"; else ok "$3"; fi; }
 vmark() { printf '%s/cdt-verified-%s.marker' "${TMPDIR:-/tmp}" "$1"; }
-clrm()  { rm -f "$(vmark "$1")" "${TMPDIR:-/tmp}/cdt-edits-$1.marker" "${TMPDIR:-/tmp}/cdt-verify-blocked-$1.marker" "${TMPDIR:-/tmp}/cdt-scope-blocked-$1.marker" 2>/dev/null; }
+clrm()  { rm -f "$(vmark "$1")" "${TMPDIR:-/tmp}/cdt-edits-$1.marker" "${TMPDIR:-/tmp}/cdt-verify-blocked-$1.marker" "${TMPDIR:-/tmp}/cdt-scope-blocked-$1.marker" "${TMPDIR:-/tmp}/cdt-memory-blocked-$1.marker" 2>/dev/null; }
 EP() { printf '{"session_id":"%s","tool_name":"Edit","tool_input":{"file_path":"%s/none.txt"},"cwd":"%s"}' "$1" "$SBX" "$SBX"; }
 BP() { printf '{"session_id":"%s","tool_name":"Bash","tool_input":{"command":"%s"},"tool_response":"%s"}' "$1" "$2" "$3"; }
 SP() { printf '{"session_id":"%s","cwd":"%s","transcript_path":"%s"}' "$1" "$SBX" "${2:-}"; }
@@ -168,6 +168,36 @@ try: print(sqlite3.connect(os.environ["CDT_DB"]).execute("SELECT count(*) FROM e
 except Exception: print(0)' 2>/dev/null)"
 [ "${SCEV:-0}" -gt 0 ] && ok "scope events recorded to the DB" || no "scope events recorded to the DB"
 for s in sc1 sc2 sc3 sc4; do rm -rf "$(SCD $s)"; clrm $s; done
+
+echo "== 4f. memory gate + recall ranking =="
+LEARN="$HOME/.claude/vault/learnings.md"
+"$BIN/cdt-config" verify off >/dev/null 2>&1; "$BIN/cdt-config" memory block >/dev/null 2>&1
+# (a) team-tier session (>=1 agent_run) + edits + no fresh lesson -> block
+clrm mg1
+printf '{"agent_type":"cdt:demo","session_id":"mg1","transcript_path":""}' | bash "$REPO/hooks/agent-track.sh" >/dev/null 2>&1
+touch -t 202001010000 "$LEARN" 2>/dev/null
+edit mg1
+has "$(stop mg1)" '"decision":"block"' "memory gate blocks a team-tier session with no persisted lesson"
+# (b) after a lesson is persisted -> pass
+rm -f "${TMPDIR:-/tmp}/cdt-memory-blocked-mg1.marker"
+"$BIN/cdt-learn" "mg1 captured a durable lesson" testing >/dev/null 2>&1
+lacks "$(stop mg1)" '"decision":"block"' "memory gate passes after a lesson is persisted"
+# (c) solo session (no agent_runs) is exempt
+clrm mg2; touch -t 202001010000 "$LEARN" 2>/dev/null; edit mg2
+lacks "$(stop mg2)" '"decision":"block"' "memory gate never fires for a solo (non-team) session"
+"$BIN/cdt-config" memory warn >/dev/null 2>&1; "$BIN/cdt-config" verify block >/dev/null 2>&1
+# (d) recall recency: the newer of two equally-relevant lessons ranks first
+printf -- '- [2020-01-01] epsilonquux ranking probe older entry\n- [2026-06-16] epsilonquux ranking probe newer entry\n' >> "$LEARN"
+RANK="$(CDT_VAULT="$HOME/.claude/vault" CDT_DB="$HOME/.claude/claude-dev-team.db" "$BIN/cdt-recall" "epsilonquux ranking probe" 5)"
+NP="$(printf '%s\n' "$RANK" | grep -n 'newer entry' | head -1 | cut -d: -f1)"
+OP="$(printf '%s\n' "$RANK" | grep -n 'older entry' | head -1 | cut -d: -f1)"
+{ [ -n "$NP" ] && [ -n "$OP" ] && [ "$NP" -lt "$OP" ]; } && ok "recall ranks the newer lesson first (recency)" || no "recall recency ordering (new=$NP old=$OP)"
+# (e) memory events recorded
+MEV="$(CDT_DB="$HOME/.claude/claude-dev-team.db" python3 -c 'import os,sqlite3
+try: print(sqlite3.connect(os.environ["CDT_DB"]).execute("SELECT count(*) FROM events WHERE type=?",("memory_gate",)).fetchone()[0])
+except Exception: print(0)' 2>/dev/null)"
+[ "${MEV:-0}" -gt 0 ] && ok "memory_gate events recorded to the DB" || no "memory_gate events recorded"
+clrm mg1; clrm mg2
 
 echo "== 5. statusline -> budget (eco conserves when weekly is high) =="
 SL_JSON='{"model":{"display_name":"Opus"},"effort":{"level":"xhigh"},"rate_limits":{"seven_day":{"used_percentage":90},"five_hour":{"used_percentage":10}}}'
