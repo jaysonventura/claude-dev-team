@@ -2,6 +2,19 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.33.0] — 2026-06-16
+### Added
+- **Adaptive advise + ship integration** — Phase 5 (final) of *Parallel Orchestration v2* (all four goals,
+  compounding; additive). `cdt-advise "<task>"` now also recommends the **agent mix** — the typical squad
+  size (from the tier prior) + the specialists your codebase actually uses (from `agent_runs` telemetry) —
+  and points at `cdt-route` for per-agent model sizing. SKILL.md STEP 4 gets a **fast-ship** note: once the
+  gate chain is green, flow straight into `/cdt:ship` (or `/cdt:autopilot`) rather than re-litigating done
+  work — the verify/scope/memory gates + security veto are the safety net.
+- **Parallel Orchestration v2 track complete** (v1.29.0–v1.33.0): fast parallel dispatch · shared-context
+  packs · production-grade model right-sizing · quality-via-parallelism · adaptive advise — all additive to
+  the baseline, all within bounded dispatch, all above the production-grade model floor. Spec:
+  `docs/specs/2026-06-16-parallel-orchestration-v2.md`.
+
 ## [1.32.0] — 2026-06-16
 ### Added
 - **Quality-via-parallelism (bounded)** — Phase 4 of *Parallel Orchestration v2* (the quality axis;

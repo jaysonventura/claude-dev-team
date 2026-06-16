@@ -225,6 +225,10 @@ has "$SK" "Design judge-panel" "SKILL documents the design judge-panel"
 [ -f "$REPO/commands/adversarial.md" ] && ok "/cdt:adversarial command present" || no "/cdt:adversarial command present"
 has "$(sed -n '/STEP 3f/,/STEP 4/p' "$REPO/skills/orchestration/SKILL.md")" "never Haiku" "STEP 3f stays above the production-grade floor (no Haiku)"
 
+echo "== 4j. adaptive advise (agent mix from telemetry) =="
+has "$("$BIN/cdt-advise" "sandbox task" 2>&1)" "agent mix" "advise recommends an agent mix from telemetry"
+has "$("$BIN/cdt-advise" "sandbox task" 2>&1)" "cdt-route" "advise points at cdt-route for model sizing"
+
 echo "== 5. statusline -> budget (eco conserves when weekly is high) =="
 SL_JSON='{"model":{"display_name":"Opus"},"effort":{"level":"xhigh"},"rate_limits":{"seven_day":{"used_percentage":90},"five_hour":{"used_percentage":10}}}'
 has "$(printf '%s' "$SL_JSON" | "$BIN/cdt-statusline" 2>&1)" "wk" "statusline renders usage"

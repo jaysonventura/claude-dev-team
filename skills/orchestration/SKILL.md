@@ -246,6 +246,10 @@ Close every task — scaled to tier so trivial work stays cheap and risky work s
   simplify if you touched it.
 - **T2 / T3 (full mandate):** `1 simplify · 2 code-review · 3 reuse-audit (search for an existing
   util before keeping new code) · 4 dead-code scan · 5 vault-learning` → then **SHIP**.
+  - **Fast ship:** once the gate chain is green, flow straight into `/cdt:ship` (or `/cdt:autopilot` for a
+    PR) — don't re-litigate done work. The verify/scope/memory gates and security veto are the safety net,
+    so a green change can ship without manual ceremony. For routing the *next* task, `cdt-advise "<task>"`
+    now also suggests the **agent mix** (typical squad + specialists) from real telemetry.
 - **Risk floor:** auth / payments / infra / migrations / secrets get the **full mandate regardless of
   tier**.
 - **Persist:** append a session note to `~/.claude/vault/sessions/`, a one-liner to `vault/log.md`,

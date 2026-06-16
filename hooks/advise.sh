@@ -60,5 +60,19 @@ if blockers:
     print(f"  warning: {blockers}/{len(sample)} similar task(s) hit a blocker/deferred")
 budget = f"; budget ~{int(round(avg)) + 1} iteration(s)" if avg is not None else ""
 print(f"  suggestion: lean {top_tier}{budget}. (advisory — you decide.)")
+
+# Agent-mix hint (which specialists this codebase commonly uses, from real telemetry) + a model pointer.
+# Robust even when tasks.session_id is sparse — it reads the agent_runs roster directly.
+try:
+    roster = con.execute(
+        "SELECT agent, COUNT(*) FROM agent_runs WHERE agent NOT IN ('unknown','') "
+        "GROUP BY agent ORDER BY 2 DESC LIMIT 5").fetchall()
+except Exception:
+    roster = []
+if roster:
+    tier_n = {"T0": "0", "T1": "1", "T2": "3-5", "T3": "6-10"}.get(top_tier, "a few")
+    mix = " ".join("%s×%d" % (str(a).split(":")[-1], c) for a, c in roster)
+    print(f"  agent mix: lean ~{tier_n} agents — commonly used here: {mix}")
+    print("  model: size each with cdt-route (Opus for risk/judgment, Sonnet for throughput; never Haiku).")
 PY
 exit 0

@@ -1,6 +1,6 @@
 # Spec — claude-dev-team Parallel Orchestration v2
 
-Date: 2026-06-16 · Status: approved-pending-review
+Date: 2026-06-16 · Status: shipped (P1 v1.29.0 · P2 v1.30.0 · P3 v1.31.0 · P4 v1.32.0 · P5 v1.33.0)
 
 ## Context & goal
 
