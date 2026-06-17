@@ -1,0 +1,12 @@
+{
+  "_comment": "Keyword -> agent mapping for advisory routing. `match` terms are matched case-insensitively against the prompt. `owns` are the exclusive-write globs for that role. Overridable per project.",
+  "roster": [
+    { "name": "backend-engineer", "owns": ["api/**", "server/**"], "match": ["api", "server", "endpoint", "backend", "service", "auth", "payment", "route"], "wave": 1 },
+    { "name": "frontend-engineer", "owns": ["ui/**", "client/**"], "match": ["ui", "component", "page", "css", "frontend", "react", "vue", "svelte", "button", "form", "navbar"], "wave": 1 },
+    { "name": "mobile-engineer", "owns": ["mobile/**", "app/**"], "match": ["mobile", "ios", "android", "swift", "kotlin", "react native", "expo", "flutter"], "wave": 1 },
+    { "name": "data-engineer", "owns": ["db/**", "migrations/**"], "match": ["database", "db ", "schema", "migration", "query", "sql", "index", "etl"], "wave": 1 },
+    { "name": "devops-engineer", "owns": ["infra/**", "ci/**"], "match": ["infra", "ci", "cd", "docker", "kubernetes", "terraform", "deploy", "pipeline"], "wave": 1 },
+    { "name": "qa-engineer", "owns": ["test/**", "tests/**"], "match": ["test", "spec", "e2e", "coverage", "qa"], "wave": 1 },
+    { "name": "technical-writer", "owns": ["docs/**"], "match": ["docs", "documentation", "readme", "changelog", "guide"], "wave": 1 }
+  ]
+}

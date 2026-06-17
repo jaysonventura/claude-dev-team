@@ -1,0 +1,8 @@
+{
+  "status": "done | partial | blocked | failed | needs_review",
+  "task": "short task title",
+  "result": "one-line result",
+  "verification": "passed | failed | not_run",
+  "artifact": "artifact path or link if available",
+  "nextStep": "one recommended next step"
+}

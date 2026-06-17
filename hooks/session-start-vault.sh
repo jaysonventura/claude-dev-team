@@ -3,6 +3,10 @@
 # then inject accumulated learnings into the session context. Fail-open (always exit 0).
 set +e
 
+# Recursion guard: when the toolkit's prompt-enhancer spawns a nested `claude -p` (CDT_IN_ENHANCER=1),
+# do no bootstrap work — keep the nested call fast and side-effect-free.
+[ "${CDT_IN_ENHANCER:-0}" = "1" ] && exit 0
+
 HOOKS_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
 CDT_HOME="$HOME/.claude"
 VAULT="$CDT_HOME/vault"
@@ -39,6 +43,17 @@ cp "$HOOKS_DIR/version.sh"   "$BIN/cdt-version"  2>/dev/null && chmod +x "$BIN/c
 cp "$HOOKS_DIR/contract.sh"  "$BIN/cdt-contract" 2>/dev/null && chmod +x "$BIN/cdt-contract" 2>/dev/null
 cp "$HOOKS_DIR/context.sh"   "$BIN/cdt-context"  2>/dev/null && chmod +x "$BIN/cdt-context"  2>/dev/null
 cp "$HOOKS_DIR/route.sh"     "$BIN/cdt-route"    2>/dev/null && chmod +x "$BIN/cdt-route"    2>/dev/null
+
+# claude-dev-team-toolkit (TS engine): link the built bins onto PATH + dist-missing healthcheck.
+TOOLKIT_DIST="$(cd "$HOOKS_DIR/../toolkit/dist" 2>/dev/null && pwd)"
+if [ -n "$TOOLKIT_DIST" ] && [ -f "$TOOLKIT_DIST/cli/cdt.js" ]; then
+  ln -sf "$TOOLKIT_DIST/cli/cdt.js"        "$BIN/cdt"        2>/dev/null
+  ln -sf "$TOOLKIT_DIST/cli/cdt-prompt.js" "$BIN/cdt-prompt" 2>/dev/null
+  ln -sf "$TOOLKIT_DIST/cli/cdt-spec.js"   "$BIN/cdt-spec"   2>/dev/null
+  ln -sf "$TOOLKIT_DIST/cli/cdt-verify.js" "$BIN/cdt-verify" 2>/dev/null
+elif [ -d "$HOOKS_DIR/../toolkit" ]; then
+  echo "⚠ claude-dev-team-toolkit not built — run: cd \"$HOOKS_DIR/../toolkit\" && npm install && npm run build"
+fi
 
 # Housekeeping: drop stale per-session scope-contracts and context packs (>12h old) so they don't pile up.
 find "$CDT_HOME/.cdt/contracts" -maxdepth 1 -mindepth 1 -type d -mmin +720 -exec rm -rf {} + 2>/dev/null
