@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.39.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.40.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -448,7 +448,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.39.0**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.40.0**.
 
 ---
 
@@ -740,6 +740,7 @@ certificate + `notarytool` credentials, then `cd menubar && ./release.sh`.
 | `CDT_TEAMS` · `CDT_SCALE` | off · off | enable the DEPTH (agent-team) / BREADTH (workflow) engines |
 | `CDT_AUTONOMY_WEEKLY_CEILING` | 85 | governor pauses to ASK at/above this weekly usage % |
 | `CDT_STOP_REMINDER` | 0 | `1` = remind once to run the mandate at session end |
+| `CDT_AGENT_ACTIVITY` | on | `on` / `compact` / `off` — pretty per-agent dispatch/finish lines + token cost in the CLI (display-only, **zero tokens**) |
 
 Effort runs at your session level (xhigh, never `max`). **By default** the orchestrator uses **bounded**
 subagent dispatch per tier; the heavier engines (agent teams, dynamic workflows) are **never

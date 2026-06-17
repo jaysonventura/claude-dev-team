@@ -11,6 +11,13 @@ CDT_HOME="$HOME/.claude"
 _EN="$(grep -E '^CDT_ENABLED=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
 [ "$_EN" = "0" ] && exit 0
 command -v python3 >/dev/null 2>&1 || exit 0
+HOOKS_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
+
+# Pretty agent-activity banner: "▶️ <emoji> <agent> · <what>" right as the agent is dispatched.
+# Display-only (hook systemMessage → shown to the user, never added to the model context) → ZERO token cost.
+# Gated by CDT_AGENT_ACTIVITY (on|compact|off). Fail-open. This is the hook's only stdout; the contract
+# capture below writes files only.
+printf '%s' "$INPUT" | CDT_EVENT=dispatch CDT_HOME="$CDT_HOME" python3 "$HOOKS_DIR/agent_activity.py" 2>/dev/null
 
 CDT_PAYLOAD="$INPUT" CDT_DIR="$CDT_HOME/.cdt/contracts" python3 - <<'PY'
 import os, json, re, time
