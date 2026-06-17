@@ -23,15 +23,22 @@ LABEL="com.jaysonventura.claude-dev-team.menubar"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 
 find_src() {
-  [ -f "$SRC/Package.swift" ] && return 0
+  # Always re-sync the build source from the NEWEST installed-plugin copy in the cache, so the compiled CODE
+  # matches the version build() stamps (plugin_version). Without this, a stale staged $SRC can produce an app
+  # that reports a new version but is missing that version's features. Falls back to any already-staged source.
   local cand
   cand=$(ls -d "$CDT_HOME"/plugins/cache/claude-dev-team/cdt/*/menubar 2>/dev/null | sort -V | tail -1)
   if [ -n "$cand" ] && [ -f "$cand/Package.swift" ]; then
-    mkdir -p "$SRC" && cp -R "$cand/Package.swift" "$cand/Sources" "$SRC/" 2>/dev/null
+    mkdir -p "$SRC"
+    rm -rf "$SRC/Sources" "$SRC/Tests" 2>/dev/null
+    cp "$cand/Package.swift" "$SRC/" 2>/dev/null
+    cp -R "$cand/Sources" "$SRC/" 2>/dev/null
+    [ -d "$cand/Tests" ] && cp -R "$cand/Tests" "$SRC/" 2>/dev/null
     [ -f "$cand/Info.plist" ] && cp "$cand/Info.plist" "$SRC/" 2>/dev/null
     [ -f "$cand/AppIcon.icns" ] && cp "$cand/AppIcon.icns" "$SRC/" 2>/dev/null
     return 0
   fi
+  [ -f "$SRC/Package.swift" ] && return 0
   return 1
 }
 
@@ -97,14 +104,33 @@ uninstall() {
   echo "Uninstalled (login item + CDT Usage.app removed). Re-enable: cdt-menubar install"
 }
 
+# Rebuild + relaunch ONLY when the installed app version lags the plugin version (e.g. after
+# `claude plugin update`). A fast no-op when they already match. Fail-open + quiet — safe to call in the
+# background from SessionStart on every session.
+auto_update() {
+  command -v swift >/dev/null 2>&1 || return 0
+  [ -f "$CDT_HOME/.cdt-menubar-disabled" ] && return 0
+  local pv av plist
+  pv="$(plugin_version)"
+  plist="$APP_BUNDLE/Contents/Info.plist"
+  av="$([ -f "$plist" ] && /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist" 2>/dev/null)"
+  # Up to date → nothing to do.
+  [ -x "$APP" ] && [ -n "$av" ] && [ "$av" = "$pv" ] && return 0
+  echo "Menu bar app (${av:-none}) lags plugin ($pv) — rebuilding…"
+  build >/dev/null 2>&1 || { echo "Menu bar rebuild failed."; return 0; }
+  pkill -f "$APP_RE" 2>/dev/null
+  open "$APP_BUNDLE" >/dev/null 2>&1 && echo "Menu bar app updated to v$pv."
+}
+
 case "${1:-install}" in
-  build)                 build ;;
-  start)                 start ;;
-  stop)                  stop ;;
-  restart)               stop; start ;;
-  status|check|once)     status ;;
-  install-login|login)   install_login ;;
-  uninstall|remove)      uninstall ;;
-  install)               build && install_login ;;
-  *) echo "usage: cdt-menubar {install|build|start|stop|restart|status|install-login|uninstall}"; exit 1 ;;
+  build)                  build ;;
+  start)                  start ;;
+  stop)                   stop ;;
+  restart)                stop; start ;;
+  status|check|once)      status ;;
+  install-login|login)    install_login ;;
+  uninstall|remove)       uninstall ;;
+  install)                build && install_login ;;
+  auto-update|update|sync) auto_update ;;
+  *) echo "usage: cdt-menubar {install|build|start|stop|restart|status|install-login|auto-update|uninstall}"; exit 1 ;;
 esac

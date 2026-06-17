@@ -14,6 +14,14 @@ describe('redaction', () => {
     expect(out).not.toContain('AKIA1234567890ABCDEF');
     expect(out).toContain('‹redacted:');
   });
+
+  it('masks natural-language secrets ("password is X") but keeps ordinary prose', () => {
+    expect(redact('the db password is Hunter2zzzz so connect')).not.toContain('Hunter2zzzz');
+    expect(redact('the api token is abc123XYZ890def')).not.toContain('abc123XYZ890def');
+    expect(redact('a passphrase of correcthorsebattery works')).not.toContain('correcthorsebattery');
+    // ordinary prose (no digit/symbol, short) is preserved
+    expect(redact('a password is required to log in')).toContain('required');
+  });
 });
 
 describe('safety scan', () => {

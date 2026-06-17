@@ -114,7 +114,7 @@ show() {
   local vg; vg="$(get_env CDT_VERIFY_GATE)"; [ -z "$vg" ] && vg="block"
   local sg; sg="$(get_env CDT_SCOPE_GATE)"; [ -z "$sg" ] && sg="warn"
   local mg; mg="$(get_env CDT_MEMORY_GATE)"; [ -z "$mg" ] && mg="warn"
-  local tk pe pm; tk="$(get_env CDT_TOOLKIT_ENABLED)"; [ -z "$tk" ] && tk="1"; pe="$(get_env CDT_PROMPT_ENHANCE)"; [ -z "$pe" ] && pe="true"; pm="$(get_env CDT_PROMPT_ENHANCE_MODE)"; [ -z "$pm" ] && pm="auto"
+  local tk pe pm pef; tk="$(get_env CDT_TOOLKIT_ENABLED)"; [ -z "$tk" ] && tk="1"; pe="$(get_env CDT_PROMPT_ENHANCE)"; [ -z "$pe" ] && pe="true"; pm="$(get_env CDT_PROMPT_ENHANCE_MODE)"; [ -z "$pm" ] && pm="auto"; pef="$(get_env CDT_PROMPT_EFFORT)"; [ -z "$pef" ] && pef="medium"
   local sa ea oc rd; sa="$(get_env CDT_SPEC_AUTO)"; [ -z "$sa" ] && sa="false"; ea="$(get_env CDT_EXTERNAL_AI_ALLOWED)"; [ -z "$ea" ] && ea="false"; oc="$(get_env CDT_OCR_ENABLED)"; [ -z "$oc" ] && oc="false"; rd="$(get_env CDT_REDACT)"; [ -z "$rd" ] && rd="true"
   echo "claude-dev-team config:"
   echo "  status    : $([ "$en" = "0" ] && echo DISABLED || echo enabled)   (core CDT — cdt-config on|off)"
@@ -128,7 +128,7 @@ show() {
   echo "  teams     : $tm   ·  scale : $sc   (DEPTH/BREADTH engines; off by default, opt in to enable)"
   echo "  statusline: $(statusline_state)   (terminal status line)"
   echo "  toolkit   : $([ "$tk" = "0" ] && echo DISABLED || echo enabled)   (TS engine, SEPARATE from core CDT — cdt-config toolkit on|off · cdt enable|disable)"
-  echo "    prompt-enhance : $pe (mode $pm)   (prompt-mode auto|always|off · prompt-enhance on|off)"
+  echo "    prompt-enhance : $pe (mode $pm, Haiku effort $pef)   (prompt-mode auto|always|off · prompt-enhance on|off)"
   echo "    spec-auto : $sa  ·  external-ai : $ea  ·  ocr : $oc  ·  redact : $rd"
   echo "  effort/model apply on the next session (restart Claude Code). Toggle core CDT: cdt-config on|off · toolkit: cdt-config toolkit on|off"
 }
@@ -154,6 +154,11 @@ case "${1:-show}" in
       auto|always) set_env CDT_PROMPT_ENHANCE true; set_env CDT_PROMPT_ENHANCE_MODE "$2"; echo "claude-dev-team: prompt-enhance mode = $2  (auto = only unclear/risky/spec-driven · always = every non-trivial)." ;;
       off)         set_env CDT_PROMPT_ENHANCE false; set_env CDT_PROMPT_ENHANCE_MODE off; echo "claude-dev-team: prompt enhancement OFF (deterministic only, no Haiku)." ;;
       *) echo "cdt-config: usage: cdt-config prompt-mode auto|always|off" ;;
+    esac ;;
+  prompt-effort)
+    case "$2" in
+      medium|high) set_env CDT_PROMPT_EFFORT "$2"; echo "claude-dev-team: prompt-enhancer effort = $2  (Haiku rewrite only; core CDT effort is separate)." ;;
+      *) echo "cdt-config: usage: cdt-config prompt-effort medium|high  (the enhancer uses Haiku; never xhigh/max)" ;;
     esac ;;
   spec-auto)
     case "$2" in
@@ -268,6 +273,6 @@ PY
     set_setting effortLevel "$DEFAULT_EFFORT"
     set_setting model "$DEFAULT_MODEL"
     echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off, autonomy=assist, engines off)." ;;
-  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
+  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
 esac
 exit 0

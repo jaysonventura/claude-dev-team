@@ -30,6 +30,7 @@ export function claudeEnhance(prompt: string, cfg: CdtConfig, claudeBin = 'claud
     '--tools', '',
     '--disallowedTools', 'mcp__*',
     '--output-format', 'text',
+    '--effort', cfg.prompt.effort,
     '--append-system-prompt', ENHANCE_SYSTEM,
     '--max-budget-usd', String(cfg.prompt.maxUsd),
     buildEnhanceUserPrompt(prompt),

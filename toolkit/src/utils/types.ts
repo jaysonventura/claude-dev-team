@@ -17,6 +17,7 @@ export interface PromptConfig {
   maxContextChars: number;
   backend: Backend;
   localModel: string;
+  effort: string; // effort for the Haiku enhancer call only (medium|high); core CDT effort is unchanged
 }
 
 export interface SpecConfig {

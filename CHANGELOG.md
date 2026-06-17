@@ -2,6 +2,27 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.37.0] — 2026-06-17
+### Added
+- **Menu-bar app auto-updates with the plugin.** `cdt-menubar` gains an `auto-update` subcommand that
+  rebuilds + relaunches the app **only when its bundle version lags the plugin** (a fast no-op otherwise), and
+  `session-start` runs it in the background. So `claude plugin update cdt@claude-dev-team` (which requires a
+  restart) now refreshes the menu-bar app automatically on the next session — no manual `/cdt:menubar` needed.
+- **`Package.swift` declares the test target only when `Tests/` is present** (via `#filePath`), so staged /
+  auto-update builds that copy `Sources/` but not `Tests/` no longer fail.
+- **Prompt enhancer runs Haiku at `medium` effort** (configurable `medium|high` via `cdt-config prompt-effort`
+  / `CDT_PROMPT_EFFORT`). Core CDT effort is unchanged (xhigh) — the enhancer is a lightweight rewrite that
+  never needs xhigh/max. The toolkit + prompt-enhance are ON by default.
+### Fixed
+- **Menu-bar build keeps code in sync with the stamped version.** `cdt-menubar build` now re-syncs its source
+  from the newest cached plugin before compiling, so the app can no longer report a new version while missing
+  that version's menu items (e.g. the Toolkit-engine / Prompt-enhance toggles).
+- **Toolkit redaction now masks natural-language secrets** (e.g. `password is Hunter2zzzz`, `passphrase of …`),
+  not just `key=value` forms. Found by live testing: a sensitivity-gated prompt was correctly kept off the
+  external model, but a spoken-form password still persisted into `ROUTING.json` / `TASK_RESULT.json` / the
+  injected context. `redact.ts` gains a label-preserving `secret-value` rule that masks only secret-shaped
+  values (digit/symbol or ≥10 chars), so ordinary prose like "a password is required" is untouched. +1 test (45 total).
+
 ## [1.36.0] — 2026-06-17
 ### Added
 - **Separate enable/disable for the toolkit vs core CDT.** New `CDT_TOOLKIT_ENABLED` switch gates the TS
