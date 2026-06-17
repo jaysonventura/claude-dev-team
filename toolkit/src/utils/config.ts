@@ -23,6 +23,7 @@ export const DEFAULT_CONFIG: CdtConfig = {
     maxContextChars: 4000,
     backend: 'haiku',
     localModel: 'qwen3:8b',
+    effort: 'medium', // the enhancer (Haiku) runs at medium effort; core CDT keeps its own (xhigh) effort
   },
   spec: {
     auto: false,
@@ -92,6 +93,8 @@ function applyEnv(cfg: CdtConfig, env: Env): CdtConfig {
   out.prompt.maxUsd = num(env.CDT_PROMPT_MAX_USD, out.prompt.maxUsd);
   out.prompt.maxContextChars = num(env.CDT_MAX_CONTEXT_CHARS, out.prompt.maxContextChars);
   out.prompt.localModel = env.LOCAL_PROMPT_MODEL ?? out.prompt.localModel;
+  // Enhancer effort: medium|high only (a lightweight Haiku rewrite never needs xhigh/max).
+  out.prompt.effort = oneOf(env.CDT_PROMPT_EFFORT, ['medium', 'high'], out.prompt.effort);
   if (env.CDT_PROMPT_BACKEND) {
     out.prompt.backend = oneOf<Backend>(env.CDT_PROMPT_BACKEND, ['haiku', 'ollama', 'deterministic'], out.prompt.backend);
   }

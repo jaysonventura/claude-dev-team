@@ -10,7 +10,13 @@ All notable changes to claude-dev-team. Versions follow semver.
   restart) now refreshes the menu-bar app automatically on the next session — no manual `/cdt:menubar` needed.
 - **`Package.swift` declares the test target only when `Tests/` is present** (via `#filePath`), so staged /
   auto-update builds that copy `Sources/` but not `Tests/` no longer fail.
+- **Prompt enhancer runs Haiku at `medium` effort** (configurable `medium|high` via `cdt-config prompt-effort`
+  / `CDT_PROMPT_EFFORT`). Core CDT effort is unchanged (xhigh) — the enhancer is a lightweight rewrite that
+  never needs xhigh/max. The toolkit + prompt-enhance are ON by default.
 ### Fixed
+- **Menu-bar build keeps code in sync with the stamped version.** `cdt-menubar build` now re-syncs its source
+  from the newest cached plugin before compiling, so the app can no longer report a new version while missing
+  that version's menu items (e.g. the Toolkit-engine / Prompt-enhance toggles).
 - **Toolkit redaction now masks natural-language secrets** (e.g. `password is Hunter2zzzz`, `passphrase of …`),
   not just `key=value` forms. Found by live testing: a sensitivity-gated prompt was correctly kept off the
   external model, but a spoken-form password still persisted into `ROUTING.json` / `TASK_RESULT.json` / the

@@ -23,15 +23,22 @@ LABEL="com.jaysonventura.claude-dev-team.menubar"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 
 find_src() {
-  [ -f "$SRC/Package.swift" ] && return 0
+  # Always re-sync the build source from the NEWEST installed-plugin copy in the cache, so the compiled CODE
+  # matches the version build() stamps (plugin_version). Without this, a stale staged $SRC can produce an app
+  # that reports a new version but is missing that version's features. Falls back to any already-staged source.
   local cand
   cand=$(ls -d "$CDT_HOME"/plugins/cache/claude-dev-team/cdt/*/menubar 2>/dev/null | sort -V | tail -1)
   if [ -n "$cand" ] && [ -f "$cand/Package.swift" ]; then
-    mkdir -p "$SRC" && cp -R "$cand/Package.swift" "$cand/Sources" "$SRC/" 2>/dev/null
+    mkdir -p "$SRC"
+    rm -rf "$SRC/Sources" "$SRC/Tests" 2>/dev/null
+    cp "$cand/Package.swift" "$SRC/" 2>/dev/null
+    cp -R "$cand/Sources" "$SRC/" 2>/dev/null
+    [ -d "$cand/Tests" ] && cp -R "$cand/Tests" "$SRC/" 2>/dev/null
     [ -f "$cand/Info.plist" ] && cp "$cand/Info.plist" "$SRC/" 2>/dev/null
     [ -f "$cand/AppIcon.icns" ] && cp "$cand/AppIcon.icns" "$SRC/" 2>/dev/null
     return 0
   fi
+  [ -f "$SRC/Package.swift" ] && return 0
   return 1
 }
 
