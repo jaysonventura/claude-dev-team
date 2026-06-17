@@ -22,6 +22,14 @@ node_modules/
 # Git worktrees created by cdt-worktree / claude --worktree (parallel isolation)
 .claude/worktrees/
 
+# Ephemeral CDT runtime + per-prompt artifacts (regenerated each session; never tracked).
+# NOTE: .claude/specs/ is intentionally NOT ignored — cited requirement sets are often committed.
+.claude/runtime/
+.claude/TASK_BRIEF.md
+.claude/ROUTING.json
+.claude/NEXT_PROMPT.md
+.claude/TASK_RESULT.json
+
 # Swift build artifacts (menu bar app)
 .build/
 menubar/.build/

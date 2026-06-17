@@ -2,6 +2,12 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.41.1] — 2026-06-17
+### Chore
+- `.gitignore` now covers CDT's ephemeral runtime/per-prompt artifacts (`.claude/runtime/`,
+  `.claude/TASK_BRIEF.md`, `.claude/ROUTING.json`, `.claude/NEXT_PROMPT.md`, `.claude/TASK_RESULT.json`) so
+  they no longer show up in `git status`. `.claude/specs/` stays trackable. No code or behavior change.
+
 ## [1.41.0] — 2026-06-17
 ### Added
 - **Phase board + status-line phase indicator** for multi-wave (T2/T3) tasks. The orchestrator marks each
