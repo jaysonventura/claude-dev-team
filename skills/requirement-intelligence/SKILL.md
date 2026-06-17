@@ -31,4 +31,7 @@ cited set only.
 - **Sensitive docs stay local.** Payroll, user data, contracts/legal, secrets, production DB details, and
   auth/payment logic are never sent to an external model; their spec output carries a do-not-commit banner.
 - **Images/diagrams** with weak/disabled OCR are marked `NEEDS_REVIEW`, not implemented directly.
-- Auto-running on detected docs is off by default (`CDT_SPEC_AUTO=false`); suggest `cdt-spec`, don't force it.
+- Auto-extraction is off by default (`CDT_SPEC_AUTO=false`) — suggest `cdt-spec`, don't force it. When the
+  user opts in (`CDT_SPEC_AUTO=true`), the UserPromptSubmit hook auto-runs `cdt-spec` on any **spec document**
+  named in the prompt (`.pdf`/`.docx` or a requirement-named `.md`/`.txt`); **source files and folders are
+  excluded**, so it never extracts from code.
