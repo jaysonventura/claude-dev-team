@@ -18,8 +18,13 @@ _EN="$(grep -E '^CDT_ENABLED=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | hea
 # Separate toolkit switch (independent of core CDT): cdt disable / cdt-config toolkit off.
 _TK="$(grep -E '^CDT_TOOLKIT_ENABLED=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
 case "$_TK" in 0|false|off) exit 0 ;; esac
+# Short-circuit only when BOTH prompt-enhance AND spec-auto are off (nothing for the engine to do).
+# (Spec auto-detect runs independently of prompt enhancement.)
 _PE="$(grep -E '^CDT_PROMPT_ENHANCE=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
-case "$_PE" in 0|false|off) exit 0 ;; esac
+_SA="$(grep -E '^CDT_SPEC_AUTO=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+_pe_off=0; case "$_PE" in 0|false|off) _pe_off=1 ;; esac
+_sa_on=0;  case "$_SA" in 1|true|yes|on) _sa_on=1 ;; esac
+[ "$_pe_off" = 1 ] && [ "$_sa_on" = 0 ] && exit 0
 
 command -v node >/dev/null 2>&1 || exit 0
 TKDIST="$(cd "$(dirname "$0")/../toolkit/dist" 2>/dev/null && pwd)"

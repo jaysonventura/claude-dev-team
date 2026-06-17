@@ -2,6 +2,15 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.38.0] — 2026-06-17
+### Added
+- **Auto `cdt-spec` on referenced documents** (opt-in: `CDT_SPEC_AUTO=true`, default off). When a prompt
+  names a real spec **document** — `.pdf`/`.docx`, or a requirement-named `.md`/`.txt` — the UserPromptSubmit
+  hook auto-extracts cited requirements into `.claude/specs/` and points the agent at them. It **classifies
+  every path first**: source files (`.ts`/`.py`/`.json`/…), **project folders** (`isFile()` check),
+  non-existent paths, and URLs are excluded, so it never misfires on code or directories. Sensitive docs stay
+  local. (`cdt-verify` stays manual by design — verification must be a deliberate, observed command.)
+
 ## [1.37.0] — 2026-06-17
 ### Added
 - **Menu-bar app auto-updates with the plugin.** `cdt-menubar` gains an `auto-update` subcommand that
