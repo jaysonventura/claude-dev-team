@@ -1,0 +1,17 @@
+{
+  "_comment": "Approved free/OSS MCP source-of-truth policy. INJECTED as guidance and reported in artifacts — NOT runtime-enforced (a script cannot force a tool call). Availability is detected at runtime; unavailable MCPs are reported, never faked.",
+  "approved": [
+    { "name": "Context7", "use": "package/library/API/framework docs (never memory)" },
+    { "name": "GitHub", "use": "repo, PRs, issues, commits, CI context" },
+    { "name": "Playwright", "use": "browser/UI verification" },
+    { "name": "Filesystem", "use": "scoped project files only" },
+    { "name": "DB (read-only)", "use": "schema/table/column truth" }
+  ],
+  "securityDefaults": [
+    "filesystem scoped to the current project",
+    "database read-only; production DB disabled",
+    "no cloud write access",
+    "no destructive commands without explicit approval",
+    "never install untrusted MCP servers globally"
+  ]
+}

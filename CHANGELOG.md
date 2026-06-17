@@ -2,6 +2,29 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.35.0] — 2026-06-17
+### Added
+- **claude-dev-team-toolkit** (`toolkit/`) — a deterministic-first TypeScript engine layer that auto-applies
+  via plugin hooks/skills (not slash-command-only):
+  - **`cdt-prompt` + UserPromptSubmit hook** — prompt intake, advisory routing (RISK → Sonnet +
+    security-reviewer; Opus only for architecture/severe-security/prod-release/major-refactor), and
+    *conditional* Haiku enhancement via `claude -p` (existing login, no API key). Deterministic-first: the
+    model is called only for genuinely unclear/risky/spec-driven prompts, never for sensitive or trivial ones.
+    Output is additive `additionalContext` — the original prompt is never rewritten. Hook always exits 0.
+  - **`cdt-spec`** — deterministic requirement/spec extraction (PDF/DOCX/MD/image) into `.claude/specs/`; every
+    requirement carries a required `source` citation; sensitive docs stay local (do-not-commit banner, no
+    external AI); weak/disabled-OCR diagrams → `NEEDS_REVIEW`.
+  - **`cdt-verify -- <cmd>`** — the only trusted verification source (`.claude/runtime/verify-events.jsonl`).
+    The Stop hook derives `TASK_RESULT.json` verification strictly from evidence (`passed` only on a real
+    exitCode 0; never fabricated). TASK_RESULT.json is local-only — **no notifications**.
+  - Hardened: realpath write-jail, mandatory redaction (HMAC prompt-hash, no raw prompt stored), fail-closed
+    sensitivity gate, safe-degrade validators, docs-only verify exemption, staging guard, session
+    circuit-breaker.
+### Changed
+- `hooks.json` (+UserPromptSubmit), `completion-guard.sh` (docs-only exemption + TASK_RESULT finalize),
+  `verify-track.sh` (best-effort verify events), `session-start-vault.sh` (link toolkit bins + recursion
+  guard + dist healthcheck). `notify.sh` is untouched and not wired to TASK_RESULT.
+
 ## [1.34.4] — 2026-06-17
 ### Fixed
 - **Menu bar: subscription % no longer freezes for hours after a transient rate-limit.** Root cause

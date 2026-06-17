@@ -1,0 +1,45 @@
+{
+  "name": "claude-dev-team-toolkit",
+  "version": "0.1.0",
+  "description": "Deterministic-first TypeScript engine layer for the Claude Dev Team (CDT) plugin: prompt intake + conditional local enhancement, agent routing, requirement/spec extraction, schema validation, redaction, and local evidence-based TASK_RESULT formatting. No notifications.",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "cdt": "dist/cli/cdt.js",
+    "cdt-prompt": "dist/cli/cdt-prompt.js",
+    "cdt-spec": "dist/cli/cdt-spec.js",
+    "cdt-verify": "dist/cli/cdt-verify.js"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "presets",
+    "README.md",
+    ".env.example"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/postbuild.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepare": "npm run build",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
+  "optionalDependencies": {
+    "mammoth": "^1.8.0",
+    "pdf-parse": "^1.1.1",
+    "tesseract.js": "^5.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
+  },
+  "license": "MIT",
+  "author": "Jayson Ventura"
+}

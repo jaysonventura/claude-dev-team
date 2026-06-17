@@ -1,0 +1,4 @@
+{
+  "_comment": "Default quality-gate chain (advisory). security-review is appended automatically when routing flags a security review.",
+  "gates": ["fmt", "lint", "typecheck", "unit", "integration", "e2e", "build", "smoke", "review"]
+}

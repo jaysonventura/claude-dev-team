@@ -1,0 +1,18 @@
+{
+  "_comment": "Canonical CDT agent roster (descriptive). The deterministic router uses routing-rules.json; this file documents roles, ownership, model floors, and waves.",
+  "agents": [
+    { "name": "product-manager", "wave": 0, "model": "opus", "readonly": true, "owns": [], "role": "requirements, acceptance criteria, scope/non-goals" },
+    { "name": "architect", "wave": 0, "model": "opus", "readonly": true, "owns": [], "role": "approach, types/interfaces, module boundaries, trade-offs" },
+    { "name": "ui-ux-engineer", "wave": 0, "model": "sonnet", "readonly": true, "owns": ["design/**"], "role": "UX flows, IA, design tokens, a11y" },
+    { "name": "backend-engineer", "wave": 1, "model": "sonnet", "readonly": false, "owns": ["api/**", "server/**"], "role": "APIs, services, business logic, auth, jobs, data access" },
+    { "name": "frontend-engineer", "wave": 1, "model": "sonnet", "readonly": false, "owns": ["ui/**", "client/**"], "role": "components, pages, state, styling, a11y" },
+    { "name": "mobile-engineer", "wave": 1, "model": "sonnet", "readonly": false, "owns": ["mobile/**", "app/**"], "role": "mobile screens, navigation, native modules" },
+    { "name": "data-engineer", "wave": 1, "model": "sonnet", "readonly": false, "owns": ["db/**", "migrations/**"], "role": "schema, migrations, queries, indexes, ETL" },
+    { "name": "devops-engineer", "wave": 1, "model": "sonnet", "readonly": false, "owns": ["infra/**", "ci/**"], "role": "CI/CD, Docker, infra config, release automation" },
+    { "name": "qa-engineer", "wave": 1, "model": "sonnet", "readonly": false, "owns": ["test/**", "tests/**"], "role": "unit/integration/e2e tests, quality gates" },
+    { "name": "technical-writer", "wave": 1, "model": "sonnet", "readonly": false, "owns": ["docs/**"], "role": "README, guides, API docs, CHANGELOG, ADRs" },
+    { "name": "code-reviewer", "wave": 2, "model": "opus", "readonly": true, "owns": [], "role": "correctness, scope adherence, edge cases, maintainability" },
+    { "name": "security-reviewer", "wave": 2, "model": "opus", "readonly": true, "owns": [], "role": "security review with veto on risk >= medium" },
+    { "name": "fast-ops", "wave": 1, "model": "haiku", "readonly": false, "owns": [], "role": "trivial mechanical ops only" }
+  ]
+}

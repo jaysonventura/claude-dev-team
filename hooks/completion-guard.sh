@@ -33,7 +33,31 @@ _EN="$(grep -E '^CDT_ENABLED=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | hea
 # Default ON (block). Soften any time:  cdt-config verify warn|off  (writes CDT_VERIFY_GATE).
 GATE="$(grep -E '^CDT_VERIFY_GATE=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
 case "$GATE" in block|warn|off) : ;; *) GATE=block ;; esac
-if [ "$GATE" != "off" ]; then
+
+# Docs-only exemption (claude-dev-team-toolkit): a session whose edits are ALL plan/markdown docs needs no
+# verifying command — treat as verification:not_run, never a blocking failure. File-scope aware; NOT a global
+# "verify off". Toggle with CDT_VERIFY_DOCS_EXEMPT=0.
+_DOCS_EXEMPT="$(grep -E '^CDT_VERIFY_DOCS_EXEMPT=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+case "$_DOCS_EXEMPT" in 0|false|off) _DOCS_EXEMPT=0 ;; *) _DOCS_EXEMPT=1 ;; esac
+_DOCS_ONLY=0
+if [ "$_DOCS_EXEMPT" = 1 ] && command -v git >/dev/null 2>&1; then
+  _CHANGED="$( { git -C "$CWD" diff --name-only HEAD 2>/dev/null; git -C "$CWD" ls-files --others --exclude-standard 2>/dev/null; } )"
+  if [ -n "$_CHANGED" ]; then
+    _DOCS_ONLY=1
+    while IFS= read -r _f; do
+      [ -z "$_f" ] && continue
+      case "$_f" in
+        *.claude/plans/*|*.md|*.markdown) : ;;
+        *) _DOCS_ONLY=0; break ;;
+      esac
+    done <<EOF_DOCS
+$_CHANGED
+EOF_DOCS
+  fi
+fi
+[ "$_DOCS_ONLY" = 1 ] && db_event verify_gate "docs-exempt" "${SESSION_ID:-}" 2>/dev/null
+
+if [ "$GATE" != "off" ] && [ "$_DOCS_ONLY" != 1 ]; then
   GHOOKS="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
   # shellcheck source=/dev/null
   . "$GHOOKS/verify-lib.sh" 2>/dev/null
@@ -131,6 +155,35 @@ except Exception: print(0)' 2>/dev/null)"
       case "$_AGG" in ''|*[!0-9]*) _AGG=0 ;; esac
       db_event orch_overhead "main=$_MAIN delegated=$_AGG" "${SESSION_ID:-}" 2>/dev/null
     fi
+  fi
+fi
+
+# --- TASK_RESULT finalize (claude-dev-team-toolkit) — local only, NO notification. -------------------
+# Writes .claude/TASK_RESULT.json with verification derived strictly from verify-events.jsonl, then surfaces
+# (on stderr, non-blocking) the staging guard + a cdt-verify nudge. Never blocks (block-once is preserved).
+_TKDIST="$(cd "$(dirname "$0")/../toolkit/dist" 2>/dev/null && pwd)"
+if [ -n "$_TKDIST" ] && [ -f "$_TKDIST/cli/hook.js" ] && command -v node >/dev/null 2>&1; then
+  _FIN="$(printf '%s' "$INPUT" | node "$_TKDIST/cli/hook.js" finalize 2>/dev/null)"
+  if [ -n "$_FIN" ] && command -v python3 >/dev/null 2>&1; then
+    # Fire the 6-field final-response reminder at most ONCE per session (stderr, never blocks → no loop).
+    FRMARK="${TMPDIR:-/tmp}/cdt-finalresp-${SESSION_ID:-default}.marker"
+    _FR=0; [ ! -f "$FRMARK" ] && { : > "$FRMARK" 2>/dev/null; _FR=1; }
+    CDT_FIN="$_FIN" CDT_FR="$_FR" python3 - 1>&2 <<'PYF' 2>/dev/null || true
+import os, json
+try:
+    d = json.loads(os.environ.get("CDT_FIN", "{}"))
+except Exception:
+    d = {}
+for w in (d.get("stagingWarnings") or []):
+    print("claude-dev-team: ⚠ STAGING GUARD: " + str(w))
+if d.get("hookOnly"):
+    print("claude-dev-team: a verify command ran but not via cdt-verify — re-run as 'cdt-verify -- <cmd>' to record trusted evidence.")
+# TASK_RESULT.json is the machine source of truth (already written by the engine). This is a one-shot,
+# non-blocking nudge so the final reply matches the recorded result — it never blocks or loops.
+if os.environ.get("CDT_FR") == "1" and d.get("finalResponse"):
+    print("claude-dev-team: TASK_RESULT.json written (verification=%s). Format your final reply as:" % d.get("verification"))
+    print(d["finalResponse"])
+PYF
   fi
 fi
 
