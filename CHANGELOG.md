@@ -2,6 +2,11 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.38.1] — 2026-06-17
+### Docs
+- README now leads with a hero **demo GIF** (auto `cdt-spec` extracting cited requirements from a spec
+  document) and a branded **feature card** under `docs/media/`. No code or behavior change.
+
 ## [1.38.0] — 2026-06-17
 ### Added
 - **Auto `cdt-spec` on referenced documents** (opt-in: `CDT_SPEC_AUTO=true`, default off). When a prompt
