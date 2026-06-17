@@ -15,14 +15,12 @@ BIN="$CDT_HOME/bin"
 # 1) Bootstrap the vault from the plugin template (only seeds missing files).
 mkdir -p "$VAULT/sessions" "$VAULT/adrs" "$BIN" 2>/dev/null
 if [ -d "$HOOKS_DIR/vault-template" ]; then
-  for f in README.md learnings.md log.md status-log.md; do
+  for f in README.md learnings.md log.md; do
     [ -f "$VAULT/$f" ] || cp "$HOOKS_DIR/vault-template/$f" "$VAULT/$f" 2>/dev/null
   done
 fi
 
 # 2) Install/refresh the stable CLIs so the orchestrator and commands have fixed paths.
-cp "$HOOKS_DIR/notify.sh" "$BIN/cdt-notify"   2>/dev/null && chmod +x "$BIN/cdt-notify" 2>/dev/null
-cp "$HOOKS_DIR/setup.sh"  "$BIN/cdt-setup"    2>/dev/null && chmod +x "$BIN/cdt-setup"  2>/dev/null
 cp "$HOOKS_DIR/stats.sh"  "$BIN/cdt-stats"    2>/dev/null && chmod +x "$BIN/cdt-stats"  2>/dev/null
 cp "$HOOKS_DIR/task.sh"   "$BIN/cdt-task"     2>/dev/null && chmod +x "$BIN/cdt-task"   2>/dev/null
 cp "$HOOKS_DIR/db.sh"     "$BIN/cdt-db.sh"    2>/dev/null
@@ -109,5 +107,5 @@ if [ -f "$VAULT/learnings.md" ]; then
   grep '^- \[' "$VAULT/learnings.md" 2>/dev/null | tail -n 6
 fi
 echo
-echo "_Triage every task (T0–T3); delegate under contracts; gate; ship; persist. Preferred defaults: **xhigh** effort + **Opus 4.8** (adjust via cdt-config). For lessons relevant to a task, run \`~/.claude/bin/cdt-recall \"<task>\"\`. Report milestones via cdt-notify._"
+echo "_Triage every task (T0–T3); delegate under contracts; gate; ship; persist. Preferred defaults: **xhigh** effort + **Opus 4.8** (adjust via cdt-config). For lessons relevant to a task, run \`~/.claude/bin/cdt-recall \"<task>\"\`. Report milestones to the user._"
 exit 0

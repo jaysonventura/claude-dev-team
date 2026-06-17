@@ -27,7 +27,7 @@ Recommended next step: <one step>
   If you ran the command directly (not via `cdt-verify`), it counts as `not_run` until you re-run it through
   `cdt-verify`. No observed evidence ⇒ `not_run`.
 - **TASK_RESULT.json is local-only** (`.claude/TASK_RESULT.json`). It is for local history/automation; it is
-  never sent anywhere and is not a notification.
+  never sent anywhere.
 - The **Stop hook** writes/validates `TASK_RESULT.json` and derives Verification from the evidence — your
   prose must match it, not override it.
 - Docs/plan-only sessions legitimately end with `Verification: not_run` (no code to verify).

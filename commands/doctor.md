@@ -1,5 +1,5 @@
 ---
-description: Health-check the claude-dev-team install — hooks, CLIs, state DB, gh, notifier, menu bar, companion plugins — and report fixes for anything not green.
+description: Health-check the claude-dev-team install — hooks, CLIs, state DB, gh, menu bar, companion plugins — and report fixes for anything not green.
 allowed-tools: Bash
 ---
 

@@ -15,7 +15,7 @@ bash scripts/e2e.sh             # 3) end-to-end (sandboxed — uses a temp HOME,
 
 All three run in CI and must pass before a PR merges. `validate.sh` checks manifests + frontmatter and
 runs `shellcheck` (install it: `brew install shellcheck`). `e2e.sh` boots the SessionStart hook in a
-throwaway sandbox and exercises the full chain (CLIs, doctor, recall, stats, eco, config on/off, notify).
+throwaway sandbox and exercises the full chain (CLIs, doctor, recall, stats, eco, config on/off).
 
 ## How to add things
 

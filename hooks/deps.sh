@@ -41,7 +41,6 @@ pkg() {  # package name for the detected manager
 DEPS=(
   "python3|required|recall, advise, config, analytics"
   "git|required|version operations"
-  "curl|recommended|Discord/Telegram notifications"
   "sqlite3|optional|analytics CLI (python3 fallback exists)"
   "gh|optional|PR autopilot"
 )

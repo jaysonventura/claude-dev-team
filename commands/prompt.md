@@ -21,4 +21,4 @@ Then:
 Notes:
 - Haiku enhancement (via `claude --bare -p`, your existing login) is used only for genuinely unclear / risky
   / spec-driven prompts and never for sensitive or very short ones.
-- Nothing here sends a notification; `TASK_RESULT.json` (written at Stop) is local-only.
+- `TASK_RESULT.json` (written at Stop) is local-only — nothing is sent anywhere.

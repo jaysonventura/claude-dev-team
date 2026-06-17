@@ -11,8 +11,7 @@ Safety is non-negotiable:
   failures, and the *exact* plan (what you would change). Make **no** commits, pushes, or comments.
 - With `--live` you may act — but **never force-push, never auto-merge, never close the PR.** Pushes go
   to the PR branch with a normal `git push`; merging is the user's explicit decision.
-- Bound the fix loop by `CDT_MAX_ITERATIONS`; report milestones via `~/.claude/bin/cdt-notify`; stop and
-  notify if you hit the cap.
+- Bound the fix loop by `CDT_MAX_ITERATIONS`; stop and report to the user if you hit the cap.
 
 Use `~/.claude/bin/cdt-pr {status|checks|view|diff|comment} <PR>` for PR data. Confirm `gh` is
 authenticated first. Follow the skill's STEP 3d exactly.

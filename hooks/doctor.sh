@@ -14,7 +14,7 @@ genv(){ grep -E "^$1=" "$ENVF" 2>/dev/null | cut -d= -f2-; }
 echo "claude-dev-team — doctor"
 
 missing=""
-for c in cdt-notify cdt-setup cdt-stats cdt-task cdt-tokens cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps cdt-worktree cdt-auto cdt-version; do
+for c in cdt-stats cdt-task cdt-tokens cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps cdt-worktree cdt-auto cdt-version; do
   [ -x "$BIN/$c" ] || missing="$missing $c"
 done
 [ -z "$missing" ] && P "CLIs installed" || W "CLIs missing:$missing" "open a new Claude Code session (the SessionStart hook installs them)"
@@ -52,9 +52,6 @@ if [ "$sc" = "on" ]; then
     W "scale on but Claude Code version unknown" "can't verify the 2.1.154+ requirement for workflows"
   fi
 fi
-
-prov="$(grep -E '^CDT_NOTIFY_PROVIDER=' "$ENVF" 2>/dev/null | cut -d= -f2-)"
-{ [ -n "$prov" ] && [ "$prov" != "off" ]; } && P "notifier configured ($prov)" || W "notifier not configured" "optional — run: cdt-setup"
 
 en="$(grep -E '^CDT_ENABLED=' "$ENVF" 2>/dev/null | cut -d= -f2-)"
 [ "$en" = "0" ] && W "CDT is DISABLED" "re-enable: cdt-config on" || P "CDT enabled"

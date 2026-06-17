@@ -8,7 +8,7 @@ runs adapt to the project.
 > **You:** fix the broken link in `README.md`.
 
 Triage: 1 file, 1 domain, no risk → **T0**. The orchestrator edits directly, runs nothing heavier than a
-quick check, and ships. No team, no Discord spam (INFO is below the default notify level). ~1 call.
+quick check, and ships. No team. ~1 call.
 
 ## T1 — small single-domain
 
@@ -29,7 +29,7 @@ unit test, runs the test, and ships with a light close (verify + simplify-if-tou
 4. **Wave 2:** `code-reviewer` checks scope/correctness; `security-reviewer` traces the auth path and the
    limiter (veto if weak).
 5. **Mandate + ship:** simplify, reuse-audit, dead-code scan, write a vault learning, then
-   `cdt-notify SHIP "/login shipped: rate-limited, N tests green"`.
+   report SHIP: "/login shipped: rate-limited, N tests green".
 
 ## T3 — large / cross-cutting (full team)
 
@@ -42,7 +42,7 @@ Triage: multiple domains + a migration (risk) → **T3**.
   `backend-engineer` (`api/settings/*`) · `frontend-engineer` (`ui/settings/*`) ·
   `mobile-engineer` (`mobile/settings/*`) · `qa-engineer` (`test/*`).
 - **Gates + Task Loop**, then **Wave 2** review (security checks the migration + endpoints).
-- **Full mandate + ship**, with per-milestone Discord/Telegram posts and a `vault/sessions/` entry.
+- **Full mandate + ship**, with a `vault/sessions/` entry.
 
 ## When a bug gets stuck
 

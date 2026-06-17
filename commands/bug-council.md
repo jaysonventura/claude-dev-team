@@ -12,7 +12,7 @@ Symptom: $ARGUMENTS
    `root-cause-analyst`, `code-archaeologist`, `pattern-matcher`, `systems-thinker`, `adversarial-tester`.
 3. **Synthesize** their reports into ONE ranked root cause with supporting evidence, plus a concrete
    **fix plan** (and a regression test to add).
-4. `~/.claude/bin/cdt-notify INFO "Bug Council verdict: <root cause one-liner>"`.
+4. Report the Bug Council verdict (root-cause one-liner) to the user.
 5. Ask whether to dispatch an engineer to implement the fix (don't auto-fix without confirmation unless
    we're already inside a Task Loop escalation).
 

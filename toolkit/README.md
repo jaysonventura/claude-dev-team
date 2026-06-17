@@ -38,7 +38,7 @@ a **Prompt enhance** submenu).
 - **No fabricated verification.** `verification: passed` is earned only through `cdt-verify` (exit code 0).
 - **Redaction always.** Every artifact passes through `redact.ts`; `ROUTING.json` stores only a redacted prompt
   plus an HMAC hash, never the raw text.
-- **No notifications.** `TASK_RESULT.json` is local-only.
+- `TASK_RESULT.json` is local-only (written to `.claude/`, sent nowhere).
 
 ## Install / build
 

@@ -2,7 +2,7 @@
 # scripts/e2e.sh — end-to-end integration test for claude-dev-team.
 # Runs entirely in a SANDBOX (a throwaway temp HOME), so it never touches your real ~/.claude.
 # Exercises the whole chain — bootstrap -> doctor -> deps -> learn->recall -> task->stats ->
-# statusline->budget(eco) -> config on/off -> notify->log — and exits non-zero on any failure.
+# statusline->budget(eco) -> config on/off — and exits non-zero on any failure.
 #   Run locally:  bash scripts/e2e.sh      (also runs in CI)
 set -u
 
@@ -251,11 +251,7 @@ has "$(bash "$REPO/hooks/session-start-vault.sh" 2>/dev/null)" "DISABLED" "confi
 "$BIN/cdt-config" on >/dev/null 2>&1
 has "$(bash "$REPO/hooks/session-start-vault.sh" 2>/dev/null)" "orchestrator" "config on -> orchestration injected"
 
-echo "== 7. notify -> vault status-log =="
-"$BIN/cdt-notify" INFO "e2e-sandbox-line" >/dev/null 2>&1
-has "$(cat "$HOME/.claude/vault/status-log.md" 2>/dev/null)" "e2e-sandbox-line" "notify writes the vault log"
-
-echo "== 8. worktree isolation (cdt-worktree) =="
+echo "== 7. worktree isolation (cdt-worktree) =="
 if command -v git >/dev/null 2>&1; then
   PROJ="$SBX/proj"; mkdir -p "$PROJ"
   ( cd "$PROJ" && git init -q && git config user.email e2e@cdt.local && git config user.name e2e \
@@ -287,7 +283,7 @@ else
   ok "git not present — worktree test skipped (cdt-worktree needs git)"
 fi
 
-echo "== 9. autonomous orchestration (cdt-auto router + cost governor) =="
+echo "== 8. autonomous orchestration (cdt-auto router + cost governor) =="
 NOW="$(date +%s 2>/dev/null || echo 0)"
 fresh() { printf '%s' "{\"weekly\":$1,\"session\":10,\"ts\":$NOW}" > "$HOME/.claude/.cdt-usage.json"; }
 "$BIN/cdt-config" autonomy assist >/dev/null 2>&1
@@ -329,7 +325,7 @@ rm -f "$HOME/.claude/.cdt-usage.json"
 has "$("$BIN/cdt-auto" fanout T2 2>&1)" "conservative" "fanout -> conservative when budget unknown"
 has "$("$BIN/cdt-auto" fanout T0 2>&1)" "solo" "fanout T0 -> solo (no fan-out)"
 
-echo "== 9b. slice-first projection + orchestrator overhead (cost truthfulness) =="
+echo "== 8b. slice-first projection + orchestrator overhead (cost truthfulness) =="
 # measure a slice, add some delegated spend, then project the full fan-out vs the cap
 "$BIN/cdt-auto" slice record 2 >/dev/null 2>&1
 printf '{"agent_type":"cdt:slicer","session_id":"slc","transcript_path":"%s"}' "$TR" | bash "$REPO/hooks/agent-track.sh" >/dev/null 2>&1
