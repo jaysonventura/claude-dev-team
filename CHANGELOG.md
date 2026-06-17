@@ -2,7 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
-## [1.36.1] — 2026-06-17
+## [1.37.0] — 2026-06-17
+### Added
+- **Menu-bar app auto-updates with the plugin.** `cdt-menubar` gains an `auto-update` subcommand that
+  rebuilds + relaunches the app **only when its bundle version lags the plugin** (a fast no-op otherwise), and
+  `session-start` runs it in the background. So `claude plugin update cdt@claude-dev-team` (which requires a
+  restart) now refreshes the menu-bar app automatically on the next session — no manual `/cdt:menubar` needed.
+- **`Package.swift` declares the test target only when `Tests/` is present** (via `#filePath`), so staged /
+  auto-update builds that copy `Sources/` but not `Tests/` no longer fail.
 ### Fixed
 - **Toolkit redaction now masks natural-language secrets** (e.g. `password is Hunter2zzzz`, `passphrase of …`),
   not just `key=value` forms. Found by live testing: a sensitivity-gated prompt was correctly kept off the

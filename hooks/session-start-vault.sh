@@ -80,6 +80,12 @@ if [ "$(uname)" = "Darwin" ] && command -v swift >/dev/null 2>&1; then
   if [ "$AUTO" != "0" ] && [ ! -f "$CDT_HOME/.cdt-menubar-disabled" ] && [ ! -f "$CDT_HOME/.cdt-menubar-installed" ] && [ -x "$BIN/cdt-menubar" ]; then
     ( "$BIN/cdt-menubar" install-login >/dev/null 2>&1 ) &
   fi
+  # Already installed: after `claude plugin update`, rebuild + relaunch the menu bar app when it lags the
+  # plugin version (background; a no-op when versions already match). This is how a plugin update
+  # auto-updates the app — the update requires a restart, and this SessionStart fires on that restart.
+  if [ "$AUTO" != "0" ] && [ ! -f "$CDT_HOME/.cdt-menubar-disabled" ] && [ -f "$CDT_HOME/.cdt-menubar-installed" ] && [ -x "$BIN/cdt-menubar" ]; then
+    ( "$BIN/cdt-menubar" auto-update >/dev/null 2>&1 ) &
+  fi
 fi
 
 # 3) Initialize the state DB.
