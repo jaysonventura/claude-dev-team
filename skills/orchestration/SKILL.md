@@ -276,6 +276,12 @@ Report each milestone **directly to the user in your reply** — there is no ext
 Report DELIVERED / DEFERRED / BLOCKER as they happen; give the SHIP digest at the end. The per-agent token
 cost is recorded automatically by the SubagentStop hook for `/cdt:stats` — you never compute it by hand.
 
+**Phase board (T2/T3 only).** At the start of each wave, run
+`~/.claude/bin/cdt-phase "<Wave>" --agents <roles>` (e.g. `cdt-phase "Build" --agents
+backend-engineer,frontend-engineer,qa-engineer`), and `cdt-phase done` at ship. It renders a per-wave board
++ a `phase i/N` status-line indicator for the user (per-phase token totals fill in automatically as agents
+finish). Display-only, near-zero cost; **skip it on T0/T1 solo work** (nothing to board).
+
 ## STATE LOGGING (accurate analytics)
 
 Mostly automatic: the SessionStart hook records sessions, and a
