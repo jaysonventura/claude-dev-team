@@ -12,10 +12,28 @@ It provides four binaries:
 | `cdt-prompt "<text>"` | Intake → routing → conditional local enhancement → write `TASK_BRIEF.md`, `ROUTING.json`, `NEXT_PROMPT.md`. |
 | `cdt-spec <files...>` | Deterministic requirement/spec extraction → `.claude/specs/*`. |
 | `cdt-verify -- <command>` | Run a command, capture its real exit code, and record the **only** trusted verification evidence. |
+| `cdt enable` / `cdt disable` | Turn the toolkit on/off, **independently of core CDT** (`CDT_TOOLKIT_ENABLED`). |
+
+## Enable / disable & toggles
+
+The toolkit has its own switch, separate from core CDT (`cdt-config on|off`):
+
+```sh
+cdt enable | cdt disable                  # or: cdt-config toolkit on|off
+cdt-config prompt-mode auto|always|off    # when Haiku enhancement fires
+cdt-config prompt-enhance on|off
+cdt-config spec-auto on|off               # auto-run cdt-spec on detected docs (default off)
+cdt-config external-ai on|off             # external-AI doc review (default off; sensitive docs stay local)
+cdt-config ocr on|off                     # local on-device OCR (default off)
+cdt-config redact on|off                  # mask secrets/PII in artifacts (default on)
+```
+
+On macOS these are also in the menu bar (separate **Enabled (core CDT)** and **Toolkit engine** toggles +
+a **Prompt enhance** submenu).
 
 ## Principles
 
-- **Deterministic first.** Local heuristics do the routing; the Haiku enhancer (`claude --bare -p`, existing
+- **Deterministic first.** Local heuristics do the routing; the Haiku enhancer (`claude -p`, existing
   login, no API key) is called only when a prompt is genuinely unclear and never when it is sensitive.
 - **No fabricated verification.** `verification: passed` is earned only through `cdt-verify` (exit code 0).
 - **Redaction always.** Every artifact passes through `redact.ts`; `ROUTING.json` stores only a redacted prompt
