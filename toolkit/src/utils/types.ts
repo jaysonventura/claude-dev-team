@@ -30,7 +30,8 @@ export interface VerifyConfig {
 }
 
 export interface CdtConfig {
-  enabled: boolean;
+  enabled: boolean; // core CDT plugin master (CDT_ENABLED)
+  toolkitEnabled: boolean; // the toolkit engine layer, independent of core CDT (CDT_TOOLKIT_ENABLED)
   redact: boolean;
   prompt: PromptConfig;
   spec: SpecConfig;

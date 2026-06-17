@@ -161,7 +161,9 @@ fi
 # --- TASK_RESULT finalize (claude-dev-team-toolkit) — local only, NO notification. -------------------
 # Writes .claude/TASK_RESULT.json with verification derived strictly from verify-events.jsonl, then surfaces
 # (on stderr, non-blocking) the staging guard + a cdt-verify nudge. Never blocks (block-once is preserved).
+_TK_ON="$(grep -E '^CDT_TOOLKIT_ENABLED=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
 _TKDIST="$(cd "$(dirname "$0")/../toolkit/dist" 2>/dev/null && pwd)"
+case "$_TK_ON" in 0|false|off) _TKDIST="" ;; esac   # toolkit disabled (separate from core CDT) → skip finalize
 if [ -n "$_TKDIST" ] && [ -f "$_TKDIST/cli/hook.js" ] && command -v node >/dev/null 2>&1; then
   _FIN="$(printf '%s' "$INPUT" | node "$_TKDIST/cli/hook.js" finalize 2>/dev/null)"
   if [ -n "$_FIN" ] && command -v python3 >/dev/null 2>&1; then

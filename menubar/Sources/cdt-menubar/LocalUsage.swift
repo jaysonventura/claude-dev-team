@@ -71,7 +71,9 @@ func readLocalUsage() -> LocalUsage {
 
 /// The claude-dev-team on/off switch + defaults, read from the env file + settings.json.
 struct CDTConfig {
-    var enabled = true
+    var enabled = true          // core CDT (CDT_ENABLED)
+    var toolkitEnabled = true   // TS engine layer, SEPARATE from core CDT (CDT_TOOLKIT_ENABLED)
+    var promptMode = "auto"     // auto | always | off  (off also reflects CDT_PROMPT_ENHANCE=false)
     var effort = "—"
     var model = "—"          // raw, e.g. "claude-opus-4-8"
     var eco = "off"          // off by default — opt in with cdt-config eco on|auto
@@ -81,14 +83,23 @@ func readCDTConfig() -> CDTConfig {
     var c = CDTConfig()
     let home = FileManager.default.homeDirectoryForCurrentUser
     if let env = try? String(contentsOf: home.appendingPathComponent(".claude/claude-dev-team.env"), encoding: .utf8) {
+        var enhanceOff = false
         for raw in env.split(separator: "\n") {
             let line = raw.trimmingCharacters(in: .whitespaces)
             if line.hasPrefix("CDT_ENABLED=") {
                 c.enabled = line.dropFirst("CDT_ENABLED=".count).trimmingCharacters(in: .whitespaces) != "0"
+            } else if line.hasPrefix("CDT_TOOLKIT_ENABLED=") {
+                c.toolkitEnabled = line.dropFirst("CDT_TOOLKIT_ENABLED=".count).trimmingCharacters(in: .whitespaces) != "0"
+            } else if line.hasPrefix("CDT_PROMPT_ENHANCE_MODE=") {
+                c.promptMode = String(line.dropFirst("CDT_PROMPT_ENHANCE_MODE=".count)).trimmingCharacters(in: .whitespaces)
+            } else if line.hasPrefix("CDT_PROMPT_ENHANCE=") {
+                let v = line.dropFirst("CDT_PROMPT_ENHANCE=".count).trimmingCharacters(in: .whitespaces).lowercased()
+                enhanceOff = (v == "0" || v == "false" || v == "off")
             } else if line.hasPrefix("CDT_ECO=") {
                 c.eco = String(line.dropFirst("CDT_ECO=".count)).trimmingCharacters(in: .whitespaces)
             }
         }
+        if enhanceOff { c.promptMode = "off" }
     }
     if let data = try? Data(contentsOf: home.appendingPathComponent(".claude/settings.json")),
        let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {

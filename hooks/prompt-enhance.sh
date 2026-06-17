@@ -15,6 +15,9 @@ CDT_HOME="$HOME/.claude"
 # Global off switches (read keys directly — never `source` the env file).
 _EN="$(grep -E '^CDT_ENABLED=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
 [ "$_EN" = "0" ] && exit 0
+# Separate toolkit switch (independent of core CDT): cdt disable / cdt-config toolkit off.
+_TK="$(grep -E '^CDT_TOOLKIT_ENABLED=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+case "$_TK" in 0|false|off) exit 0 ;; esac
 _PE="$(grep -E '^CDT_PROMPT_ENHANCE=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
 case "$_PE" in 0|false|off) exit 0 ;; esac
 

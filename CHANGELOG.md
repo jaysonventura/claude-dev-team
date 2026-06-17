@@ -2,6 +2,20 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.36.0] — 2026-06-17
+### Added
+- **Separate enable/disable for the toolkit vs core CDT.** New `CDT_TOOLKIT_ENABLED` switch gates the TS
+  engine layer (prompt enhancement, spec, TASK_RESULT finalize) **independently** of `CDT_ENABLED`:
+  - CLI: `cdt enable` / `cdt disable` and `cdt-config toolkit on|off` control the toolkit; core CDT stays
+    `cdt-config on|off`.
+  - `cdt-config` gains toolkit feature toggles: `prompt-mode auto|always|off`, `prompt-enhance on|off`,
+    `spec-auto on|off`, `external-ai on|off`, `ocr on|off`, `redact on|off`; all shown in `cdt-config show`.
+  - Menu bar: separate **"Enabled (core CDT)"** and **"Toolkit engine"** toggles plus a **"Prompt enhance"**
+    submenu (auto/always/off). Writes the env file only; the Keychain stays read-only.
+  - The toolkit now reads the global `~/.claude/claude-dev-team.env` as a config layer (precedence: packaged
+    defaults < global env < project `cdt.config.json` < process env), so toggles apply to the CLI too.
+  - `prompt-enhance.sh` and the Stop-hook finalize honor `CDT_TOOLKIT_ENABLED` (skip when the toolkit is off).
+
 ## [1.35.0] — 2026-06-17
 ### Added
 - **claude-dev-team-toolkit** (`toolkit/`) — a deterministic-first TypeScript engine layer that auto-applies

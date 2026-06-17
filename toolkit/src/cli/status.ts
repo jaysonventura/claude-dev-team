@@ -16,7 +16,8 @@ export function runStatus(root: string = projectRoot()): void {
   const out: string[] = [];
 
   out.push(`CDT status — ${root}`);
-  out.push(`  enabled: ${cfg.enabled}  ·  prompt-enhance: ${cfg.prompt.enhance} (${cfg.prompt.mode})  ·  redact: ${cfg.redact}`);
+  out.push(`  core CDT (CDT_ENABLED): ${cfg.enabled}  ·  toolkit (CDT_TOOLKIT_ENABLED): ${cfg.toolkitEnabled}`);
+  out.push(`  prompt-enhance: ${cfg.prompt.enhance} (${cfg.prompt.mode})  ·  redact: ${cfg.redact}`);
   out.push(`  config: ${existsSync(join(cdir, 'cdt.config.json')) ? '.claude/cdt.config.json' : 'defaults (no project config)'}`);
 
   for (const f of ['TASK_BRIEF.md', 'ROUTING.json', 'NEXT_PROMPT.md', 'TASK_RESULT.json']) {
