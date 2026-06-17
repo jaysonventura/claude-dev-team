@@ -1,13 +1,15 @@
 // Configuration resolution with explicit precedence:
 //   packaged defaults  <  project .claude/cdt.config.json  <  environment variables.
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { claudeDir, projectRoot } from './paths.js';
 import type { Backend, CdtConfig, EnhanceMode } from './types.js';
 
 export const DEFAULT_CONFIG: CdtConfig = {
   enabled: true,
+  toolkitEnabled: true,
   redact: true,
   prompt: {
     enhance: true,
@@ -61,6 +63,7 @@ function mergeProject(base: CdtConfig, project: unknown): CdtConfig {
     verify: { ...base.verify },
   };
   if (typeof p.enabled === 'boolean') out.enabled = p.enabled;
+  if (typeof p.toolkitEnabled === 'boolean') out.toolkitEnabled = p.toolkitEnabled;
   if (typeof p.redact === 'boolean') out.redact = p.redact;
   if (p.prompt && typeof p.prompt === 'object') Object.assign(out.prompt, p.prompt);
   if (p.spec && typeof p.spec === 'object') Object.assign(out.spec, p.spec);
@@ -76,6 +79,7 @@ function applyEnv(cfg: CdtConfig, env: Env): CdtConfig {
     verify: { ...cfg.verify },
   };
   out.enabled = bool(env.CDT_ENABLED, out.enabled);
+  out.toolkitEnabled = bool(env.CDT_TOOLKIT_ENABLED, out.toolkitEnabled);
   out.redact = bool(env.CDT_REDACT, out.redact);
 
   out.prompt.enhance = bool(env.CDT_PROMPT_ENHANCE, out.prompt.enhance);
@@ -100,15 +104,58 @@ function applyEnv(cfg: CdtConfig, env: Env): CdtConfig {
   return out;
 }
 
-/** Load the effective config for a project root, applying defaults < project file < env. */
+/** Path of the global env file (~/.claude/claude-dev-team.env), overridable via CDT_ENV_FILE. */
+function globalEnvPath(env: Env): string {
+  return env.CDT_ENV_FILE ?? join(homedir(), '.claude', 'claude-dev-team.env');
+}
+
+/** Read the global env file into a KEY=VALUE map (the surface cdt-config / the menu bar write to). */
+export function readGlobalEnvFile(env: Env = process.env): Env {
+  const out: Env = {};
+  try {
+    const raw = readFileSync(globalEnvPath(env), 'utf8');
+    for (const line of raw.split('\n')) {
+      const m = /^([A-Za-z][A-Za-z0-9_]*)=(.*)$/.exec(line.trim());
+      if (m && m[1] !== undefined) out[m[1]] = m[2] ?? '';
+    }
+  } catch {
+    // no global env file — fine.
+  }
+  return out;
+}
+
+/** Upsert KEY=VALUE in the global env file (0600). Used by `cdt enable|disable`. Returns the path. */
+export function setGlobalEnv(key: string, value: string, env: Env = process.env): string {
+  const path = globalEnvPath(env);
+  let lines: string[] = [];
+  try {
+    lines = readFileSync(path, 'utf8')
+      .split('\n')
+      .filter((l) => l.trim() !== '' && !l.trim().startsWith(`${key}=`));
+  } catch {
+    // new file
+  }
+  lines.push(`${key}=${value}`);
+  try {
+    mkdirSync(dirname(path), { recursive: true });
+  } catch {
+    /* best effort */
+  }
+  writeFileSync(path, lines.join('\n') + '\n', { mode: 0o600 });
+  return path;
+}
+
+/**
+ * Load the effective config for a project root. Precedence (low → high):
+ *   packaged defaults  <  global ~/.claude/claude-dev-team.env  <  project .claude/cdt.config.json  <  process env.
+ */
 export function loadConfig(root: string = projectRoot(), env: Env = process.env): CdtConfig {
   let cfg = DEFAULT_CONFIG;
-  const file = join(claudeDir(root), 'cdt.config.json');
+  cfg = applyEnv(cfg, readGlobalEnvFile(env)); // global toggles (cdt-config / menu bar)
   try {
-    const raw = readFileSync(file, 'utf8');
-    cfg = mergeProject(cfg, JSON.parse(raw));
+    cfg = mergeProject(cfg, JSON.parse(readFileSync(join(claudeDir(root), 'cdt.config.json'), 'utf8')));
   } catch {
-    // No project config (or unreadable) — defaults stand. Safe-degrade.
+    // No project config (or unreadable) — safe-degrade.
   }
-  return applyEnv(cfg, env);
+  return applyEnv(cfg, env); // explicit process env wins
 }

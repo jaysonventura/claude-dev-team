@@ -36,7 +36,7 @@ async function promptMode(): Promise<void> {
   const cfg = loadConfig(root);
 
   // Defensive gates (the Bash shim also guards these).
-  if (!cfg.enabled || !cfg.prompt.enhance || cfg.prompt.mode === 'off') return;
+  if (!cfg.enabled || !cfg.toolkitEnabled || !cfg.prompt.enhance || cfg.prompt.mode === 'off') return;
   if (process.env.CDT_IN_ENHANCER === '1') return;
   if (str(input.permission_mode) === 'plan') return;
 
@@ -57,7 +57,7 @@ function finalizeMode(): void {
   const input = readStdin();
   const root = projectRoot(str(input.cwd) || process.cwd());
   const cfg = loadConfig(root);
-  if (!cfg.enabled) {
+  if (!cfg.enabled || !cfg.toolkitEnabled) {
     emit({ skipped: true });
     return;
   }

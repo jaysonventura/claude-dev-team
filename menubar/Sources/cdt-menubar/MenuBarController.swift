@@ -117,12 +117,23 @@ final class MenuBarController: NSObject {
         header("claude-dev-team")
         let cfg = readCDTConfig()
 
-        // Enable / disable — clicking flips it (cdt-config on|off).
-        let enabledItem = NSMenuItem(title: "Enabled", action: #selector(applyConfig(_:)), keyEquivalent: "")
+        // Enable / disable core CDT — clicking flips it (cdt-config on|off).
+        let enabledItem = NSMenuItem(title: "Enabled (core CDT)", action: #selector(applyConfig(_:)), keyEquivalent: "")
         enabledItem.target = self
         enabledItem.state = cfg.enabled ? .on : .off
         enabledItem.representedObject = [cfg.enabled ? "off" : "on"]
         menu.addItem(enabledItem)
+
+        // Toolkit engine — a SEPARATE on/off from core CDT (cdt-config toolkit on|off).
+        let toolkitItem = NSMenuItem(title: "Toolkit engine", action: #selector(applyConfig(_:)), keyEquivalent: "")
+        toolkitItem.target = self
+        toolkitItem.state = cfg.toolkitEnabled ? .on : .off
+        toolkitItem.representedObject = ["toolkit", cfg.toolkitEnabled ? "off" : "on"]
+        menu.addItem(toolkitItem)
+
+        // Prompt enhancement mode (cdt-config prompt-mode auto|always|off).
+        menu.addItem(optionSubmenu("Prompt enhance", key: "prompt-mode", current: cfg.promptMode,
+            options: [("Auto (default)", "auto"), ("Always", "always"), ("Off", "off")]))
 
         menu.addItem(optionSubmenu("Eco mode", key: "eco", current: cfg.eco,
             options: [("Auto", "auto"), ("On", "on"), ("Off (default)", "off")]))
