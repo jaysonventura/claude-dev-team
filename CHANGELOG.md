@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.36.1] — 2026-06-17
+### Fixed
+- **Toolkit redaction now masks natural-language secrets** (e.g. `password is Hunter2zzzz`, `passphrase of …`),
+  not just `key=value` forms. Found by live testing: a sensitivity-gated prompt was correctly kept off the
+  external model, but a spoken-form password still persisted into `ROUTING.json` / `TASK_RESULT.json` / the
+  injected context. `redact.ts` gains a label-preserving `secret-value` rule that masks only secret-shaped
+  values (digit/symbol or ≥10 chars), so ordinary prose like "a password is required" is untouched. +1 test (45 total).
+
 ## [1.36.0] — 2026-06-17
 ### Added
 - **Separate enable/disable for the toolkit vs core CDT.** New `CDT_TOOLKIT_ENABLED` switch gates the TS

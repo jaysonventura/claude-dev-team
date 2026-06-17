@@ -4,6 +4,8 @@
 export interface RedactPattern {
   kind: string;
   re: RegExp;
+  /** Optional custom replacer; receives (match, group1, group2). Return null to leave the text unchanged. */
+  replace?: (match: string, g1: string, g2: string) => string | null;
 }
 
 // NOTE: order matters — multi-line / structured secrets first.
@@ -24,6 +26,15 @@ export const SECRET_PATTERNS: RedactPattern[] = [
     kind: 'secret-assignment',
     re: /\b(?:pass(?:word|wd)?|secret|token|api[_-]?key|client[_-]?secret)\b\s*[:=]\s*["']?[^\s"',;]{6,}/gi,
   },
+  {
+    // Natural-language secrets: "password is Hunter2zzzz", "passphrase was hunter2!", "the token of …".
+    // Keeps the label, redacts only a secret-shaped value (has a digit/symbol or ≥10 chars) to avoid
+    // mangling ordinary prose like "password is required".
+    kind: 'secret-value',
+    re: /\b(pass(?:word|wd|code)?|passphrase|secret|token|credential|passcode|pin)\b\s+(?:is|was|of)\s+["']?([A-Za-z0-9._+\-!@#$%^&*]{6,})/gi,
+    replace: (_m: string, label: string, value: string): string | null =>
+      /[0-9!@#$%^&*+]/.test(value) || value.length >= 10 ? `${label} ‹redacted:secret-value›` : null,
+  },
   { kind: 'email', re: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g },
 ];
 
@@ -36,10 +47,18 @@ export interface RedactReport {
 export function redactReport(input: string): RedactReport {
   const hits: Array<{ kind: string; match: string }> = [];
   let text = input;
-  for (const { kind, re } of SECRET_PATTERNS) {
-    text = text.replace(re, (m) => {
-      hits.push({ kind, match: m });
-      return `‹redacted:${kind}›`;
+  for (const p of SECRET_PATTERNS) {
+    text = text.replace(p.re, (m: string, ...rest: unknown[]): string => {
+      if (p.replace) {
+        const g1 = typeof rest[0] === 'string' ? rest[0] : '';
+        const g2 = typeof rest[1] === 'string' ? rest[1] : '';
+        const out = p.replace(m, g1, g2);
+        if (out === null) return m; // not secret-shaped — leave unchanged
+        hits.push({ kind: p.kind, match: m });
+        return out;
+      }
+      hits.push({ kind: p.kind, match: m });
+      return `‹redacted:${p.kind}›`;
     });
   }
   return { text, hits };
