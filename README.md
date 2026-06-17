@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.21.2-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.38.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -53,11 +53,12 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
   manual**. Dev deploy/build → `make up-dev`; on a Makefile-target failure they **stop and report**
   instead of improvising another path. Reviewers + QA **flag** manual `serverless`/`gradle`/`npm`·`ng
   build`/`cap sync`/AWS deploy commands when an equivalent target/script exists. (`automation-first` skill)
-- **Deterministic-first toolkit engine (TypeScript)** — auto-applies via hooks/skills: local prompt
-  routing + *conditional* Haiku enhancement (existing login, **no API key**; sensitive/trivial prompts never
-  leave the machine), `cdt-spec` requirement extraction with **cited sources**, **evidence-only** `cdt-verify`
-  → local-only `TASK_RESULT.json`, mandatory **redaction** + a `realpath()` **write-jail**. Toggle it
-  independently of core CDT. See **[Toolkit engine](#toolkit-engine-deterministic-first-prompt--spec--verify)**.
+- **Deterministic-first toolkit engine (TypeScript)** — **runs on every prompt, zero commands:** sharpens your
+  prompt (conditional Haiku via your existing login — **no API key**; sensitive/trivial prompts never leave the
+  machine), routes it, **auto-extracts** a spec doc you mention (`cdt-spec`, **cited sources**, source/folders
+  excluded), and refuses to fake "done" (**evidence-only** `cdt-verify`). Mandatory **redaction** + a
+  `realpath()` **write-jail**; toggle it independently of core CDT.
+  See **[Toolkit engine](#toolkit-engine--your-prompts-get-smarter-automatically)**.
 - **14 role agents** (product-manager → architect → ui-ux-engineer → builders → technical-writer →
   reviewers, incl. a Haiku `fast-ops` tier) + a gated **5-agent Bug Council** for stuck bugs.
 - **10-gate quality chain** (incl. **e2e** for user-facing flows) + a bounded **Task Loop** (iterate to
@@ -249,55 +250,72 @@ session; the bare `/command` form won't match).
 
 ---
 
-## Toolkit engine (deterministic-first prompt / spec / verify)
+## Toolkit engine — your prompts get smarter, automatically
 
-A TypeScript engine layer under `toolkit/` that **auto-applies in every session** through plugin hooks and
-skills (not slash-command-only). All generated output is written to the project's `.claude/` and is
-**local-only** — it never sends notifications.
+A deterministic-first TypeScript engine (under `toolkit/`) that **runs on every prompt — no commands to
+remember.** You just type; CDT quietly sharpens the prompt, routes it, pulls in any spec you mention, and
+keeps "done" honest. Everything stays **on your machine** (`.claude/`) — no notifications, no secrets sent
+anywhere, **no API key** (it uses your existing Claude login).
 
-| CLI | What it does |
-|-----|--------------|
-| `cdt-prompt "<task>"` | intake → advisory routing → *conditional* local enhancement → writes `.claude/{TASK_BRIEF.md,ROUTING.json,NEXT_PROMPT.md}`. Also runs automatically on every non-trivial prompt via the `UserPromptSubmit` hook. |
-| `cdt-spec <files…>` | deterministic requirement/spec extraction (PDF/DOCX/MD/image) → `.claude/specs/*` with a **required source citation** per requirement. |
-| `cdt-verify -- <cmd>` | run a command, capture its real exit code, and record the **only** trusted verification evidence. |
-| `cdt init` · `cdt status` | scaffold `.claude/` config · report toolkit state. |
-| `cdt enable` · `cdt disable` | turn the toolkit on/off, **independently of core CDT**. |
+### What happens the moment you hit Enter
 
-**How it behaves**
-
-- **Deterministic-first routing.** A local classifier picks tier/agents/model (RISK → Sonnet +
-  security-reviewer; Opus only for architecture / severe-security / prod-release / major-refactor). Routing
-  is *advisory* — the orchestrator decides.
-- **Conditional Haiku enhancement.** Only when a prompt is genuinely unclear / risky / spec-driven is it
-  enhanced via `claude -p` using your existing login (**no API key**). The suggestion is injected as
-  *additional context* — your original prompt is never rewritten. **Sensitive or trivial prompts are never
-  sent to an external model** (fail-closed sensitivity gate).
-- **Evidence-only verification.** `verification: passed` is earned *only* through `cdt-verify` (a real
-  exit-code 0). The Stop hook writes `TASK_RESULT.json` from that evidence — never fabricated.
-- **Safety by construction.** Mandatory redaction of every artifact (HMAC prompt-hash; the raw prompt is
-  never stored in `ROUTING.json`), a `realpath()` write-jail confined to `.claude/`, a fail-closed
-  sensitivity scanner, safe-degrading validators, a docs-only verify exemption, and a sensitive-spec
-  staging guard.
-
-**Enable / disable & toggles** — the toolkit has its **own** switch, separate from core CDT
-(`cdt-config on|off`):
-
-```sh
-cdt-config toolkit on|off                 # the whole toolkit engine (or: cdt enable | cdt disable)
-cdt-config prompt-mode auto|always|off    # when Haiku enhancement fires (auto = only when unclear/risky)
-cdt-config prompt-enhance on|off
-cdt-config spec-auto on|off               # auto-run cdt-spec on detected docs (default off)
-cdt-config external-ai on|off             # allow external-AI doc review (default off; sensitive docs stay local)
-cdt-config ocr on|off                     # local on-device OCR for diagrams (default off)
-cdt-config redact on|off                  # mask secrets/PII in artifacts (default on — keep it on)
+```text
+You type:  "improve the checkout flow and use requirements.pdf"
+              │
+              ▼   AUTOMATIC — the toolkit (deterministic, with a touch of Haiku)
+   • routes it → tier, model, which specialists, security review?   → ROUTING.json
+   • sharpens a vague/risky prompt with Haiku (your login, no key)   → a *suggestion*, never a rewrite
+   • spots "requirements.pdf", extracts cited requirements           → .claude/specs/
+   • redacts every secret before anything is written to disk
+              │
+              ▼   THE WORK — the Orchestrator (the model @ xhigh, the tech-lead)
+   triage → write per-agent contracts → dispatch specialist agents in parallel
+          → quality gates → independent + security review → ship
+              │
+              ▼   HONESTY BACKSTOP — hooks
+   "done" is blocked without a real passing command · cdt-verify records the proof
 ```
 
-On macOS these are also in the **menu bar**: separate **Enabled (core CDT)** and **Toolkit engine** toggles
-plus a **Prompt enhance** (auto / always / off) submenu.
+> **The toolkit preps & guards (automatic, advisory). The Orchestrator decides & ships (it does the real
+> engineering).** Routing is *advisory* — `advisory: true`, never auto-dispatch. The toolkit can't build your
+> feature; the orchestrator can — the toolkit just hands it a cleaner brief and refuses to let it fake "done."
 
-The TS engine builds on first session via the `session-start` healthcheck (`cd toolkit && npm install &&
-npm run build`). Config precedence: packaged defaults < global `~/.claude/claude-dev-team.env` < project
-`.claude/cdt.config.json` < environment.
+### The pieces (all auto-run — or invoke them yourself)
+
+| Tool | What it does for you |
+|------|----------------------|
+| **`cdt-prompt`** | Fires on **every non-trivial prompt** (UserPromptSubmit hook): intake → routing → *conditional* Haiku enhancement → `.claude/{TASK_BRIEF, ROUTING, NEXT_PROMPT}`. `/cdt:prompt` is just the manual button. |
+| **`cdt-spec`** | Turns a **PDF/DOCX/MD** into a clean requirement list — **one cited source per requirement, never hallucinated.** With `CDT_SPEC_AUTO=true` it **auto-detects** a spec doc named in your prompt (and ignores source files & folders). |
+| **`cdt-verify -- <cmd>`** | The **only** way `verification: passed` is earned — runs your real test/build and captures the actual exit code. No more "it works" without proof. |
+| **`cdt enable｜disable`** · **`cdt status`** · **`cdt init`** | Toggle the toolkit (separately from core CDT), check state, scaffold a project. |
+
+### Why it's safe — by construction, not by promise
+
+- 🔒 **Your secrets never leave the machine.** A *fail-closed* sensitivity gate sends sensitive prompts/docs
+  to **no** external model; every artifact is **redacted** (the raw prompt isn't even stored — only a
+  redacted copy + an HMAC hash).
+- ✅ **No fake "done."** `verification` comes only from a real command's exit code.
+- 📄 **No hallucinated requirements.** `cdt-spec` copies + cites; it never invents — and its auto-detect
+  **classifies every path first**, so `.ts`/`.py` source files, project **folders**, missing paths, and URLs
+  are excluded; only a real `.pdf`/`.docx` (or requirement-named `.md`) is treated as a spec.
+- 🧱 **Can't write outside `.claude/`** (realpath write-jail); validators **safe-degrade** instead of
+  crashing; a docs-only edit never trips the verify gate.
+
+### Controls (CLI or the macOS menu bar)
+
+```sh
+cdt enable | cdt disable                   # the whole toolkit, separate from core CDT (cdt-config on|off)
+cdt-config prompt-mode auto|always|off     # when Haiku fires (auto = only unclear/risky prompts)
+cdt-config prompt-effort medium|high       # the enhancer's effort (Haiku) — your real work stays xhigh
+cdt-config spec-auto on|off                # auto-extract a spec doc named in your prompt (default off)
+cdt-config redact on|off                   # mask secrets/PII in artifacts (default on — keep it)
+```
+
+On macOS the **menu bar** has the same toggles (Enabled / Toolkit engine / Prompt enhance), shows your live
+usage %, and **auto-rebuilds itself** when you update the plugin.
+
+_Builds on first session (`cd toolkit && npm install && npm run build`). Config precedence: packaged defaults
+< global `~/.claude/claude-dev-team.env` < project `.claude/cdt.config.json` < env._
 
 ---
 
@@ -427,7 +445,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.37.0**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.38.0**.
 
 ---
 
