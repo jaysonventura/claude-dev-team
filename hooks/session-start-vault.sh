@@ -22,6 +22,7 @@ fi
 
 # 2) Install/refresh the stable CLIs so the orchestrator and commands have fixed paths.
 cp "$HOOKS_DIR/stats.sh"  "$BIN/cdt-stats"    2>/dev/null && chmod +x "$BIN/cdt-stats"  2>/dev/null
+cp "$HOOKS_DIR/phase.sh"  "$BIN/cdt-phase"    2>/dev/null && chmod +x "$BIN/cdt-phase"  2>/dev/null
 cp "$HOOKS_DIR/task.sh"   "$BIN/cdt-task"     2>/dev/null && chmod +x "$BIN/cdt-task"   2>/dev/null
 cp "$HOOKS_DIR/db.sh"     "$BIN/cdt-db.sh"    2>/dev/null
 cp "$HOOKS_DIR/menubar-install.sh" "$BIN/cdt-menubar" 2>/dev/null && chmod +x "$BIN/cdt-menubar" 2>/dev/null

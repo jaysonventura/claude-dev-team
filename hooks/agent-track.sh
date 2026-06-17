@@ -39,6 +39,15 @@ fi
 CDT_EVENT=stop CDT_AGENT="$AGENT" CDT_TOKENS="$TOKENS" CDT_HOME="$HOME/.claude" \
   python3 "$HOOKS_DIR/agent_activity.py" 2>/dev/null
 
+# Phase board: append this agent's tokens to the CURRENT phase's race-safe token log (append-only → safe
+# under parallel SubagentStop). Only when a board is active for this workspace. cwd from the hook payload.
+_PCWD="$(get cwd)"
+if [ -n "$_PCWD" ] && [ -f "$_PCWD/.claude/runtime/phase.json" ]; then
+  _PCUR="$(python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get('current',-1))" "$_PCWD/.claude/runtime/phase.json" 2>/dev/null)"
+  case "$_PCUR" in ''|*[!0-9]*) _PCUR="" ;; esac
+  [ -n "$_PCUR" ] && { mkdir -p "$_PCWD/.claude/runtime/phasetok" 2>/dev/null; printf '%s\n' "$TOKENS" >> "$_PCWD/.claude/runtime/phasetok/$_PCUR.log"; }
+fi
+
 # shellcheck source=/dev/null
 [ -f "$HOOKS_DIR/db.sh" ] && . "$HOOKS_DIR/db.sh" 2>/dev/null && db_agent "$AGENT" "$SID" "$TOKENS" "$CACHE_READ"
 

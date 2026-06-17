@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.41.0] — 2026-06-17
+### Added
+- **Phase board + status-line phase indicator** for multi-wave (T2/T3) tasks. The orchestrator marks each
+  wave with `cdt-phase "<name>" --agents …`; CDT renders a per-wave board (status ✓/▸/· · agents · token
+  total) at each transition and shows a compact `phase i/N <name>` in the status line. Per-phase token totals
+  fill in automatically as agents finish (race-safe append-logs; reuses the SubagentStop token sum).
+  Display-only → near-zero cost. Toggle: `cdt-config phase-board on|off` (default `on`).
+
 ## [1.40.0] — 2026-06-17
 ### Added
 - **Agent-activity display in the CLI** — pretty per-agent lines show who is working and what it cost:

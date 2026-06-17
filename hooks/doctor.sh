@@ -14,7 +14,7 @@ genv(){ grep -E "^$1=" "$ENVF" 2>/dev/null | cut -d= -f2-; }
 echo "claude-dev-team — doctor"
 
 missing=""
-for c in cdt-stats cdt-task cdt-tokens cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps cdt-worktree cdt-auto cdt-version; do
+for c in cdt-stats cdt-phase cdt-task cdt-tokens cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps cdt-worktree cdt-auto cdt-version; do
   [ -x "$BIN/$c" ] || missing="$missing $c"
 done
 [ -z "$missing" ] && P "CLIs installed" || W "CLIs missing:$missing" "open a new Claude Code session (the SessionStart hook installs them)"

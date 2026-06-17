@@ -117,6 +117,7 @@ show() {
   local tk pe pm pef; tk="$(get_env CDT_TOOLKIT_ENABLED)"; [ -z "$tk" ] && tk="1"; pe="$(get_env CDT_PROMPT_ENHANCE)"; [ -z "$pe" ] && pe="true"; pm="$(get_env CDT_PROMPT_ENHANCE_MODE)"; [ -z "$pm" ] && pm="auto"; pef="$(get_env CDT_PROMPT_EFFORT)"; [ -z "$pef" ] && pef="medium"
   local sa ea oc rd; sa="$(get_env CDT_SPEC_AUTO)"; [ -z "$sa" ] && sa="false"; ea="$(get_env CDT_EXTERNAL_AI_ALLOWED)"; [ -z "$ea" ] && ea="false"; oc="$(get_env CDT_OCR_ENABLED)"; [ -z "$oc" ] && oc="false"; rd="$(get_env CDT_REDACT)"; [ -z "$rd" ] && rd="true"
   local aa; aa="$(get_env CDT_AGENT_ACTIVITY)"; [ -z "$aa" ] && aa="on"
+  local pb; pb="$(get_env CDT_PHASE_BOARD)"; [ -z "$pb" ] && pb="on"
   echo "claude-dev-team config:"
   echo "  status    : $([ "$en" = "0" ] && echo DISABLED || echo enabled)   (core CDT — cdt-config on|off)"
   echo "  effort    : ${eff:-(unset)}   (default $DEFAULT_EFFORT)"
@@ -129,6 +130,7 @@ show() {
   echo "  teams     : $tm   ·  scale : $sc   (DEPTH/BREADTH engines; off by default, opt in to enable)"
   echo "  statusline: $(statusline_state)   (terminal status line)"
   echo "  agent-act : $aa   (on | compact | off — pretty per-agent dispatch/finish lines + token cost; display-only)"
+  echo "  phase-brd : $pb   (on | off — per-wave phase board + status-line phase indicator on T2/T3 tasks)"
   echo "  toolkit   : $([ "$tk" = "0" ] && echo DISABLED || echo enabled)   (TS engine, SEPARATE from core CDT — cdt-config toolkit on|off · cdt enable|disable)"
   echo "    prompt-enhance : $pe (mode $pm, Haiku effort $pef)   (prompt-mode auto|always|off · prompt-enhance on|off)"
   echo "    spec-auto : $sa  ·  external-ai : $ea  ·  ocr : $oc  ·  redact : $rd"
@@ -191,6 +193,12 @@ case "${1:-show}" in
       on|compact) set_env CDT_AGENT_ACTIVITY "$2"; echo "claude-dev-team: agent activity = $2  (pretty per-agent dispatch/finish lines + token cost in the CLI; display-only → zero token cost)." ;;
       off)        set_env CDT_AGENT_ACTIVITY off; echo "claude-dev-team: agent activity OFF (no per-agent CLI lines)." ;;
       *) echo "cdt-config: usage: cdt-config agent-activity on|compact|off" ;;
+    esac ;;
+  phase-board)
+    case "$2" in
+      on)  set_env CDT_PHASE_BOARD on;  echo "claude-dev-team: phase board ON  (per-wave board + 'phase i/N' status-line indicator on T2/T3 tasks; display-only)." ;;
+      off) set_env CDT_PHASE_BOARD off; echo "claude-dev-team: phase board OFF." ;;
+      *) echo "cdt-config: usage: cdt-config phase-board on|off" ;;
     esac ;;
   effort)
     case "$2" in
@@ -281,6 +289,6 @@ PY
     set_setting effortLevel "$DEFAULT_EFFORT"
     set_setting model "$DEFAULT_MODEL"
     echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off, autonomy=assist, engines off)." ;;
-  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|agent-activity <on|compact|off>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
+  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|agent-activity <on|compact|off>|phase-board <on|off>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
 esac
 exit 0
