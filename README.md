@@ -53,6 +53,11 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
   manual**. Dev deploy/build → `make up-dev`; on a Makefile-target failure they **stop and report**
   instead of improvising another path. Reviewers + QA **flag** manual `serverless`/`gradle`/`npm`·`ng
   build`/`cap sync`/AWS deploy commands when an equivalent target/script exists. (`automation-first` skill)
+- **Deterministic-first toolkit engine (TypeScript)** — auto-applies via hooks/skills: local prompt
+  routing + *conditional* Haiku enhancement (existing login, **no API key**; sensitive/trivial prompts never
+  leave the machine), `cdt-spec` requirement extraction with **cited sources**, **evidence-only** `cdt-verify`
+  → local-only `TASK_RESULT.json`, mandatory **redaction** + a `realpath()` **write-jail**. Toggle it
+  independently of core CDT. See **[Toolkit engine](#toolkit-engine-deterministic-first-prompt--spec--verify)**.
 - **14 role agents** (product-manager → architect → ui-ux-engineer → builders → technical-writer →
   reviewers, incl. a Haiku `fast-ops` tier) + a gated **5-agent Bug Council** for stuck bugs.
 - **10-gate quality chain** (incl. **e2e** for user-facing flows) + a bounded **Task Loop** (iterate to
@@ -223,13 +228,15 @@ session; the bare `/command` form won't match).
 | Command | Does |
 |---------|------|
 | `/cdt:triage <task>` | preview the tier + proposed dispatch **without** executing |
+| `/cdt:prompt "<task>"` | toolkit: prompt intake + routing + conditional enhancement → `.claude/{TASK_BRIEF,ROUTING,NEXT_PROMPT}` (also auto-runs on every non-trivial prompt) |
+| `/cdt:spec <files…>` | toolkit: deterministic requirement/spec extraction → `.claude/specs/*` with cited sources |
 | `/cdt:ship` | run the completion mandate on the current work and ship |
 | `/cdt:bug-council <symptom>` | convene the 5-agent diagnostic squad |
 | `/cdt:autopilot <PR#> [--live]` | drive a GitHub PR toward green — CI fixes, conflicts, review (dry-run by default) |
 | `/cdt:stats [today\|week\|all]` | cost & activity report from the state DB — incl. **which agents cost the most tokens** |
 | `/cdt:recall <task>` | recall the most relevant past lessons from the vault for a task |
 | `/cdt:advise <task>` | advisory tier/effort prior learned from how similar past tasks went |
-| `/cdt:config [...]` | enable/disable CDT + set defaults (effort, model, eco, statusline); defaults xhigh + Opus 4.8 |
+| `/cdt:config [...]` | enable/disable CDT **+ the toolkit** + set defaults (effort, model, eco, statusline, `prompt-mode`, `redact`, …); defaults xhigh + Opus 4.8 |
 | `/cdt:doctor` | health-check the install (hooks, CLIs, DB, gh, notifier, menu bar, deps) |
 | `/cdt:deps [--install]` | check / install system prerequisites (python3, git, curl, sqlite3, gh) |
 | `/cdt:worktree [new\|list\|rm\|...]` | git-worktree isolation for parallel work (interops with `claude --worktree`) |
@@ -239,6 +246,58 @@ session; the bare `/command` form won't match).
 | `/cdt:notify-setup [...]` | configure Discord/Telegram (no manual `.env`) |
 | `/cdt:menubar [install\|status\|...]` | macOS menu bar usage monitor (subscription % + local tokens) |
 | `/cdt:version` | show the installed version (plugin + menu bar app) |
+
+---
+
+## Toolkit engine (deterministic-first prompt / spec / verify)
+
+A TypeScript engine layer under `toolkit/` that **auto-applies in every session** through plugin hooks and
+skills (not slash-command-only). All generated output is written to the project's `.claude/` and is
+**local-only** — it never sends notifications.
+
+| CLI | What it does |
+|-----|--------------|
+| `cdt-prompt "<task>"` | intake → advisory routing → *conditional* local enhancement → writes `.claude/{TASK_BRIEF.md,ROUTING.json,NEXT_PROMPT.md}`. Also runs automatically on every non-trivial prompt via the `UserPromptSubmit` hook. |
+| `cdt-spec <files…>` | deterministic requirement/spec extraction (PDF/DOCX/MD/image) → `.claude/specs/*` with a **required source citation** per requirement. |
+| `cdt-verify -- <cmd>` | run a command, capture its real exit code, and record the **only** trusted verification evidence. |
+| `cdt init` · `cdt status` | scaffold `.claude/` config · report toolkit state. |
+| `cdt enable` · `cdt disable` | turn the toolkit on/off, **independently of core CDT**. |
+
+**How it behaves**
+
+- **Deterministic-first routing.** A local classifier picks tier/agents/model (RISK → Sonnet +
+  security-reviewer; Opus only for architecture / severe-security / prod-release / major-refactor). Routing
+  is *advisory* — the orchestrator decides.
+- **Conditional Haiku enhancement.** Only when a prompt is genuinely unclear / risky / spec-driven is it
+  enhanced via `claude -p` using your existing login (**no API key**). The suggestion is injected as
+  *additional context* — your original prompt is never rewritten. **Sensitive or trivial prompts are never
+  sent to an external model** (fail-closed sensitivity gate).
+- **Evidence-only verification.** `verification: passed` is earned *only* through `cdt-verify` (a real
+  exit-code 0). The Stop hook writes `TASK_RESULT.json` from that evidence — never fabricated.
+- **Safety by construction.** Mandatory redaction of every artifact (HMAC prompt-hash; the raw prompt is
+  never stored in `ROUTING.json`), a `realpath()` write-jail confined to `.claude/`, a fail-closed
+  sensitivity scanner, safe-degrading validators, a docs-only verify exemption, and a sensitive-spec
+  staging guard.
+
+**Enable / disable & toggles** — the toolkit has its **own** switch, separate from core CDT
+(`cdt-config on|off`):
+
+```sh
+cdt-config toolkit on|off                 # the whole toolkit engine (or: cdt enable | cdt disable)
+cdt-config prompt-mode auto|always|off    # when Haiku enhancement fires (auto = only when unclear/risky)
+cdt-config prompt-enhance on|off
+cdt-config spec-auto on|off               # auto-run cdt-spec on detected docs (default off)
+cdt-config external-ai on|off             # allow external-AI doc review (default off; sensitive docs stay local)
+cdt-config ocr on|off                     # local on-device OCR for diagrams (default off)
+cdt-config redact on|off                  # mask secrets/PII in artifacts (default on — keep it on)
+```
+
+On macOS these are also in the **menu bar**: separate **Enabled (core CDT)** and **Toolkit engine** toggles
+plus a **Prompt enhance** (auto / always / off) submenu.
+
+The TS engine builds on first session via the `session-start` healthcheck (`cd toolkit && npm install &&
+npm run build`). Config precedence: packaged defaults < global `~/.claude/claude-dev-team.env` < project
+`.claude/cdt.config.json` < environment.
 
 ---
 
@@ -680,9 +739,10 @@ two-line shape that survives a crowded or notched menu bar. Click it for the ful
   countdown, from Anthropic's `oauth/usage` endpoint.
 - **Tokens today (local)** — your real token usage by model (with cache) and the 7-day total, summed
   from your own `~/.claude/projects` transcripts.
-- **`claude-dev-team` activity panel** — an **Enabled** toggle plus **Eco mode / Effort / Model**
-  submenus to change CDT's defaults right from the bar (they call `cdt-config`; effort/model apply next
-  session), then the **7-day activity**: sessions logged, **tasks by tier** (e.g. `T2×4 T3×2`), and the
+- **`claude-dev-team` activity panel** — separate **Enabled (core CDT)** and **Toolkit engine** toggles, a
+  **Prompt enhance** (auto / always / off) submenu, plus **Eco mode / Effort / Model** submenus to change
+  CDT's defaults right from the bar (they call `cdt-config`; effort/model apply next session), then the
+  **7-day activity**: sessions logged, **tasks by tier** (e.g. `T2×4 T3×2`), and the
   **specialist subagents dispatched by role** (e.g. `security-reviewer ×6`). For each role's **token
   cost**, run `/cdt:stats`.
 - **Installed version** — the dropdown footer shows the running version (e.g. `v1.22.0`) alongside the
