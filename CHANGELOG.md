@@ -2,6 +2,12 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.38.2] — 2026-06-17
+### Docs
+- Made the README media **version-less** (feature card + demo GIF no longer bake in a version number), so
+  they never go stale as the version bumps. The authoritative version lives in the badge, CHANGELOG, and
+  releases. No code or behavior change.
+
 ## [1.38.1] — 2026-06-17
 ### Docs
 - README now leads with a hero **demo GIF** (auto `cdt-spec` extracting cited requirements from a spec
