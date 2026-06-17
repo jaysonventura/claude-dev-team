@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.38.2-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.39.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -31,7 +31,7 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - [What you get](#what-you-get) · [Why](#why)
 - [Architecture](#architecture) · [Execution model](#execution-model) · [Triage & tiers](#triage--tiers)
 - [The team](#the-team) · [Skills](#skills) · [Commands](#commands)
-- [Installation](#installation) · [Requirements](#requirements) · [Notifications (Discord + Telegram)](#notifications-discord--telegram)
+- [Installation](#installation) · [Requirements](#requirements)
 - [Usage examples](#usage-examples) · [Autonomy & debugging](#autonomy--debugging)
 - [Parallel isolation (git worktrees)](#parallel-isolation-git-worktrees) · [Autonomous orchestration](#autonomous-orchestration-router--cost-governor)
 - [State & cost analytics](#state--cost-analytics) · [Memory & recall](#memory--recall)
@@ -70,11 +70,10 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - **14 role agents** (product-manager → architect → ui-ux-engineer → builders → technical-writer →
   reviewers, incl. a Haiku `fast-ops` tier) + a gated **5-agent Bug Council** for stuck bugs.
 - **10-gate quality chain** (incl. **e2e** for user-facing flows) + a bounded **Task Loop** (iterate to
-  green, anti-abandonment, capped, then notify).
+  green, anti-abandonment, capped).
 - **Completion mandate** (tier-scaled) — simplify, review, reuse-audit, dead-code scan, learn, ship.
 - **SQLite cost analytics** with **real per-agent token telemetry** (`/cdt:stats` ranks which roles
   cost the most) so you can see and tune spend on Max.
-- **Discord / Telegram notifications** for every milestone — delivered, deferred, blocker, ship.
 - **A markdown vault** for durable memory (learnings, ADRs, session logs).
 - **8 quality skills** (karpathy guidelines, clean TS, code-splitting, gauge-improvements, RCA, web
   design, ui/ux pro-max, technical-writing) plus first-class reuse of the official `superpowers`, `code-review`,
@@ -127,7 +126,6 @@ flowchart TD
     R --> M
     M --> S["Ship"]
     S --> V[("Vault + SQLite")]
-    S --> N["Discord / Telegram"]
 ```
 
 ## Execution model
@@ -246,13 +244,12 @@ session; the bare `/command` form won't match).
 | `/cdt:recall <task>` | recall the most relevant past lessons from the vault for a task |
 | `/cdt:advise <task>` | advisory tier/effort prior learned from how similar past tasks went |
 | `/cdt:config [...]` | enable/disable CDT **+ the toolkit** + set defaults (effort, model, eco, statusline, `prompt-mode`, `redact`, …); defaults xhigh + Opus 4.8 |
-| `/cdt:doctor` | health-check the install (hooks, CLIs, DB, gh, notifier, menu bar, deps) |
+| `/cdt:doctor` | health-check the install (hooks, CLIs, DB, gh, menu bar, deps) |
 | `/cdt:deps [--install]` | check / install system prerequisites (python3, git, curl, sqlite3, gh) |
 | `/cdt:worktree [new\|list\|rm\|...]` | git-worktree isolation for parallel work (interops with `claude --worktree`) |
 | `/cdt:auto [status\|gate\|explain\|off\|assist\|auto]` | the autonomous mode router + cost governor (BOUNDED / DEPTH / BREADTH) |
 | `/cdt:budget` | show usage % + the Eco (conserve-when-low) recommendation |
 | `/cdt:learn <lesson>` | teach the vault a durable lesson (surfaced later by recall) |
-| `/cdt:notify-setup [...]` | configure Discord/Telegram (no manual `.env`) |
 | `/cdt:menubar [install\|status\|...]` | macOS menu bar usage monitor (subscription % + local tokens) |
 | `/cdt:version` | show the installed version (plugin + menu bar app) |
 
@@ -262,8 +259,8 @@ session; the bare `/command` form won't match).
 
 A deterministic-first TypeScript engine (under `toolkit/`) that **runs on every prompt — no commands to
 remember.** You just type; CDT quietly sharpens the prompt, routes it, pulls in any spec you mention, and
-keeps "done" honest. Everything stays **on your machine** (`.claude/`) — no notifications, no secrets sent
-anywhere, **no API key** (it uses your existing Claude login).
+keeps "done" honest. Everything stays **on your machine** (`.claude/`) — nothing is sent anywhere,
+**no API key** (it uses your existing Claude login).
 
 ### What happens the moment you hit Enter
 
@@ -343,7 +340,6 @@ install the missing ones via your package manager:
 | **python3** | **required** | recall, advise, config, status line, analytics | `brew install python3` | `apt install python3` | python.org · `winget install Python.Python.3.12` |
 | **git** | **required** | install, autopilot, version ops | `brew install git` | `apt install git` | gitforwindows.org · `winget install Git.Git` |
 | **bash** | **required** | runs the hooks & `cdt-*` CLIs | preinstalled | preinstalled | **Git for Windows** (Git Bash) |
-| **curl** | recommended | Discord / Telegram notifications | preinstalled | `apt install curl` | Git Bash |
 | **sqlite3** (CLI) | optional | analytics CLI — *python3 fallback exists* | `brew install sqlite` | `apt install sqlite3` | `winget install SQLite.SQLite` |
 | **gh** | optional | PR autopilot | `brew install gh` | `apt install gh` | `winget install GitHub.cli` |
 | **swift** (Xcode) | optional | the macOS menu bar app only | `xcode-select --install` | — | — |
@@ -376,7 +372,7 @@ Claude Code surface on this machine (the CLI, the VS Code & JetBrains extensions
 ### Step 2 — Set up your platform
 
 Follow the guide for your OS, then run **`/cdt:doctor`** — it verifies hooks, CLIs, the DB, `gh`, the
-notifier, the menu bar, and companion plugins, and prints a fix for anything not green.
+menu bar, and companion plugins, and prints a fix for anything not green.
 
 <details open>
 <summary><b>🍎 macOS</b></summary>
@@ -433,7 +429,6 @@ Bash + Python 3 are standard, so it works out of the box:
 Describe any task normally. The `orchestration` skill auto-triggers, the SessionStart hook bootstraps the
 vault + SQLite DB + `cdt-*` CLIs, skills auto-apply, and the `/cdt:*` commands are available.
 
-- **Notifications are optional** — run `/cdt:notify-setup` only if you want Discord/Telegram pushes.
 - **Always-on (power users):** for a hard guarantee every session, drop the `orchestration` summary into
   your global `~/.claude/CLAUDE.md` (see [`docs/architecture.md`](docs/architecture.md)). Most users don't need this.
 
@@ -453,71 +448,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.38.2**.
-
----
-
-## Notifications (Discord + Telegram)
-
-Milestones (`DELIVERED` / `DEFERRED` / `BLOCKER` / `SHIP`) are logged to the vault and pushed to your
-channel(s). Secrets live in `~/.claude/claude-dev-team.env` (`chmod 600`, **never committed**) — you
-never hand-edit them.
-
-**⚡ Fastest path — the wizard** (hidden input for tokens):
-```
-!~/.claude/bin/cdt-setup
-```
-Pick Discord / Telegram / Both, paste the secret; it auto-detects the chat id and auto-tests. Done.
-
-> 💡 The `!` prefix runs a command from **inside Claude Code's input box**. In a **plain terminal**,
-> drop the `!` (zsh reads a leading `!` as history expansion → `event not found`). Use the full path
-> either way: `~/.claude/bin/cdt-setup …`
-
-Prefer a single command? Use the slash command **`/cdt:notify-setup`** (all plugin commands
-use the `/cdt:` prefix), or the `cdt-setup` CLI directly.
-
-### Discord — step by step
-1. In Discord: **Server Settings → Integrations → Webhooks → New Webhook**.
-2. Pick a channel, click **Copy Webhook URL**.
-3. Configure it (one line):
-   ```
-   /cdt:notify-setup discord https://discord.com/api/webhooks/XXXXXX/YYYYYY
-   ```
-   …or via CLI: `!~/.claude/bin/cdt-setup --discord "<url>"`
-4. A test message lands in that channel. Done.
-
-### Telegram — step by step
-1. In Telegram, open **@BotFather** → send `/newbot` → follow prompts → **copy the bot token**
-   (looks like `123456789:AA...`).
-2. **Open your new bot and send it any message** (e.g. `hi`). *(Required — the bot can only find your
-   chat id after you message it first.)*
-3. Configure it — the chat id is **auto-detected** from the token, so you don't need to find it:
-   ```
-   /cdt:notify-setup telegram <your-bot-token>
-   ```
-   …or via CLI: `!~/.claude/bin/cdt-setup --telegram <your-bot-token>` → `Telegram saved (chat id: …)`
-4. Send a test: `!~/.claude/bin/cdt-setup --test` → you should get a Telegram message.
-
-### Message format
-Notifications are **rich and detailed**, not one-liners — a colored **Discord embed** (green delivered,
-red blocker, …) and a **formatted Telegram** message, each with the **task**, **tier**, **how long it
-took**, **Task-Loop iterations**, and the **tokens *this task* used** (an input+output delta — not a
-cumulative/remaining figure), plus a timestamp:
-
-```
-✅ DELIVERED
-/login endpoint shipped: rate-limited, 12 tests green
-  Task: add /login endpoint   ·   Tier: T2   ·   Duration: 2m 5s   ·   Iterations: 1
-  Tokens (this task): 48.3k tokens
-```
-
-The orchestrator fills these in automatically — it captures a `cdt-tokens` baseline at the start and
-passes the delta + duration at delivery (`--task … --tier … --duration … --tokens …`).
-
-### Settings
-`CDT_NOTIFY_PROVIDER` = `discord` | `telegram` | `both` | `off` · `CDT_NOTIFY_LEVEL` = `all` |
-`milestones` | `off`. Credentials live in `~/.claude/claude-dev-team.env` (`chmod 600`, **never
-committed**).
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.39.0**.
 
 ---
 
@@ -528,7 +459,7 @@ Just describe the task — the orchestrator triages and runs the right amount of
 - **T0 — "fix this typo in the README"** → stays solo, edits, verifies, ships. One model call.
 - **T2 — "add a rate-limited `/login` endpoint with tests"** → risk floor forces T2+: `architect`
   designs the interface, `backend-engineer` implements (`api/*`), `qa-engineer` writes tests (`test/*`),
-  gates run, `security-reviewer` checks the auth path, then ship + a Discord post.
+  gates run, `security-reviewer` checks the auth path, then ship.
 - **T3 — "build a settings page (web + mobile) with API + a migration"** → full team in parallel waves:
   architect → backend + frontend + mobile + data (exclusive paths) → gates + Task Loop → code + security
   review → ship + vault learning.
@@ -543,7 +474,6 @@ sequenceDiagram
     participant B as backend-engineer
     participant Q as qa-engineer
     participant S as security-reviewer
-    participant N as cdt-notify
     U->>O: add rate-limited /login with tests
     O->>A: contract - design auth + interfaces
     A-->>O: interfaces + file plan
@@ -553,7 +483,6 @@ sequenceDiagram
     Q-->>O: gates green
     O->>S: security review (risk floor)
     S-->>O: PASS
-    O->>N: SHIP digest
     O-->>U: shipped
 ```
 
@@ -574,9 +503,9 @@ stateDiagram-v2
     Stuck --> BugCouncil
     BugCouncil --> Gates
     Fix --> Cap: hit CDT_MAX_ITERATIONS
-    Cap --> Notify: BLOCKER / DEFERRED
+    Cap --> Report: BLOCKER / DEFERRED
     Pass --> [*]
-    Notify --> [*]
+    Report --> [*]
 ```
 
 **Bug Council** — convened only when stuck (Diagram G):
@@ -598,7 +527,7 @@ flowchart TD
 ```
 
 Anti-abandonment: agents must emit a structured `BLOCKER` rather than quit or fake success. The loop
-stops after `CDT_MAX_ITERATIONS` (default 5) and notifies you — protecting your Max rate limits.
+stops after `CDT_MAX_ITERATIONS` (default 5) and reports what's left — protecting your Max rate limits.
 
 > **DEPTH upgrade.** With agent teams enabled (`cdt-config teams on`), the Council convenes as a
 > *debating* **agent-team** — a shared task list + mailbox so the five lenses challenge each other before
@@ -610,7 +539,7 @@ stops after `CDT_MAX_ITERATIONS` (default 5) and notifies you — protecting you
 CI status → diagnose + dispatch a focused fix → push to the branch → re-check → and, once green, post a
 `code-reviewer` + `security-reviewer` synthesis as a PR comment. It's deliberately **safe**: **dry-run by
 default** (add `--live` to act), **never force-pushes, never auto-merges, never closes** — merging stays
-your explicit call. Bounded by `CDT_MAX_ITERATIONS`, reports each step via the notifier. Needs `gh`
+your explicit call. Bounded by `CDT_MAX_ITERATIONS`, reports each step to you. Needs `gh`
 authenticated. Uses a read-mostly wrapper (`cdt-pr`) whose only write is posting a comment.
 
 ---
@@ -810,8 +739,6 @@ certificate + `notarytool` credentials, then `cd menubar && ./release.sh`.
 | `CDT_AUTONOMY` | assist | autonomous escalation leash: `off` / `assist` / `auto` |
 | `CDT_TEAMS` · `CDT_SCALE` | off · off | enable the DEPTH (agent-team) / BREADTH (workflow) engines |
 | `CDT_AUTONOMY_WEEKLY_CEILING` | 85 | governor pauses to ASK at/above this weekly usage % |
-| `CDT_NOTIFY_PROVIDER` | off | `discord` / `telegram` / `both` / `off` |
-| `CDT_NOTIFY_LEVEL` | milestones | `all` / `milestones` / `off` |
 | `CDT_STOP_REMINDER` | 0 | `1` = remind once to run the mandate at session end |
 
 Effort runs at your session level (xhigh, never `max`). **By default** the orchestrator uses **bounded**
@@ -890,11 +817,8 @@ its scope (overreach)** or **inside a peer's scope (collision)** is flagged. Ins
 
 `claude-dev-team` runs **entirely on your machine** and phones home to nothing.
 
-- **No telemetry.** The plugin sends no analytics anywhere. The only outbound traffic is what *you*
-  configure: milestone messages to *your own* Discord/Telegram channel.
-- **Secrets** (notifier webhook/token) live in `~/.claude/claude-dev-team.env` (`chmod 600`, gitignored,
-  never committed). Input is strictly validated and handed to `curl` via a stdin config, so secrets never
-  appear in the process list (`ps`).
+- **No telemetry, no outbound traffic.** The plugin sends nothing anywhere — no analytics. Everything
+  runs and is stored locally.
 - **The menu bar app** (macOS, optional) reads Claude Code's existing OAuth token from your **Keychain**
   (never logged) and calls Anthropic's `oauth/usage` endpoint over TLS — the token is only ever sent to
   `api.anthropic.com`. That endpoint is **undocumented** (the same one Claude Code uses) and may change;
@@ -916,7 +840,6 @@ its scope (overreach)** or **inside a peer's scope (collision)** is flagged. Ins
 |---------|-----|
 | Commands/agents don't show up | Restart the session or run `/reload-plugins`; confirm `claude plugin list` shows `claude-dev-team` enabled. Commands are **namespaced**: `/cdt:<cmd>`. |
 | Companion plugins didn't enable | You're on Claude Code &lt; 2.1.143 — update, or enable `superpowers` / `code-review` / `frontend-design` / `context7` once manually. |
-| Notifications never arrive | `~/.claude/bin/cdt-setup --show` — provider must not be `off`, level not `off`. Re-run `--test`. Discord: webhook still valid? Telegram: did you message the bot **first**? Is `curl` installed? |
 | `cdt-*: command not found` | In a **plain terminal** use the full path `~/.claude/bin/cdt-…` (the `!cdt-…` shorthand only works **inside** Claude Code's input box). |
 | Menu bar item missing (macOS) | Needs the Swift toolchain (`xcode-select --install`). Check `~/.claude/bin/cdt-menubar status`; approve the one-time Keychain prompt (**Always Allow**); `cdt-menubar restart`. It installs to **/Applications → "CDT Usage"**. |
 | Subscription shows "unavailable" | The undocumented usage endpoint or your login is unavailable — it **fails soft**; local token counts still work. Try **Refresh now** (⌘R). |
@@ -940,7 +863,7 @@ bash scripts/e2e.sh             # sandboxed end-to-end (temp HOME — never touc
 ```
 
 The **e2e** boots the SessionStart hook in a throwaway sandbox and asserts the whole chain works
-(CLIs installed → doctor → learn→recall → task→stats → statusline→budget → config on/off → notify→log).
+(CLIs installed → doctor → learn→recall → task→stats → statusline→budget → config on/off).
 To remove the plugin entirely, see [Uninstall](#uninstall).
 
 ## Uninstall
@@ -952,7 +875,7 @@ claude plugin uninstall cdt
 # 2) remove the macOS menu bar app + its login item (macOS only)
 ~/.claude/bin/cdt-menubar uninstall
 
-# 3) (optional) wipe local state — vault, SQLite DB, CLIs, notifier creds, staged app source
+# 3) (optional) wipe local state — vault, SQLite DB, CLIs, config, staged app source
 rm -rf ~/.claude/vault ~/.claude/claude-dev-team.db ~/.claude/claude-dev-team.env \
        ~/.claude/bin/cdt-* ~/.claude/claude-dev-team-menubar \
        ~/.claude/.cdt-menubar-installed ~/.claude/.cdt-menubar-disabled
@@ -968,8 +891,8 @@ step 1 you're back to stock Claude Code.
 .claude-plugin/   plugin.json, marketplace.json
 agents/           14 core role agents (incl. product-manager, ui-ux-engineer, technical-writer, Haiku fast-ops) + 5 Bug Council agents (flat)
 skills/           orchestration (brain) + 8 skills (quality, design, debug, technical-writing)
-commands/         ship, triage, bug-council, autopilot, stats, notify-setup, menubar, recall, advise, config, doctor, budget, learn, deps, worktree, auto
-hooks/            hooks.json + scripts (vault/db/recall/advise/pr/config/doctor/learn/budget/statusline/deps/worktree/auto/format/notify/setup/stats/guard) + vault-template
+commands/         ship, triage, bug-council, autopilot, stats, menubar, recall, advise, config, doctor, budget, learn, deps, worktree, auto
+hooks/            hooks.json + scripts (vault/db/recall/advise/pr/config/doctor/learn/budget/statusline/deps/worktree/auto/format/stats/guard) + vault-template
 docs/             architecture.md, examples.md, roadmap.md, specs/
 ```
 

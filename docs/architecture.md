@@ -45,8 +45,8 @@ implementation to specialist subagents under strict contracts.
 For any non-trivial software task, invoke the `orchestration` skill and follow it:
 triage (T0–T3, risk floor) -> contract -> dispatch specialists -> quality gates -> review ->
 tier-scaled completion mandate -> ship. Never claim done without running the verifying command and
-pasting output. Library/API questions -> context7 first. Report milestones via
-~/.claude/bin/cdt-notify. Effort stays xhigh (never max); heavy engines only via the gated cost governor.
+pasting output. Library/API questions -> context7 first. Report milestones directly to the user.
+Effort stays xhigh (never max); heavy engines only via the gated cost governor.
 ```
 
 ## Autonomous orchestration & scaling (router + cost governor)
@@ -75,7 +75,7 @@ All hooks are **fail-open** — any error exits 0 so they never interrupt your s
 ## Memory (vault + recall)
 
 Durable memory lives in `~/.claude/vault/` as plain markdown — `learnings.md` (curated lessons),
-`sessions/` (per-task notes), `adrs/`, `log.md`, `status-log.md`. The completion mandate appends a lesson
+`sessions/` (per-task notes), `adrs/`, `log.md`. The completion mandate appends a lesson
 after meaningful work. To keep context **cost-effective as the vault grows**, memory is *retrieved, not
 dumped*: SessionStart injects only the most recent lessons, and on T2+ the orchestrator runs
 `cdt-recall "<task>"` to pull just the lessons relevant to the current task (lexical ranking, pure stdlib —

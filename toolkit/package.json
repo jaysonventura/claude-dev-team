@@ -1,7 +1,7 @@
 {
   "name": "claude-dev-team-toolkit",
   "version": "0.1.0",
-  "description": "Deterministic-first TypeScript engine layer for the Claude Dev Team (CDT) plugin: prompt intake + conditional local enhancement, agent routing, requirement/spec extraction, schema validation, redaction, and local evidence-based TASK_RESULT formatting. No notifications.",
+  "description": "Deterministic-first TypeScript engine layer for the Claude Dev Team (CDT) plugin: prompt intake + conditional local enhancement, agent routing, requirement/spec extraction, schema validation, redaction, and local evidence-based TASK_RESULT formatting.",
   "type": "module",
   "engines": {
     "node": ">=18"

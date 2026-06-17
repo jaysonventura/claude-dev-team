@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "claude-dev-team",
-  "description": "Jayson Ventura's orchestrated Claude Code dev team - role-based agents, quality workflow, Bug Council, Task Loop, cost analytics, and Discord/Telegram notifications.",
+  "description": "Jayson Ventura's orchestrated Claude Code dev team - role-based agents, quality workflow, Bug Council, Task Loop, and cost analytics.",
   "owner": {
     "name": "Jayson Ventura",
     "email": "jgventura03business@gmail.com"

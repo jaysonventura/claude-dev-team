@@ -195,7 +195,7 @@ _REMIND="$(grep -E '^CDT_STOP_REMINDER=' "$CDT_HOME/claude-dev-team.env" 2>/dev/
 if [ "${_REMIND:-0}" = "1" ] && [ ! -f "$REMIND_MARK" ]; then
   : > "$REMIND_MARK" 2>/dev/null
   printf '{"decision":"block","reason":"%s"}\n' \
-    "claude-dev-team: edits were made — run the completion mandate before finishing (simplify, code-review, reuse-audit, dead-code scan, verify with command output, persist a vault learning), then post a SHIP digest via cdt-notify. If already done, you may stop."
+    "claude-dev-team: edits were made — run the completion mandate before finishing (simplify, code-review, reuse-audit, dead-code scan, verify with command output, persist a vault learning). If already done, you may stop."
   exit 0
 fi
 exit 0

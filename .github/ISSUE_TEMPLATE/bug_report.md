@@ -25,5 +25,5 @@ What you expected instead.
 - claude-dev-team version: (see the README badge / `plugin.json`)
 
 **Logs / output**
-Paste relevant output (redact any secrets). Helpful: `~/.claude/bin/cdt-setup --show` (masked),
+Paste relevant output (redact any secrets). Helpful: `~/.claude/bin/cdt-doctor`,
 `~/.claude/bin/cdt-menubar status`, or `claude --debug`.

@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.39.0] — 2026-06-17
+### Removed
+- **Notifications removed entirely.** The Discord/Telegram notifier (`cdt-notify`), its setup CLI
+  (`cdt-setup` / `/cdt:notify-setup`), and all `CDT_NOTIFY_*` / Discord / Telegram / webhook configuration
+  are gone. The orchestrator now reports milestones (DELIVERED / DEFERRED / BLOCKER / SHIP) **directly to
+  you** in its reply. The vault still records sessions + lessons and `/cdt:stats` analytics are unaffected.
+  `curl` is no longer a dependency.
+
 ## [1.38.2] — 2026-06-17
 ### Docs
 - Made the README media **version-less** (feature card + demo GIF no longer bake in a version number), so
