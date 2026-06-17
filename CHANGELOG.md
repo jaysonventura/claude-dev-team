@@ -2,6 +2,15 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.40.0] — 2026-06-17
+### Added
+- **Agent-activity display in the CLI** — pretty per-agent lines show who is working and what it cost:
+  `▶️ backend-engineer · implementing api/*` on dispatch and `✅ backend-engineer · 48.3k tok` on finish.
+  **Display-only** (a hook `systemMessage` — shown to you, never added to the model context) → **zero token
+  cost**; the token count reuses the value the SubagentStop hook already sums for `/cdt:stats`. Built on the
+  existing `contract-capture.sh` (PreToolUse[Task]) + `agent-track.sh` (SubagentStop) hooks — no new hooks.
+  Toggle: `cdt-config agent-activity on|compact|off` (default `on`; `compact` = finish lines only).
+
 ## [1.39.0] — 2026-06-17
 ### Removed
 - **Notifications removed entirely.** The Discord/Telegram notifier (`cdt-notify`), its setup CLI
