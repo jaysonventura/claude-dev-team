@@ -2,6 +2,17 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.42.0] — 2026-06-18
+### Added
+- **Session health metrics in the status line** — three always-on compact indicators now appear after the
+  weekly usage %: `Nk` (current context window size in thousands of input tokens), `Nh`/`Nm` (session age
+  since last start/clear/compact), and `N⪟` (subagents fired this session). Example:
+  `CDT on · claude-opus-4-8 · xhigh · 62% wk · 148k · 7h · 23⪟`. Driven by a shared
+  `~/.claude/.cdt-usage.json` cache with merge-write discipline so all three hooks (SessionStart,
+  SubagentStop, statusline) update disjoint fields without clobbering each other. Context is read from the
+  current project's JSONL transcript tail (mtime-guarded — only re-reads when the file changes). Session
+  start resets on every `/clear` and `/compact`. Zero token cost — hook display-only.
+
 ## [1.41.1] — 2026-06-17
 ### Chore
 - `.gitignore` now covers CDT's ephemeral runtime/per-prompt artifacts (`.claude/runtime/`,

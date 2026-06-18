@@ -85,4 +85,22 @@ if [ -n "$SID" ] && [ -f "$HOOKS_DIR/scope-lib.sh" ]; then
     db_event scope "no contract matched for $AGENT" "$SID" 2>/dev/null
   fi
 fi
+
+# Increment per-session agent count in the usage cache (for the status-line health display).
+python3 - <<'PY' 2>/dev/null
+import os, json
+cache = os.path.join(os.path.expanduser("~/.claude"), ".cdt-usage.json")
+tmp = cache + ".agt.%d.tmp" % os.getpid()
+try:
+    existing = json.load(open(cache))
+except Exception:
+    existing = {}
+existing["agent_count"] = existing.get("agent_count", 0) + 1
+try:
+    with open(tmp, "w") as f:
+        json.dump(existing, f)
+    os.replace(tmp, cache)
+except Exception:
+    pass
+PY
 exit 0

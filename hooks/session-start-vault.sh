@@ -109,4 +109,23 @@ if [ -f "$VAULT/learnings.md" ]; then
 fi
 echo
 echo "_Triage every task (T0–T3); delegate under contracts; gate; ship; persist. Preferred defaults: **xhigh** effort + **Opus 4.8** (adjust via cdt-config). For lessons relevant to a task, run \`~/.claude/bin/cdt-recall \"<task>\"\`. Report milestones to the user._"
+
+# Reset per-session health metrics (context, duration, agent count) on every SessionStart/clear/compact.
+python3 - <<'PY' 2>/dev/null
+import os, json, time
+cache = os.path.join(os.path.expanduser("~/.claude"), ".cdt-usage.json")
+tmp = cache + ".ss.%d.tmp" % os.getpid()
+try:
+    existing = json.load(open(cache))
+except Exception:
+    existing = {}
+existing.update({"session_start": int(time.time()), "agent_count": 0,
+                 "ctx_tokens": 0, "ctx_mtime": 0.0})
+try:
+    with open(tmp, "w") as f:
+        json.dump(existing, f)
+    os.replace(tmp, cache)
+except Exception:
+    pass
+PY
 exit 0
