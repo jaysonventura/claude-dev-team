@@ -2,6 +2,19 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.46.0] — 2026-06-19
+### Added
+- **Live multi-agent status line — see what's running *now*, below "auto mode on".** The CDT status line
+  gains a live "running agents" segment (role emoji + count, e.g. `🔭 Explore×3 · ⚙️ backend-engineer×1`)
+  that updates as subagents start and finish, plus emoji on every segment and an emoji phase indicator:
+  `CDT on · 🧠 opus · ⚡ xhigh · 📊 3% wk · 🪟 148k · ⏱ 7h · 🔭 Explore×3 · 🧭 1/3 Recon`. When no wave is in
+  flight it falls back to the cumulative subagents-this-session count (`🤖 N`). Backed by a tiny
+  per-workspace running-set (`hooks/running_agents.py`) maintained by the dispatch (PreToolUse[Task]) and
+  finish (SubagentStop) hooks — display-only, **zero token cost**, fail-open, and self-healing (stale
+  entries pruned after 30 min). The transcript dispatch/finish lines (`▶️/✅`) now use the same shared emoji
+  map (`hooks/cdt_emoji.py`), so the auto-mode agents (Explore 🔭, Plan 📐, general-purpose 🤖, …) get real
+  icons instead of the generic robot. Enable with `cdt-config statusline on`.
+
 ## [1.45.0] — 2026-06-19
 ### Fixed
 - **The menu bar app could silently downgrade itself — the real reason the "unavailable / the data couldn't

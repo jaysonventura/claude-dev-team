@@ -19,6 +19,10 @@ HOOKS_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
 # capture below writes files only.
 printf '%s' "$INPUT" | CDT_EVENT=dispatch CDT_HOME="$CDT_HOME" python3 "$HOOKS_DIR/agent_activity.py" 2>/dev/null
 
+# Track this dispatch in the live running-agents set (for the status-line "running now" segment). Every
+# dispatch counts (incl. contract-less ones like Explore). Display-only, fail-open. SubagentStop removes it.
+CDT_PAYLOAD="$INPUT" python3 "$HOOKS_DIR/running_agents.py" add 2>/dev/null
+
 CDT_PAYLOAD="$INPUT" CDT_DIR="$CDT_HOME/.cdt/contracts" python3 - <<'PY'
 import os, json, re, time
 try:

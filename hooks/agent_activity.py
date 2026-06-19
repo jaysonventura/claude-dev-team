@@ -15,15 +15,25 @@ import json
 
 HOME = os.environ.get("CDT_HOME") or os.path.expanduser("~/.claude")
 
-EMOJI = {
-    "product-manager": "📋", "architect": "🏛️", "ui-ux-engineer": "🎨",
-    "frontend-engineer": "💻", "backend-engineer": "⚙️", "mobile-engineer": "📱",
-    "data-engineer": "🗄️", "devops-engineer": "🚀", "qa-engineer": "🧪",
-    "security-reviewer": "🔒", "code-reviewer": "🔎", "technical-writer": "📝",
-    "diagrams": "📊", "fast-ops": "⚡", "root-cause-analyst": "🔬",
-    "adversarial-tester": "💥", "pattern-matcher": "🧩", "systems-thinker": "🕸️",
-    "code-archaeologist": "🏺",
-}
+# Shared role→emoji map (also covers the auto-mode agents Explore/Plan/general-purpose). Falls back to a
+# local copy if the shared module isn't beside this file (e.g. an older partial install).
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    from cdt_emoji import emoji as _emoji, short as _short
+except Exception:                                     # pragma: no cover
+    _EMOJI = {
+        "product-manager": "📋", "architect": "🏛️", "ui-ux-engineer": "🎨",
+        "frontend-engineer": "💻", "backend-engineer": "⚙️", "mobile-engineer": "📱",
+        "data-engineer": "🗄️", "devops-engineer": "🚀", "qa-engineer": "🧪",
+        "security-reviewer": "🔒", "code-reviewer": "🔎", "technical-writer": "📝",
+        "diagrams": "📊", "fast-ops": "⚡", "Explore": "🔭", "Plan": "📐",
+    }
+
+    def _short(role):
+        return (role or "").split(":")[-1].strip() or "agent"
+
+    def _emoji(role):
+        return _EMOJI.get(_short(role), "🤖")
 
 
 def mode():
@@ -39,12 +49,11 @@ def mode():
 
 
 def short(agent):
-    a = (agent or "").split(":")[-1].strip()
-    return a or "agent"
+    return _short(agent)
 
 
 def emoji(agent):
-    return EMOJI.get(short(agent), "🤖")
+    return _emoji(agent)
 
 
 def fmt_tokens(n):
