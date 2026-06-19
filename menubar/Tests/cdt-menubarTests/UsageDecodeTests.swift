@@ -120,6 +120,46 @@ final class UsageDecodeTests: XCTestCase {
         XCTAssertEqual(UsageError.rateLimited(retryAfter: nil).errorDescription, "rate limited — will retry when allowed")
     }
 
+    // MARK: - cold-start cache seed (never blank "unavailable" if we have prior data)
+
+    func testCacheSeedParsesMergedFile() {
+        // The real on-disk cache carries the status-line's sibling fields too — must still parse.
+        let json = #"{"weekly":2,"ctx_mtime":0,"ctx_tokens":148000,"agent_count":3,"session":13,"session_start":1781829635,"ts":1781829176}"#
+        let c = parseUsageCache(Data(json.utf8))
+        XCTAssertEqual(c?.session, 13)
+        XCTAssertEqual(c?.weekly, 2)
+        XCTAssertEqual(c?.ts, 1781829176)
+    }
+
+    func testCacheSeedTsOptional() {
+        let c = parseUsageCache(Data(#"{"session":5,"weekly":9}"#.utf8))
+        XCTAssertEqual(c?.session, 5)
+        XCTAssertEqual(c?.weekly, 9)
+        XCTAssertNil(c?.ts)
+    }
+
+    func testCacheSeedRejectsIncompleteOrGarbage() {
+        XCTAssertNil(parseUsageCache(Data(#"{"session":5}"#.utf8)))       // no weekly
+        XCTAssertNil(parseUsageCache(Data(#"{"weekly":5}"#.utf8)))        // no session
+        XCTAssertNil(parseUsageCache(Data(#"{}"#.utf8)))
+        XCTAssertNil(parseUsageCache(Data("not json".utf8)))
+    }
+
+    func testSeededSnapshotIsStaleNotLoadingNotUnavailable() {
+        var snap = UsageSnapshot()
+        snap.subscription = SubscriptionUsage(sessionPct: 13, weeklyPct: 2, sonnetPct: nil,
+                                              sessionResetIn: nil, weeklyResetIn: nil, planLabel: nil)
+        snap.subscriptionSeeded = true
+        XCTAssertTrue(snap.subscriptionStale)      // grayed, not presented as live
+        XCTAssertFalse(snap.subscriptionLoading)   // we DO have a reading → not "loading"
+    }
+
+    func testEmptySnapshotIsLoading() {
+        let snap = UsageSnapshot()
+        XCTAssertTrue(snap.subscriptionLoading)
+        XCTAssertFalse(snap.subscriptionStale)
+    }
+
     func testRetryAfterHeaderParsing() {
         let url = URL(string: "https://api.anthropic.com")!
         func resp(_ headers: [String: String]) -> HTTPURLResponse {

@@ -2,6 +2,25 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.45.0] — 2026-06-19
+### Fixed
+- **The menu bar app could silently downgrade itself — the real reason the "unavailable / the data couldn't
+  be read because it is missing" bug kept coming back.** `cdt-menubar auto_update` (run from SessionStart)
+  rebuilt the app whenever the installed version `!=` the cached plugin version — so a freshly-installed
+  **newer** app (e.g. a notarized v1.44.0 release) sitting ahead of the still-cached older plugin (v1.42.0)
+  was rebuilt **down** to the older, buggy code. Now it only rebuilds when the app is **missing or strictly
+  older** than the plugin (numeric-aware `version_ge`), and never downgrades a newer install.
+### Added
+- **Never a blank "unavailable" again — cold-start cache seed.** On launch the menu bar now seeds the
+  displayed % from the on-disk cache (`~/.claude/.cdt-usage.json`), shown grayed as `cached · refreshing…`,
+  so the last-known reading is visible immediately instead of "unavailable" while the first live fetch is in
+  flight (and it stays visible if that first fetch is rate-limited).
+- **Clear rate-limit feedback.** When the usage endpoint returns 429 the dropdown now shows a live
+  `rate limited · retry in Xm` countdown (honoring the server's `Retry-After`) instead of a vague stale
+  state — so "it stopped refreshing" reads as "intentionally waiting out the limit," not "broken." The
+  no-`Retry-After` fallback back-off is now a gentler 5 min (the value the server actually sends) instead of
+  15 min. 6 new tests (24 total, all green).
+
 ## [1.44.0] — 2026-06-19
 ### Fixed
 - **Menu bar no longer worsens the usage endpoint's rate limit.** `GET /api/oauth/usage` 429s on bursts.

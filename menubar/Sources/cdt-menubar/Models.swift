@@ -60,16 +60,19 @@ struct TeamActivity {
 struct UsageSnapshot {
     var subscription: SubscriptionUsage?
     var subscriptionError: String?
-    var subscriptionAsOf: Date?            // when `subscription` was last fetched successfully
+    var subscriptionAsOf: Date?            // when `subscription` was last known good (live fetch or cache ts)
+    var subscriptionRetryAt: Date?         // when an active rate-limit (429) cooldown ends — for the countdown
+    var subscriptionSeeded = false         // showing the on-disk cache, no live fetch has landed yet this run
     var local = LocalUsage()
     var team = TeamActivity()
     var lastUpdated = Date()
 
-    /// True when we're still showing the last-good subscription reading but the most recent
-    /// refresh failed (e.g. the OAuth token expired) — the displayed %s are stale, not live.
-    var subscriptionStale: Bool { subscription != nil && subscriptionError != nil }
+    /// True when we're showing a non-live reading — either the last good one after a failed refresh
+    /// (e.g. expired token / rate limit) or the disk-cached one before the first live fetch lands. The
+    /// displayed %s are grayed so a non-live value never masquerades as fresh.
+    var subscriptionStale: Bool { subscription != nil && (subscriptionError != nil || subscriptionSeeded) }
 
-    /// True before the very first fetch resolves (no reading and no error yet). Lets the UI show
+    /// True before any reading at all (no live fetch, no error, no cache seed). Lets the UI show
     /// "loading…" on first paint instead of a premature "unavailable" while the request is in flight.
     var subscriptionLoading: Bool { subscription == nil && subscriptionError == nil }
 }

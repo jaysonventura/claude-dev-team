@@ -1,5 +1,14 @@
 import AppKit
 
+/// Parses the persisted usage cache (`~/.claude/.cdt-usage.json`) into the displayable %s. Returns nil when
+/// the file lacks both `session` and `weekly`. Tolerates the extra sibling fields other writers merge in
+/// (context size, session age, subagent count). PURE (takes Data) so it is unit-tested.
+func parseUsageCache(_ data: Data) -> (session: Int, weekly: Int, ts: Int?)? {
+    guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+          let session = obj["session"] as? Int, let weekly = obj["weekly"] as? Int else { return nil }
+    return (session, weekly, obj["ts"] as? Int)
+}
+
 /// Coordinates the two data sources at independent cadences:
 ///  - local token usage (#2): cheap, no rate limit → refresh every 60s
 ///  - subscription % (#1): the undocumented endpoint rate-limits → poll gently (5 min) and back off on 429
@@ -20,7 +29,7 @@ final class UsageStore {
     private let subNormal: TimeInterval = 300        // 5 min (endpoint, healthy)
     private let subError: TimeInterval = 60          // base retry after a non-429 failure — recover fast
     private let subAuthRetry: TimeInterval = 45      // 401/403: retry fast — Claude Code refreshes in ~60s
-    private let subBackoff: TimeInterval = 900        // 15 min after HTTP 429 when the server gives no hint
+    private let subBackoff: TimeInterval = 300        // after HTTP 429 with no Retry-After (server typically sends 300)
     private let subBackoffMin: TimeInterval = 60      // floor on a 429 back-off (don't retry faster than this)
     private let subBackoffMax: TimeInterval = 1800    // ceiling on a 429 back-off (cap a huge Retry-After)
     private let subMinInterval: TimeInterval = 20     // don't re-hit the endpoint if the reading is this fresh
@@ -48,6 +57,7 @@ final class UsageStore {
     }
 
     func start() {
+        seedFromCache()   // show the last-known % immediately, grayed, so first paint is never blank
         refreshLocal()
         // Local token usage — a plain repeating timer in .common mode.
         let lt = Timer(timeInterval: localInterval, repeats: true) { [weak self] _ in self?.refreshLocal() }
@@ -122,28 +132,31 @@ final class UsageStore {
                 }
             } catch {
                 // Map the failure to a clean message + the right recovery cadence:
-                //   429        → back off 15m (respect the rate limit)
+                //   429        → honor Retry-After (respect the rate limit), show a countdown
                 //   401 / 403  → token expired/denied: retry fast (Claude Code refreshes in ~60s)
                 //   other      → network/decode/keychain: that error's message, escalating retry
                 let status = (error as? UsageError)?.httpStatus
+                let retryHint = (error as? UsageError)?.retryAfter
                 let msg = error.localizedDescription
                 await MainActor.run {
-                    self.applySubscription(nil, error: msg)
                     let delay: TimeInterval
+                    var retryAt: Date? = nil
                     switch status {
                     case 429:
                         // Wait exactly as long as the server asks (Retry-After), clamped to a sane window;
-                        // fall back to the fixed back-off when it gives no hint. Mark the cooldown so nothing
-                        // re-hits the endpoint until it elapses.
-                        let hint = (error as? UsageError)?.retryAfter ?? self.subBackoff
+                        // fall back to the gentle fixed back-off when it gives no hint. Mark the cooldown so
+                        // nothing re-hits the endpoint until it elapses, and surface a countdown to the user.
+                        let hint = retryHint ?? self.subBackoff
                         delay = min(self.subBackoffMax, max(self.subBackoffMin, hint))
                         self.rateLimitedUntil = Date().addingTimeInterval(delay)
+                        retryAt = self.rateLimitedUntil
                     case 401, 403:
                         delay = self.subAuthRetry            // fast, fixed — don't escalate auth recovery
                     default:
                         self.subFailures += 1
                         delay = min(self.subNormal, self.subError * pow(2, Double(self.subFailures - 1)))
                     }
+                    self.applySubscription(nil, error: msg, retryAt: retryAt)
                     self.nextSubFetch = Date().addingTimeInterval(delay)
                     self.subInFlight = false
                 }
@@ -165,17 +178,36 @@ final class UsageStore {
         }
     }
 
-    private func applySubscription(_ sub: SubscriptionUsage?, error: String?) {
+    private func applySubscription(_ sub: SubscriptionUsage?, error: String?, retryAt: Date? = nil) {
         // Keep the last good subscription reading visible if a refresh fails (don't blank it out on error).
         if let sub = sub {
             snapshot.subscription = sub
             snapshot.subscriptionError = nil
+            snapshot.subscriptionSeeded = false                               // a live reading supersedes the cache seed
+            snapshot.subscriptionRetryAt = nil
             snapshot.subscriptionAsOf = Date()                                // last good fetch (for the stale note)
             writeUsageCache(session: sub.sessionPct, weekly: sub.weeklyPct)   // keep Eco mode's data fresh
         } else {
             snapshot.subscriptionError = error                               // keep last-good `subscription`; mark stale
+            snapshot.subscriptionRetryAt = retryAt                           // rate-limit countdown (nil otherwise)
         }
         snapshot.lastUpdated = Date()
+        controller.render(snapshot)
+    }
+
+    /// Seed the displayed subscription % from the on-disk cache (~/.claude/.cdt-usage.json) at launch, so the
+    /// menu bar shows the last-known reading (grayed) immediately instead of a blank "unavailable" while the
+    /// first live fetch is in flight — and keeps showing it if that first fetch is rate-limited. The reading
+    /// is marked `seeded` (stale) and is replaced the instant a live fetch lands.
+    private func seedFromCache() {
+        guard snapshot.subscription == nil else { return }
+        let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/.cdt-usage.json")
+        guard let data = try? Data(contentsOf: url), let c = parseUsageCache(data) else { return }
+        snapshot.subscription = SubscriptionUsage(
+            sessionPct: c.session, weeklyPct: c.weekly, sonnetPct: nil,
+            sessionResetIn: nil, weeklyResetIn: nil, planLabel: nil)
+        snapshot.subscriptionSeeded = true
+        if let ts = c.ts { snapshot.subscriptionAsOf = Date(timeIntervalSince1970: TimeInterval(ts)) }
         controller.render(snapshot)
     }
 

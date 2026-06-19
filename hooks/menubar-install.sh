@@ -104,9 +104,13 @@ uninstall() {
   echo "Uninstalled (login item + CDT Usage.app removed). Re-enable: cdt-menubar install"
 }
 
-# Rebuild + relaunch ONLY when the installed app version lags the plugin version (e.g. after
-# `claude plugin update`). A fast no-op when they already match. Fail-open + quiet — safe to call in the
-# background from SessionStart on every session.
+# True when version $1 >= $2 (numeric-aware). Used so auto_update NEVER downgrades a newer installed app.
+version_ge() { [ "$1" = "$2" ] || [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" = "$1" ]; }
+
+# Rebuild + relaunch ONLY when the installed app is MISSING or strictly OLDER than the plugin (e.g. after
+# `claude plugin update`). A fast no-op when up to date — and, critically, when the app is NEWER than the
+# cached plugin (e.g. a freshly-installed notarized release that's ahead of the cache) it is left ALONE
+# rather than rebuilt down to the older cached code. Fail-open + quiet — safe to call from SessionStart.
 auto_update() {
   command -v swift >/dev/null 2>&1 || return 0
   [ -f "$CDT_HOME/.cdt-menubar-disabled" ] && return 0
@@ -114,9 +118,9 @@ auto_update() {
   pv="$(plugin_version)"
   plist="$APP_BUNDLE/Contents/Info.plist"
   av="$([ -f "$plist" ] && /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist" 2>/dev/null)"
-  # Up to date → nothing to do.
-  [ -x "$APP" ] && [ -n "$av" ] && [ "$av" = "$pv" ] && return 0
-  echo "Menu bar app (${av:-none}) lags plugin ($pv) — rebuilding…"
+  # Up to date OR newer → leave it alone (never downgrade). Only build when missing or strictly older.
+  [ -x "$APP" ] && [ -n "$av" ] && version_ge "$av" "$pv" && return 0
+  echo "Menu bar app (${av:-none}) is missing/older than plugin ($pv) — rebuilding…"
   build >/dev/null 2>&1 || { echo "Menu bar rebuild failed."; return 0; }
   pkill -f "$APP_RE" 2>/dev/null
   open "$APP_BUNDLE" >/dev/null 2>&1 && echo "Menu bar app updated to v$pv."
