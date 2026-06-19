@@ -55,10 +55,12 @@ final class MenuBarController: NSObject {
                 top: "\(sub.sessionPct)%", topColor: stale ? .tertiaryLabelColor : color(for: sub.sessionPct),
                 bottom: "\(sub.weeklyPct)%", bottomColor: stale ? .tertiaryLabelColor : color(for: sub.weeklyPct))
         } else {
-            // No subscription data → a small single line with today's tokens.
+            // No subscription data yet → a small single line. While the first fetch is still in flight show
+            // an ellipsis (not token counts) so the bar doesn't look "done"; afterwards show today's tokens.
             statusItem.button?.image = nil
+            let title = snap.subscriptionLoading ? "CDT …" : "CDT \(formatTokens(snap.local.todayTotal))"
             statusItem.button?.attributedTitle = NSAttributedString(
-                string: "CDT \(formatTokens(snap.local.todayTotal))",
+                string: title,
                 attributes: [.foregroundColor: NSColor.labelColor, .font: NSFont.systemFont(ofSize: 11)])
         }
 
@@ -94,6 +96,8 @@ final class MenuBarController: NSObject {
                 let asOf = snap.subscriptionAsOf.map { "  (last good \(clockTime($0)))" } ?? ""
                 line("  ⚠ \(snap.subscriptionError ?? "usage stale")\(asOf)")
             }
+        } else if snap.subscriptionLoading {
+            line("  loading usage…")
         } else {
             line("  unavailable — " + (snap.subscriptionError ?? "endpoint/login"))
         }

@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import CryptoKit
 
 enum KeychainError: LocalizedError {
     case notFound(OSStatus)
@@ -71,3 +72,14 @@ func readClaudeAccount() throws -> ClaudeAccount {
 
 /// Reads just the OAuth access token (for callers that don't need the plan fields).
 func readClaudeOAuthToken() throws -> String { try readClaudeAccount().accessToken }
+
+/// A stable, non-reversible fingerprint of the current Keychain access token (first 16 hex of its
+/// SHA-256), or nil if it can't be read. Used ONLY to notice when Claude Code has rotated the token
+/// (so the menu bar can refetch immediately and recover from an expired-token state in seconds, rather
+/// than waiting out a backoff). The raw token is never logged, persisted, or returned by this function.
+func claudeTokenFingerprint() -> String? {
+    guard let token = try? readClaudeAccount().accessToken,
+          let data = token.data(using: .utf8) else { return nil }
+    let digest = SHA256.hash(data: data)
+    return digest.prefix(8).map { String(format: "%02x", $0) }.joined()
+}

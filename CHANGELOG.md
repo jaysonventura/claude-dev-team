@@ -2,6 +2,49 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.44.0] — 2026-06-19
+### Fixed
+- **Menu bar no longer worsens the usage endpoint's rate limit.** `GET /api/oauth/usage` 429s on bursts.
+  Previously `refreshNow()` (the "Refresh now" click), the wake-from-sleep refresh, and token-rotation
+  recovery all reset the next-fetch time to "now" — so clicking Refresh while rate-limited immediately
+  re-hit the endpoint and could spiral. Now an **active 429 cooldown is honored everywhere** (heartbeat,
+  manual refresh, wake, token-rotation), and a healthy reading newer than 20s is reused instead of
+  re-fetched — so refresh-mashing and wake flurries can't trip a 429.
+- **429 back-off now honors the server's `Retry-After`** (delta-seconds or HTTP-date), clamped to
+  [60s, 30min], instead of a blind fixed 15 min — the badge recovers exactly when the server allows,
+  not later. Falls back to the fixed back-off when no header is sent.
+### Chore
+- **Global git ignore for CDT runtime artifacts** — documented that `~/.config/git/ignore` (git's default
+  global excludes, no `core.excludesfile` needed) should carry `**/.claude/runtime/`, the per-prompt
+  artifacts (`TASK_BRIEF.md`/`ROUTING.json`/`NEXT_PROMPT.md`/`TASK_RESULT.json`), `**/.claude/worktrees/`,
+  `**/.claude/.cdt/`, and `**/.claude/.cdt-usage.json` so they never show up as untracked in *any* repo
+  (`.claude/specs/` stays trackable). 3 new 429/Retry-After tests (19 total, all green).
+
+## [1.43.0] — 2026-06-19
+### Fixed
+- **Menu bar usage is now production-grade — the "unavailable" / "the data couldn't be read because it is
+  missing" / never-refreshing bug is fixed at the root.** The live `/api/oauth/usage` response returns
+  `"seven_day_sonnet":{"utilization":0.0,"resets_at":null}` — a JSON `null` for `resets_at`. The decoder
+  modeled that field as a non-optional `String`, so one null threw `DecodingError` and aborted the **whole**
+  decode, discarding the perfectly-valid session/weekly numbers and leaving the badge stuck on "unavailable"
+  forever (which also looked like a broken auto-refresh). Every nested OAuth field is now fault-tolerant
+  (`try?` + optional in a custom `init(from:)`), so no single null/missing/new field can break the read.
+  Verified against a captured real payload (now a regression test) and live (`session=4% weekly=0%`).
+### Added
+- **Cleaner failures + faster recovery.** Parse failures now surface a clean, retryable message
+  (`usage format changed — retrying`) instead of the raw Cocoa string, and the app refuses to fabricate a
+  misleading `0%` from a body it couldn't actually parse (throws a clean error instead). Expired/denied
+  tokens (401/403) now retry on a fast fixed cadence (~45s) instead of an exponential back-off to 5 min, and
+  the moment Claude Code rotates the Keychain token (detected via a non-reversible fingerprint — the token
+  is never logged) the app refetches immediately, so an expired token clears within seconds. A
+  wake-from-sleep observer refreshes instantly instead of waiting out the poll interval. First paint now
+  shows `loading usage…` rather than a premature "unavailable".
+- **8 new decoder regression/edge tests** (null resets_at, null utilization, empty body, error envelope,
+  all-null, garbage, rounding, live smoke) — 16 tests total, all green.
+### Chore
+- The menu bar now **merge-writes** `~/.claude/.cdt-usage.json` (preserving the status-line's session-health
+  fields) instead of overwriting the file, matching v1.42.0's shared-cache discipline.
+
 ## [1.42.0] — 2026-06-18
 ### Added
 - **Session health metrics in the status line** — three always-on compact indicators now appear after the
