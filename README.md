@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.49.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.50.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -188,27 +188,35 @@ flowchart LR
 |-------|-------|-------------------|
 | `product-manager` | Opus | requirements + testable acceptance criteria + scope/non-goals (read-only, Wave 0) |
 | `architect` | Opus | design, interfaces, contracts (read-only) |
-| `backend-engineer` | inherit | APIs, server, data access, logic (`api/server/*`) |
-| `frontend-engineer` | inherit | web UI/components (`ui/client/*`) |
-| `mobile-engineer` | inherit | RN/Expo/Flutter/native (`mobile/app/*`) |
+| `backend-engineer` | **Sonnet** | APIs, server, data access, logic (`api/server/*`) |
+| `frontend-engineer` | **Sonnet** | web UI/components (`ui/client/*`) |
+| `mobile-engineer` | **Sonnet** | RN/Expo/Flutter/native (`mobile/app/*`) |
 | `ui-ux-engineer` | Opus | UX flows, design system/tokens, accessibility + visual-polish review (`design/*`) |
-| `qa-engineer` | inherit | tests + the gate chain (`test/*`) |
+| `qa-engineer` | **Sonnet** | tests + the gate chain (`test/*`) |
 | `code-reviewer` | Opus | independent correctness/scope review (read-only) |
 | `security-reviewer` | Opus | security review with **veto** (read-only) |
-| `devops-engineer` | inherit | CI/CD, Docker, infra (`ci/* infra/*`) |
-| `diagrams` | inherit | mermaid / figma visuals |
-| `data-engineer` | inherit | schema, migrations, queries (`db/*`) |
-| `technical-writer` | inherit | user-facing docs — README/guides/release notes/ADRs (`docs/*` prose) |
-| **Bug Council** (gated ×5) | inherit | root-cause-analyst · code-archaeologist · pattern-matcher · systems-thinker · adversarial-tester |
+| `devops-engineer` | **Sonnet** · hybrid | CI/CD, Docker, infra (`ci/* infra/*`) — destructive/prod infra escalates to Opus + security-veto |
+| `diagrams` | **Sonnet** | mermaid / figma visuals |
+| `data-engineer` | **Sonnet** · hybrid | schema, migrations, queries (`db/*`) — destructive/irreversible migration escalates to Opus + security-veto |
+| `technical-writer` | **Sonnet** | user-facing docs — README/guides/release notes/ADRs (`docs/*` prose) |
+| **Bug Council** (gated ×5) | **Opus** | root-cause-analyst · code-archaeologist · pattern-matcher · systems-thinker · adversarial-tester |
 | `fast-ops` | **Haiku** | the cheap "hands" tier — trivial mechanical ops **only** (gather, literal find/replace, rename, template fill); **never** dev/test/review/security |
 
-**Model routing — Opus is the recommended main model.** Quality-critical work runs on a strong model;
-cost-effectiveness comes from **tiering + a trivial-only low tier**, never from downgrading important
-work. **Opus** reasons & reviews (product, architecture, UX, code & security) and is the right session model for
-quality work; **Sonnet** (inherit) is a capable high-quality tier fine for routine throughput; **Haiku**
-(`fast-ops`) is the **low tier for *trivial mechanical* ops only** — it **never** touches complicated or
-quality-sensitive work (orchestration, development, testing, review, security) and escalates the instant
-a task needs judgment. Run Sonnet for routine work; **Opus** (or `FULL:`) for anything that matters.
+**Model routing — role-based, deterministic, and lint-enforced.** Cost-effectiveness comes from
+**pinning each agent to the right tier** (plus a trivial-only low tier), never from downgrading important
+work. **Opus** reasons, reviews, and diagnoses — `product-manager`, `architect`, `ui-ux-engineer`,
+`code-reviewer`, `security-reviewer`, and the gated **Bug Council ×5** are **pinned Opus**, independent of
+the session model; keep the orchestrator session on **Opus** for quality work. **Sonnet** is the
+**pinned throughput tier** — the engineering builders, qa, `diagrams`, and `technical-writer` run
+`model: sonnet` so the savings are the *default* (no need to remember to downshift the session). A Sonnet
+dispatch **escalates to Opus** (per-dispatch `model: opus`) on any hand-off trigger — architecture,
+security-sensitive work, production deploy, destructive infra/DB op, complex root-cause bug, release
+blocker, repeated test failures, or unclear requirements — and **`FULL:`** lifts the builders to Opus for
+the whole task. `data-engineer` / `devops-engineer` are Sonnet-by-default but **hybrid**
+(destructive/irreversible change → Opus + the mandatory security-veto). **Haiku** (`fast-ops`) is the
+**low tier for *trivial mechanical* ops only** — it never touches quality-sensitive work and escalates the
+instant a task needs judgment. All three tiers are enforced by `lint-agents.sh` (CI fails if a tier
+silently regresses).
 
 ## Skills
 
@@ -448,7 +456,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.49.0**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.50.0**.
 
 ---
 

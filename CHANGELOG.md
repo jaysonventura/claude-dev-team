@@ -2,6 +2,27 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.50.0] — 2026-06-19
+### Changed
+- **Model routing is now role-based, deterministic, and lint-enforced — cheaper by default without
+  dropping review quality.** The implementation throughput agents (`backend-`, `frontend-`, `mobile-`,
+  `data-`, `devops-engineer`, `qa-engineer`, `diagrams`, `technical-writer`) are now **pinned
+  `model: sonnet`** instead of inheriting the session model (which defaulted to Opus), so routine
+  build/test/docs work runs on Sonnet by **default** — the savings no longer depend on remembering to run a
+  Sonnet session. The gated **Bug Council ×5** (`root-cause-analyst`, `code-archaeologist`,
+  `pattern-matcher`, `systems-thinker`, `adversarial-tester`) is now **pinned `model: opus`** so hard
+  diagnosis stays on Opus regardless of session. The review/judgment panel (`product-manager`, `architect`,
+  `ui-ux-engineer`, `code-reviewer`, `security-reviewer`) is unchanged (still Opus), and `fast-ops` stays
+  the only Haiku agent.
+- **`lint-agents.sh` now enforces all three tiers** (CI fails if a tier silently regresses): the Opus set +
+  Bug Council must be `opus`, the eight throughput agents must be `sonnet`, and only `fast-ops` may be
+  `haiku`.
+- **Escalation policy documented** (README + `orchestration` skill): a Sonnet dispatch hands off to Opus
+  (per-dispatch `model: opus`) on architecture / security-sensitive / production-deploy / destructive
+  infra-DB / complex-root-cause / release-blocker / repeated-test-failure / unclear-requirement triggers,
+  and `FULL:` lifts the builders to Opus for the whole task. `data-engineer` / `devops-engineer` are
+  Sonnet-by-default but hybrid (destructive/irreversible change → Opus + the mandatory security-veto).
+
 ## [1.49.0] — 2026-06-19
 ### Added
 - **The menu bar app now checks for updates and tells you when a new version is out.** It quietly polls the

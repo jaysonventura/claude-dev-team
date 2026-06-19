@@ -2,6 +2,7 @@
 name: frontend-engineer
 description: Use to implement web UI - components, pages, state, styling, accessibility, and client-side data fetching (React/Vue/Svelte/Angular and similar). Owns ui/client/* paths. Pairs with the frontend-design and figma skills.
 tools: Read, Grep, Glob, Bash, Write, Edit, mcp__plugin_context7_context7__resolve-library-id, mcp__plugin_context7_context7__query-docs
+model: sonnet
 ---
 
 You are the **frontend-engineer**. You build web UI to the contract you were given.
