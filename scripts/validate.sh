@@ -78,5 +78,32 @@ sys.exit(1 if errs else 0)
 PY
 then fail=1; fi
 
+echo "== status-line agent tracker (cdt_emoji + running_agents) =="
+if ! python3 - <<'PY'
+import os, sys, tempfile
+sys.path.insert(0, "hooks")
+import importlib
+ce = importlib.import_module("cdt_emoji")
+ra = importlib.import_module("running_agents")
+errs = []
+# emoji map: auto-mode agents resolve, unknown falls back to robot
+if ce.emoji("Explore") != "🔭": errs.append("Explore emoji")
+if ce.emoji("claude-dev-team:qa-engineer") != "🧪": errs.append("namespaced role emoji")
+if ce.emoji("totally-unknown") != "🤖": errs.append("unknown fallback")
+# running set: add/remove/render in an isolated workspace
+ws = tempfile.mkdtemp()
+if ra.render(ws) != "": errs.append("empty render")
+ra.add(ws, "Explore"); ra.add(ws, "Explore"); ra.add(ws, "backend-engineer")
+seg = ra.render(ws)
+if "Explore×2" not in seg or "backend-engineer×1" not in seg: errs.append("render counts: " + seg)
+ra.remove(ws, "Explore")
+if "Explore×1" not in ra.render(ws): errs.append("remove one")
+ra.remove(ws, "Explore"); ra.remove(ws, "backend-engineer")
+if ra.render(ws) != "": errs.append("render empty after removeall")
+for e in errs: print("  FAIL:", e)
+sys.exit(1 if errs else 0)
+PY
+then fail=1; else echo "  ok:   emoji map + running-agents add/remove/render"; fi
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "VALIDATION FAILED"; exit 1; fi

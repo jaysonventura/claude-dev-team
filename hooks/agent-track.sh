@@ -48,6 +48,10 @@ if [ -n "$_PCWD" ] && [ -f "$_PCWD/.claude/runtime/phase.json" ]; then
   [ -n "$_PCUR" ] && { mkdir -p "$_PCWD/.claude/runtime/phasetok" 2>/dev/null; printf '%s\n' "$TOKENS" >> "$_PCWD/.claude/runtime/phasetok/$_PCUR.log"; }
 fi
 
+# Remove this agent from the live running-agents set (status-line "running now" segment). Fail-open.
+_RCWD="$(get cwd)"
+[ -n "$_RCWD" ] && CDT_WS="$_RCWD" python3 "$HOOKS_DIR/running_agents.py" remove "$AGENT" 2>/dev/null
+
 # shellcheck source=/dev/null
 [ -f "$HOOKS_DIR/db.sh" ] && . "$HOOKS_DIR/db.sh" 2>/dev/null && db_agent "$AGENT" "$SID" "$TOKENS" "$CACHE_READ"
 

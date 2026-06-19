@@ -34,6 +34,9 @@ cp "$HOOKS_DIR/doctor.sh"  "$BIN/cdt-doctor"   2>/dev/null && chmod +x "$BIN/cdt
 cp "$HOOKS_DIR/learn.sh"   "$BIN/cdt-learn"    2>/dev/null && chmod +x "$BIN/cdt-learn"   2>/dev/null
 cp "$HOOKS_DIR/budget.sh"  "$BIN/cdt-budget"   2>/dev/null && chmod +x "$BIN/cdt-budget"  2>/dev/null
 cp "$HOOKS_DIR/statusline.sh" "$BIN/cdt-statusline" 2>/dev/null && chmod +x "$BIN/cdt-statusline" 2>/dev/null
+# Python helpers the status line imports at runtime (must sit beside cdt-statusline in $BIN).
+cp "$HOOKS_DIR/cdt_emoji.py"      "$BIN/cdt_emoji.py"      2>/dev/null
+cp "$HOOKS_DIR/running_agents.py" "$BIN/running_agents.py" 2>/dev/null
 cp "$HOOKS_DIR/deps.sh"    "$BIN/cdt-deps"     2>/dev/null && chmod +x "$BIN/cdt-deps"     2>/dev/null
 cp "$HOOKS_DIR/tokens.sh"  "$BIN/cdt-tokens"   2>/dev/null && chmod +x "$BIN/cdt-tokens"   2>/dev/null
 cp "$HOOKS_DIR/worktree.sh" "$BIN/cdt-worktree" 2>/dev/null && chmod +x "$BIN/cdt-worktree" 2>/dev/null
