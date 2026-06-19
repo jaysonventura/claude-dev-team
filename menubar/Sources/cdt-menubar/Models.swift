@@ -68,6 +68,10 @@ struct UsageSnapshot {
     /// True when we're still showing the last-good subscription reading but the most recent
     /// refresh failed (e.g. the OAuth token expired) — the displayed %s are stale, not live.
     var subscriptionStale: Bool { subscription != nil && subscriptionError != nil }
+
+    /// True before the very first fetch resolves (no reading and no error yet). Lets the UI show
+    /// "loading…" on first paint instead of a premature "unavailable" while the request is in flight.
+    var subscriptionLoading: Bool { subscription == nil && subscriptionError == nil }
 }
 
 // MARK: - formatting helpers

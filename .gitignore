@@ -23,12 +23,13 @@ node_modules/
 .claude/worktrees/
 
 # Ephemeral CDT runtime + per-prompt artifacts (regenerated each session; never tracked).
+# `**/` so they're ignored at any depth (root AND nested subdirs like menubar/.claude/).
 # NOTE: .claude/specs/ is intentionally NOT ignored — cited requirement sets are often committed.
-.claude/runtime/
-.claude/TASK_BRIEF.md
-.claude/ROUTING.json
-.claude/NEXT_PROMPT.md
-.claude/TASK_RESULT.json
+**/.claude/runtime/
+**/.claude/TASK_BRIEF.md
+**/.claude/ROUTING.json
+**/.claude/NEXT_PROMPT.md
+**/.claude/TASK_RESULT.json
 
 # Swift build artifacts (menu bar app)
 .build/

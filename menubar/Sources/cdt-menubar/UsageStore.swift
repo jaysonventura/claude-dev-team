@@ -6,6 +6,8 @@ import AppKit
 ///
 /// Both run off **repeating** timers added in `.common` run-loop mode, so a single hung/failed fetch can
 /// never break the poll chain (the bug that froze the subscription % for hours after one transient 429).
+/// Recovery is also actively accelerated: an expired token (401/403) retries quickly AND the moment Claude
+/// Code rotates the Keychain token we refetch, and we refresh immediately on wake-from-sleep.
 final class UsageStore {
     private let controller: MenuBarController
     private var snapshot = UsageSnapshot()
@@ -17,15 +19,28 @@ final class UsageStore {
     private let heartbeatInterval: TimeInterval = 20 // how often we re-evaluate whether to poll the endpoint
     private let subNormal: TimeInterval = 300        // 5 min (endpoint, healthy)
     private let subError: TimeInterval = 60          // base retry after a non-429 failure — recover fast
-    private let subBackoff: TimeInterval = 900        // 15 min after HTTP 429 (respect rate limits)
+    private let subAuthRetry: TimeInterval = 45      // 401/403: retry fast — Claude Code refreshes in ~60s
+    private let subBackoff: TimeInterval = 900        // 15 min after HTTP 429 when the server gives no hint
+    private let subBackoffMin: TimeInterval = 60      // floor on a 429 back-off (don't retry faster than this)
+    private let subBackoffMax: TimeInterval = 1800    // ceiling on a 429 back-off (cap a huge Retry-After)
+    private let subMinInterval: TimeInterval = 20     // don't re-hit the endpoint if the reading is this fresh
     private let inFlightMax: TimeInterval = 30        // a fetch overdue past this is treated as lost
     private var subFailures = 0                       // consecutive non-429 failures → escalating backoff
+
+    // While we're inside a 429 cooldown nothing may hit the endpoint — not the heartbeat, not "Refresh now",
+    // not a wake event, not token-rotation. This is what stops the menu bar from worsening a rate limit.
+    private var rateLimitedUntil = Date.distantPast
 
     // Resilient subscription scheduling: the repeating heartbeat drives fetches; these track when the next
     // one is allowed and whether one is in flight — so backoff is honored without a fragile re-arm chain.
     private var subInFlight = false
     private var subStartedAt = Date.distantPast
     private var nextSubFetch = Date.distantPast
+
+    // Fingerprint of the access token used for the last fetch attempt. When this changes (Claude Code
+    // rotated the token) while we're in an error state, we refetch immediately instead of waiting out the
+    // backoff — so an "expired token" clears within seconds of Claude Code refreshing it.
+    private var lastTokenFingerprint: String?
 
     init(controller: MenuBarController) {
         self.controller = controller
@@ -45,14 +60,28 @@ final class UsageStore {
         let hb = Timer(timeInterval: heartbeatInterval, repeats: true) { [weak self] _ in self?.subTick() }
         RunLoop.main.add(hb, forMode: .common)
         heartbeat = hb
+
+        // Timers don't fire while the machine is asleep — refresh the instant it wakes so the menu bar is
+        // never showing a reading from hours ago after the lid was closed overnight.
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main
+        ) { [weak self] _ in self?.refreshNow() }
+
         subTick()
     }
 
-    /// Manual "Refresh now" — refresh local immediately and force an immediate subscription refetch.
+    /// Manual "Refresh now" — refresh local immediately and force a subscription refetch, EXCEPT when doing
+    /// so would hammer the rate-limited endpoint: an active 429 cooldown is always respected, and a healthy
+    /// reading newer than `subMinInterval` is reused rather than re-fetched (clicking Refresh repeatedly, or
+    /// a flurry of wake events, can't trip a 429). Local token usage is unlimited, so it always refreshes.
     func refreshNow() {
         refreshLocal()
+        let now = Date()
+        if now < rateLimitedUntil { return }                        // honor the server's rate-limit window
+        if snapshot.subscriptionError == nil, let asOf = snapshot.subscriptionAsOf,
+           now.timeIntervalSince(asOf) < subMinInterval { return }  // reading is fresh — don't re-hit endpoint
         nextSubFetch = .distantPast
-        if subInFlight && Date().timeIntervalSince(subStartedAt) > inFlightMax { subInFlight = false }
+        if subInFlight && now.timeIntervalSince(subStartedAt) > inFlightMax { subInFlight = false }
         subTick()
     }
 
@@ -64,6 +93,14 @@ final class UsageStore {
             if Date().timeIntervalSince(subStartedAt) <= inFlightMax { return }
             subInFlight = false
         }
+        // Never poll inside a 429 cooldown — wait the server's window out (this is the rate-limit guard).
+        if Date() < rateLimitedUntil { return }
+        // If we're in an error/stale state and Claude Code has since rotated the token, recover at once.
+        // (Skipped during a 429 cooldown above — a new token doesn't lift a rate limit.)
+        if snapshot.subscriptionError != nil, let last = lastTokenFingerprint,
+           let now = claudeTokenFingerprint(), now != last {
+            nextSubFetch = .distantPast
+        }
         if Date() < nextSubFetch { return }
         fetchSubscription()
     }
@@ -71,6 +108,7 @@ final class UsageStore {
     private func fetchSubscription() {
         subInFlight = true
         subStartedAt = Date()
+        lastTokenFingerprint = claudeTokenFingerprint()   // the token this attempt uses (for rotation detection)
         Task { [weak self] in
             guard let self = self else { return }
             do {
@@ -78,26 +116,31 @@ final class UsageStore {
                 await MainActor.run {
                     self.applySubscription(sub, error: nil)
                     self.subFailures = 0
+                    self.rateLimitedUntil = .distantPast            // recovered — clear any 429 cooldown
                     self.nextSubFetch = Date().addingTimeInterval(self.subNormal)
                     self.subInFlight = false
                 }
-            } catch let e as NSError {
-                // 429 → back off 15m. 401 (expired) / 403 (forbidden) → a clear, actionable note. Other
-                // errors (network/decode/keychain) → that error's message, with escalating retry.
-                let msg: String
-                switch e.code {
-                case 429: msg = "rate limited — retrying in 15m"
-                case 401: msg = "token expired — open Claude Code or re-login to refresh"
-                case 403: msg = "access denied — re-login may be needed"
-                default:  msg = e.localizedDescription
-                }
-                let is429 = (e.code == 429)
+            } catch {
+                // Map the failure to a clean message + the right recovery cadence:
+                //   429        → back off 15m (respect the rate limit)
+                //   401 / 403  → token expired/denied: retry fast (Claude Code refreshes in ~60s)
+                //   other      → network/decode/keychain: that error's message, escalating retry
+                let status = (error as? UsageError)?.httpStatus
+                let msg = error.localizedDescription
                 await MainActor.run {
                     self.applySubscription(nil, error: msg)
                     let delay: TimeInterval
-                    if is429 {
-                        delay = self.subBackoff
-                    } else {
+                    switch status {
+                    case 429:
+                        // Wait exactly as long as the server asks (Retry-After), clamped to a sane window;
+                        // fall back to the fixed back-off when it gives no hint. Mark the cooldown so nothing
+                        // re-hits the endpoint until it elapses.
+                        let hint = (error as? UsageError)?.retryAfter ?? self.subBackoff
+                        delay = min(self.subBackoffMax, max(self.subBackoffMin, hint))
+                        self.rateLimitedUntil = Date().addingTimeInterval(delay)
+                    case 401, 403:
+                        delay = self.subAuthRetry            // fast, fixed — don't escalate auth recovery
+                    default:
                         self.subFailures += 1
                         delay = min(self.subNormal, self.subError * pow(2, Double(self.subFailures - 1)))
                     }
@@ -138,9 +181,17 @@ final class UsageStore {
 
     /// Persist the latest usage % to ~/.claude/.cdt-usage.json so `cdt-budget` / Eco mode work on macOS
     /// without needing the status line enabled (the status line writes the same file cross-platform).
+    /// Merge-writes (preserves sibling fields like context size that other writers own).
     private func writeUsageCache(session: Int, weekly: Int) {
         let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/.cdt-usage.json")
-        let json = "{\"session\":\(session),\"weekly\":\(weekly),\"ts\":\(Int(Date().timeIntervalSince1970))}"
-        try? json.data(using: .utf8)?.write(to: url)
+        var obj = (try? Data(contentsOf: url)).flatMap {
+            try? JSONSerialization.jsonObject(with: $0) as? [String: Any]
+        } ?? [:]
+        obj["session"] = session
+        obj["weekly"] = weekly
+        obj["ts"] = Int(Date().timeIntervalSince1970)
+        if let data = try? JSONSerialization.data(withJSONObject: obj) {
+            try? data.write(to: url)
+        }
     }
 }
