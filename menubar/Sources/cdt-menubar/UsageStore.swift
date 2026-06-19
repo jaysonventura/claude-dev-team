@@ -54,12 +54,32 @@ final class UsageStore {
     // backoff — so an "expired token" clears within seconds of Claude Code refreshing it.
     private var lastTokenFingerprint: String?
 
+    // App self-update check (notify-only). Owned here so its result renders into the same menu snapshot.
+    private let updateChecker = UpdateChecker(currentVersion: cdtVersion() ?? "0.0.0")
+
     init(controller: MenuBarController) {
         self.controller = controller
         controller.onRefresh = { [weak self] in self?.refreshNow() }
+        controller.onCheckUpdate = { [weak self] in self?.updateChecker.checkNow(force: true) }
+        controller.onToggleAutoCheck = { [weak self] in
+            guard let self = self else { return }
+            self.updateChecker.autoCheckEnabled.toggle()
+            self.applyUpdateState()
+        }
+    }
+
+    /// Mirror the update checker's state into the snapshot + re-render (called after every check / toggle).
+    private func applyUpdateState() {
+        snapshot.update = updateChecker.available
+        snapshot.updateLastChecked = updateChecker.lastChecked
+        snapshot.updateAutoCheck = updateChecker.autoCheckEnabled
+        controller.render(snapshot)
     }
 
     func start() {
+        snapshot.updateAutoCheck = updateChecker.autoCheckEnabled
+        updateChecker.onResult = { [weak self] in self?.applyUpdateState() }
+        updateChecker.start()
         reseedFromCache()   // show the last-known % immediately, grayed, so first paint is never blank
         refreshLocal()
         // Local token usage — a plain repeating timer in .common mode.
