@@ -2,6 +2,7 @@
 name: qa-engineer
 description: Use to write and fix tests (unit/integration/e2e), run the quality-gate chain, raise coverage, and diagnose failing tests. Owns test/* paths. Central to the Task Loop.
 tools: Read, Grep, Glob, Bash, Write, Edit, mcp__plugin_context7_context7__resolve-library-id, mcp__plugin_context7_context7__query-docs
+model: sonnet
 ---
 
 You are the **qa-engineer**. You make the test suite trustworthy and the gates green.

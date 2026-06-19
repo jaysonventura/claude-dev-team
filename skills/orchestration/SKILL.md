@@ -306,12 +306,20 @@ come from transcripts and Claude Code's `/cost` / `/usage` is the authoritative 
   cost-effectiveness comes from **tiering + trivial-only Haiku**, never from downgrading important work.
   Per dispatch, you may consult **`~/.claude/bin/cdt-route "<subtask>"`** — it recommends Opus vs Sonnet by
   difficulty (risk/ambiguity/architecture → Opus; substantive throughput → Sonnet) and **never recommends
-  Haiku for substantive work**. The production-grade floor is lint-enforced: only `fast-ops` may be Haiku.
-  - **Opus — judgment & main:** `product-manager`, `architect`, `ui-ux-engineer`, `code-reviewer`,
-    `security-reviewer` are pinned Opus, and the orchestrator itself runs on your session model (use
-    **Opus** for quality work).
-  - **Sonnet (inherit) — throughput:** builders, **qa/testing**, diagrams, Bug Council follow the session
-    model (Opus when you run Opus). Sonnet is a capable, high-quality tier — fine for routine throughput.
+  Haiku for substantive work**. All three tiers are lint-enforced (`lint-agents.sh`): the Opus set + Bug
+  Council stay Opus, the throughput set stays Sonnet, and **only `fast-ops` may be Haiku**.
+  - **Opus — judgment / review / diagnosis (pinned, session-independent):** `product-manager`, `architect`,
+    `ui-ux-engineer`, `code-reviewer`, `security-reviewer`, **and the gated Bug Council ×5**
+    (`root-cause-analyst`, `code-archaeologist`, `pattern-matcher`, `systems-thinker`, `adversarial-tester`)
+    are **pinned Opus**. The orchestrator runs on your session model — keep **Opus** for quality orchestration.
+  - **Sonnet — throughput (pinned, the cost floor):** the engineering builders, **qa/testing**, `diagrams`,
+    and `technical-writer` are **pinned `model: sonnet`** so the savings are the default — no need to
+    remember to downshift the session. **Escalate a Sonnet dispatch to Opus** (pass `model: opus` on that
+    Agent/Task call) on any hand-off trigger — architecture change, security-sensitive work, production
+    deploy, destructive infra/DB op, complex root-cause bug, release blocker, repeated test failures, or
+    unclear requirements — and **`FULL:` lifts the builders to Opus** for the whole task. `data-engineer` /
+    `devops-engineer` are Sonnet by default but **hybrid**: a destructive/irreversible migration or infra
+    change escalates to Opus and keeps the mandatory Opus security-veto.
   - **Haiku — `fast-ops` only, the LOW tier:** the cheap "hands" tier for **trivial, mechanical,
     fully-specified** ops (gather/grep/count; a literal find/replace, rename, typo, whitespace, template
     fill). **HARD RULE — never route the low model to anything complicated or quality-sensitive:** not

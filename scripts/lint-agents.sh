@@ -10,7 +10,9 @@ err() { echo "  FAIL: $*"; fail=1; }
 # Agent classes (basenames without .md)
 READONLY="architect code-reviewer security-reviewer product-manager root-cause-analyst code-archaeologist pattern-matcher systems-thinker adversarial-tester"
 BUILDERS="backend-engineer frontend-engineer mobile-engineer data-engineer devops-engineer qa-engineer diagrams"
-OPUS="architect code-reviewer security-reviewer product-manager ui-ux-engineer"
+OPUS="architect code-reviewer security-reviewer product-manager ui-ux-engineer root-cause-analyst code-archaeologist pattern-matcher systems-thinker adversarial-tester"
+# Throughput agents pinned model: sonnet — the cost floor can't silently regress back to Opus/inherit.
+SONNET="backend-engineer frontend-engineer mobile-engineer data-engineer devops-engineer qa-engineer diagrams technical-writer"
 # Builders that MUST carry the two context7 doc tools for grounding (every builder except diagrams).
 CONTEXT7_BUILDERS="backend-engineer frontend-engineer mobile-engineer data-engineer devops-engineer qa-engineer"
 C7_RESOLVE="mcp__plugin_context7_context7__resolve-library-id"
@@ -49,8 +51,9 @@ for f in agents/*.md; do
     printf '%s' "$tools" | grep -q "$C7_DOCS" || err "$base: builder must carry context7 $C7_DOCS (grounding)" ;;
   esac
 
-  # 5. model pins
-  case " $OPUS " in *" $base "*) [ "$model" = "opus" ] || err "$base: should be 'model: opus' (judgment role)" ;; esac
+  # 5. model pins — judgment/review/diagnosis stay Opus; throughput stays Sonnet (both directions locked).
+  case " $OPUS " in *" $base "*) [ "$model" = "opus" ] || err "$base: should be 'model: opus' (judgment/review/diagnosis role)" ;; esac
+  case " $SONNET " in *" $base "*) [ "$model" = "sonnet" ] || err "$base: should be 'model: sonnet' (throughput cost floor — escalate to Opus per-dispatch, don't pin up)" ;; esac
   [ "$base" = "fast-ops" ] && { [ "$model" = "haiku" ] || err "fast-ops must be 'model: haiku' (the only low tier)"; }
 
   # 5b. PRODUCTION-GRADE MODEL FLOOR (Parallel Orchestration v2): only fast-ops may run on Haiku — no
