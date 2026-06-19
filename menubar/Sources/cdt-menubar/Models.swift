@@ -67,6 +67,12 @@ struct UsageSnapshot {
     var team = TeamActivity()
     var lastUpdated = Date()
 
+    // App self-update check (notify-only): a newer release if one exists, the last-checked time, and the
+    // auto-check toggle state. Populated by UpdateChecker; rendered as the "Updates" section.
+    var update: ReleaseInfo?
+    var updateLastChecked: Date?
+    var updateAutoCheck = true
+
     /// True when we're showing a non-live reading — either the last good one after a failed refresh
     /// (e.g. expired token / rate limit) or the disk-cached one before the first live fetch lands. The
     /// displayed %s are grayed so a non-live value never masquerades as fresh.

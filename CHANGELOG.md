@@ -2,6 +2,18 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.49.0] — 2026-06-19
+### Added
+- **The menu bar app now checks for updates and tells you when a new version is out.** It quietly polls the
+  GitHub releases API on launch and every 6 h, and when a newer version exists it shows a prominent
+  **⬆ Update available — get vX.Y.Z** banner at the top of the dropdown (click → opens the release page) plus
+  a best-effort macOS notification (once per version). A new **Updates** submenu (Settings → Updates) shows
+  the status (`✓ Up to date (v1.49.0)` or the available version), a **Check Now** action, an **Auto-check on
+  launch** toggle (default on, persisted), and the last-checked time. **Notify-only** — it never
+  auto-installs (that stays the plugin's `cdt-menubar` path); fail-soft (a failed check never disrupts the
+  app or the usage display). Version compare is numeric-aware (`1.10.0 > 1.9.0`). New unit tests + a live
+  GitHub E2E check (29 tests).
+
 ## [1.48.0] — 2026-06-19
 ### Fixed
 - **The menu bar no longer flashes "credentials not readable from Keychain" on a transient blip.** Right

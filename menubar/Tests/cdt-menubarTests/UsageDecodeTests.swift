@@ -177,6 +177,45 @@ final class UsageDecodeTests: XCTestCase {
         XCTAssertFalse(KeychainError.noToken.isLoggedOut)
     }
 
+    // MARK: - app self-update check (GitHub releases)
+
+    func testParseLatestRelease() {
+        let json = #"{"tag_name":"v1.49.0","name":"v1.49.0","html_url":"https://github.com/jaysonventura/claude-dev-team/releases/tag/v1.49.0"}"#
+        let r = parseLatestRelease(Data(json.utf8))
+        XCTAssertEqual(r?.version, "1.49.0")            // "v" stripped
+        XCTAssertEqual(r?.url, "https://github.com/jaysonventura/claude-dev-team/releases/tag/v1.49.0")
+        XCTAssertEqual(parseLatestRelease(Data(#"{"tag_name":"2.0.0"}"#.utf8))?.version, "2.0.0")  // no "v"
+        XCTAssertNil(parseLatestRelease(Data(#"{"name":"x"}"#.utf8)))                              // no tag
+        XCTAssertNil(parseLatestRelease(Data(#"{"tag_name":""}"#.utf8)))                            // empty tag
+        XCTAssertNil(parseLatestRelease(Data("not json".utf8)))
+    }
+
+    func testIsNewerVersion() {
+        XCTAssertTrue(isNewerVersion("1.49.0", than: "1.48.0"))
+        XCTAssertTrue(isNewerVersion("v1.49.0", than: "1.48.0"))   // v prefix tolerated
+        XCTAssertTrue(isNewerVersion("1.10.0", than: "1.9.0"))     // numeric-aware (10 > 9)
+        XCTAssertTrue(isNewerVersion("2.0.0", than: "1.99.99"))
+        XCTAssertFalse(isNewerVersion("1.48.0", than: "1.48.0"))   // equal → not newer
+        XCTAssertFalse(isNewerVersion("1.47.0", than: "1.48.0"))   // older
+        XCTAssertFalse(isNewerVersion("1.48", than: "1.48.0"))     // 1.48 == 1.48.0
+    }
+
+    /// Live E2E: hit the real GitHub releases API and confirm the full chain (request → parse → compare).
+    /// Skipped unless CDT_LIVE_UPDATE_CHECK is set (so CI without network stays green).
+    func testLiveGitHubReleaseCheck() throws {
+        guard ProcessInfo.processInfo.environment["CDT_LIVE_UPDATE_CHECK"] != nil else {
+            throw XCTSkip("set CDT_LIVE_UPDATE_CHECK=1 to hit the real GitHub releases API")
+        }
+        let exp = expectation(description: "github releases")
+        let checker = UpdateChecker(currentVersion: "0.0.0")   // 0.0.0 → any published release is "newer"
+        checker.onResult = { exp.fulfill() }
+        checker.checkNow(force: true)
+        wait(for: [exp], timeout: 25)
+        XCTAssertNotNil(checker.lastChecked)
+        XCTAssertNotNil(checker.available, "expected a newer release vs 0.0.0")
+        print("LIVE latest release:", checker.available?.version ?? "nil", checker.available?.url ?? "")
+    }
+
     func testRetryAfterHeaderParsing() {
         let url = URL(string: "https://api.anthropic.com")!
         func resp(_ headers: [String: String]) -> HTTPURLResponse {

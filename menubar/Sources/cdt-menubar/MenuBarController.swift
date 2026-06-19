@@ -3,7 +3,10 @@ import AppKit
 final class MenuBarController: NSObject {
     private let statusItem: NSStatusItem
     var onRefresh: (() -> Void)?
+    var onCheckUpdate: (() -> Void)?        // "Check Now" in the Updates submenu
+    var onToggleAutoCheck: (() -> Void)?    // toggle "Auto-check on launch"
     private var lastSnap: UsageSnapshot?   // so config changes can rebuild the menu in place
+    private var updateURL: String?         // release page to open for "Get vX.Y.Z"
     private lazy var versionString: String? = cdtVersion()   // installed version (constant per run)
 
     override init() {
@@ -77,6 +80,19 @@ final class MenuBarController: NSObject {
             i.attributedTitle = NSAttributedString(
                 string: t, attributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)])
             menu.addItem(i)
+        }
+
+        // Update banner (top, prominent) — only when a newer release was found. Click → open the release page.
+        updateURL = snap.update?.url
+        if let up = snap.update {
+            let item = NSMenuItem(title: "⬆  Update available — get v\(up.version)",
+                                  action: #selector(getUpdateClicked), keyEquivalent: "")
+            item.target = self
+            item.attributedTitle = NSAttributedString(string: "⬆  Update available — get v\(up.version)",
+                attributes: [.font: NSFont.systemFont(ofSize: 12, weight: .semibold),
+                             .foregroundColor: NSColor.systemBlue])
+            menu.addItem(item)
+            menu.addItem(.separator())
         }
 
         // Subscription section
@@ -172,6 +188,29 @@ final class MenuBarController: NSObject {
             line("  \(run.role.padding(toLength: 18, withPad: " ", startingAt: 0)) ×\(run.count)")
         }
 
+        // Updates submenu (Settings → Updates): status, Get/Check Now, and the auto-check toggle.
+        menu.addItem(.separator())
+        let updates = NSMenuItem(title: "Updates", action: nil, keyEquivalent: "")
+        let usub = NSMenu()
+        func uinfo(_ t: String) {
+            let i = NSMenuItem(title: t, action: nil, keyEquivalent: ""); i.isEnabled = false; usub.addItem(i)
+        }
+        if let up = snap.update {
+            uinfo("⬆  v\(up.version) available  (on v\(versionString ?? "?"))")
+            let get = NSMenuItem(title: "Get v\(up.version)…", action: #selector(getUpdateClicked), keyEquivalent: "")
+            get.target = self; usub.addItem(get)
+        } else {
+            uinfo("✓  Up to date" + (versionString.map { "  (v\($0))" } ?? ""))
+        }
+        let checkNow = NSMenuItem(title: "Check Now", action: #selector(checkUpdateClicked), keyEquivalent: "")
+        checkNow.target = self; usub.addItem(checkNow)
+        let autoCheck = NSMenuItem(title: "Auto-check on launch", action: #selector(toggleAutoCheckClicked), keyEquivalent: "")
+        autoCheck.target = self; autoCheck.state = snap.updateAutoCheck ? .on : .off; usub.addItem(autoCheck)
+        usub.addItem(.separator())
+        uinfo(snap.updateLastChecked.map { "Last checked: \(clockTime($0))" } ?? "Not checked yet")
+        updates.submenu = usub
+        menu.addItem(updates)
+
         menu.addItem(.separator())
         let stamp = clockTime(snap.lastUpdated, seconds: true)
         // Footer: installed version + last refresh (version omitted if it can't be resolved).
@@ -220,5 +259,10 @@ final class MenuBarController: NSObject {
     }
 
     @objc private func refreshClicked() { onRefresh?() }
+    @objc private func checkUpdateClicked() { onCheckUpdate?() }
+    @objc private func toggleAutoCheckClicked() { onToggleAutoCheck?() }
+    @objc private func getUpdateClicked() {
+        if let s = updateURL, let url = URL(string: s) { NSWorkspace.shared.open(url) }
+    }
     @objc private func quitClicked() { NSApp.terminate(nil) }
 }
