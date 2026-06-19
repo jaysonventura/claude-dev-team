@@ -29,12 +29,15 @@ final class UsageStore {
     private let subNormal: TimeInterval = 300        // 5 min (endpoint, healthy)
     private let subError: TimeInterval = 60          // base retry after a non-429 failure — recover fast
     private let subAuthRetry: TimeInterval = 45      // 401/403: retry fast — Claude Code refreshes in ~60s
+    private let subKeychainRetry: TimeInterval = 20   // transient Keychain blip: retry fast + quietly
+    private let kcVisibleAfter = 6                     // only surface a Keychain note after ~2m of failures
     private let subBackoff: TimeInterval = 300        // after HTTP 429 with no Retry-After (server typically sends 300)
     private let subBackoffMin: TimeInterval = 60      // floor on a 429 back-off (don't retry faster than this)
     private let subBackoffMax: TimeInterval = 1800    // ceiling on a 429 back-off (cap a huge Retry-After)
     private let subMinInterval: TimeInterval = 20     // don't re-hit the endpoint if the reading is this fresh
     private let inFlightMax: TimeInterval = 30        // a fetch overdue past this is treated as lost
     private var subFailures = 0                       // consecutive non-429 failures → escalating backoff
+    private var kcFailures = 0                         // consecutive transient Keychain failures (for the note)
 
     // While we're inside a 429 cooldown nothing may hit the endpoint — not the heartbeat, not "Refresh now",
     // not a wake event, not token-rotation. This is what stops the menu bar from worsening a rate limit.
@@ -57,7 +60,7 @@ final class UsageStore {
     }
 
     func start() {
-        seedFromCache()   // show the last-known % immediately, grayed, so first paint is never blank
+        reseedFromCache()   // show the last-known % immediately, grayed, so first paint is never blank
         refreshLocal()
         // Local token usage — a plain repeating timer in .common mode.
         let lt = Timer(timeInterval: localInterval, repeats: true) { [weak self] _ in self?.refreshLocal() }
@@ -126,37 +129,63 @@ final class UsageStore {
                 await MainActor.run {
                     self.applySubscription(sub, error: nil)
                     self.subFailures = 0
+                    self.kcFailures = 0
                     self.rateLimitedUntil = .distantPast            // recovered — clear any 429 cooldown
                     self.nextSubFetch = Date().addingTimeInterval(self.subNormal)
                     self.subInFlight = false
                 }
             } catch {
-                // Map the failure to a clean message + the right recovery cadence:
+                // Map the failure to the right recovery cadence + decide whether to show a note. The guiding
+                // rule: a TRANSIENT blip must never flash a scary error — fall back to the status-line cache
+                // (kept live without the Keychain) and show "cached · refreshing…". Only persistent or
+                // actionable failures get a message.
                 //   429        → honor Retry-After (respect the rate limit), show a countdown
-                //   401 / 403  → token expired/denied: retry fast (Claude Code refreshes in ~60s)
-                //   other      → network/decode/keychain: that error's message, escalating retry
+                //   401 / 403  → token expired/denied: retry fast + show the actionable message
+                //   keychain transient → retry fast + quiet; surface a note only after ~2m of failures
+                //   keychain logged-out → "Claude Code not logged in"
+                //   network/decode → soften the first couple, then show the message
                 let status = (error as? UsageError)?.httpStatus
                 let retryHint = (error as? UsageError)?.retryAfter
-                let msg = error.localizedDescription
+                let kc = error as? KeychainError
                 await MainActor.run {
                     let delay: TimeInterval
                     var retryAt: Date? = nil
+                    var visibleError: String? = nil
                     switch status {
                     case 429:
-                        // Wait exactly as long as the server asks (Retry-After), clamped to a sane window;
-                        // fall back to the gentle fixed back-off when it gives no hint. Mark the cooldown so
-                        // nothing re-hits the endpoint until it elapses, and surface a countdown to the user.
                         let hint = retryHint ?? self.subBackoff
                         delay = min(self.subBackoffMax, max(self.subBackoffMin, hint))
                         self.rateLimitedUntil = Date().addingTimeInterval(delay)
                         retryAt = self.rateLimitedUntil
+                        visibleError = error.localizedDescription
+                        self.subFailures = 0; self.kcFailures = 0
                     case 401, 403:
-                        delay = self.subAuthRetry            // fast, fixed — don't escalate auth recovery
+                        delay = self.subAuthRetry
+                        visibleError = error.localizedDescription
+                        self.subFailures = 0; self.kcFailures = 0
                     default:
-                        self.subFailures += 1
-                        delay = min(self.subNormal, self.subError * pow(2, Double(self.subFailures - 1)))
+                        if kc?.isTransient == true {
+                            // Momentary Keychain unavailability (just after Claude Code rewrote the item).
+                            // Retry fast and stay quiet; only note it if it persists for a couple of minutes.
+                            self.kcFailures += 1
+                            delay = self.subKeychainRetry
+                            visibleError = self.kcFailures >= self.kcVisibleAfter
+                                ? "Keychain busy — relaunch CDT Usage if this persists" : nil
+                            self.subFailures = 0
+                        } else if kc?.isLoggedOut == true {
+                            delay = self.subError
+                            visibleError = "Claude Code not logged in — open it to sign in"
+                            self.kcFailures = 0
+                        } else {
+                            self.subFailures += 1
+                            delay = min(self.subNormal, self.subError * pow(2, Double(self.subFailures - 1)))
+                            visibleError = self.subFailures >= 3 ? error.localizedDescription : nil
+                            self.kcFailures = 0
+                        }
                     }
-                    self.applySubscription(nil, error: msg, retryAt: retryAt)
+                    // Keep the badge current from the status-line cache during any outage (no Keychain needed).
+                    self.reseedFromCache(force: true)
+                    self.applySubscription(nil, error: visibleError, retryAt: retryAt)
                     self.nextSubFetch = Date().addingTimeInterval(delay)
                     self.subInFlight = false
                 }
@@ -195,17 +224,20 @@ final class UsageStore {
         controller.render(snapshot)
     }
 
-    /// Seed the displayed subscription % from the on-disk cache (~/.claude/.cdt-usage.json) at launch, so the
-    /// menu bar shows the last-known reading (grayed) immediately instead of a blank "unavailable" while the
-    /// first live fetch is in flight — and keeps showing it if that first fetch is rate-limited. The reading
-    /// is marked `seeded` (stale) and is replaced the instant a live fetch lands.
-    private func seedFromCache() {
-        guard snapshot.subscription == nil else { return }
+    /// Refresh the displayed % from the on-disk cache (`~/.claude/.cdt-usage.json`), which the status line
+    /// keeps live WITHOUT the Keychain. At launch (no reading yet) this avoids a blank first paint; with
+    /// `force` (our own fetch just failed — e.g. a transient Keychain blip) it keeps the badge current
+    /// during the outage instead of showing an error. The reading is marked `seeded` (grayed) and is
+    /// replaced the instant a live fetch lands. Preserves the last-good plan label / Sonnet % if present.
+    private func reseedFromCache(force: Bool = false) {
+        guard force || snapshot.subscription == nil else { return }
         let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/.cdt-usage.json")
         guard let data = try? Data(contentsOf: url), let c = parseUsageCache(data) else { return }
         snapshot.subscription = SubscriptionUsage(
-            sessionPct: c.session, weeklyPct: c.weekly, sonnetPct: nil,
-            sessionResetIn: nil, weeklyResetIn: nil, planLabel: nil)
+            sessionPct: c.session, weeklyPct: c.weekly,
+            sonnetPct: snapshot.subscription?.sonnetPct,
+            sessionResetIn: nil, weeklyResetIn: nil,
+            planLabel: snapshot.subscription?.planLabel)
         snapshot.subscriptionSeeded = true
         if let ts = c.ts { snapshot.subscriptionAsOf = Date(timeIntervalSince1970: TimeInterval(ts)) }
         controller.render(snapshot)

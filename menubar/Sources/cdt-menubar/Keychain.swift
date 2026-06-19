@@ -17,6 +17,23 @@ enum KeychainError: LocalizedError {
             return "Could not read the OAuth access token from the Keychain item."
         }
     }
+
+    /// A TRANSIENT "can't read it right this second" — the item is momentarily locked or interaction isn't
+    /// allowed (typically just after Claude Code rewrote the credential, which briefly resets its ACL).
+    /// These clear on their own within seconds, so the menu bar retries quietly and keeps showing the cached
+    /// %s instead of flashing a scary error.
+    var isTransient: Bool {
+        if case .notFound(let s) = self {
+            return s == errSecInteractionNotAllowed || s == errSecAuthFailed || s == errSecNotAvailable
+        }
+        return false
+    }
+
+    /// The Keychain item genuinely doesn't exist → Claude Code isn't logged in (an actionable state).
+    var isLoggedOut: Bool {
+        if case .notFound(let s) = self { return s == errSecItemNotFound }
+        return false
+    }
 }
 
 // The Keychain item "Claude Code-credentials" stores JSON:

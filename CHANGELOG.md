@@ -2,6 +2,17 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.48.0] — 2026-06-19
+### Fixed
+- **The menu bar no longer flashes "credentials not readable from Keychain" on a transient blip.** Right
+  after Claude Code rewrites its Keychain credential (token refresh / re-login), the item is momentarily
+  unreadable to the menu bar — which used to surface a scary error. Now those transient Keychain failures
+  (`interaction-not-allowed` / `auth-failed` / `not-available`) are retried **fast and quietly**, and the
+  badge falls back to the status line's cache (`~/.claude/.cdt-usage.json`, kept live without the Keychain)
+  showing `cached · refreshing…` with your current %s instead of an error. A note only appears if it
+  persists (~2 min). Genuinely-logged-out (`item-not-found`) shows a clear "Claude Code not logged in",
+  and network/decode blips are softened too. New Keychain-error-classification test (25 tests total).
+
 ## [1.47.0] — 2026-06-19
 ### Fixed
 - **Status-line health metrics are now per-session — multiple terminals no longer clobber each other.**
