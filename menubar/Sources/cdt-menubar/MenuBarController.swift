@@ -93,8 +93,18 @@ final class MenuBarController: NSObject {
                 line("  Sonnet   \(textBar(s)) \(s)%")
             }
             if snap.subscriptionStale {
-                let asOf = snap.subscriptionAsOf.map { "  (last good \(clockTime($0)))" } ?? ""
-                line("  ⚠ \(snap.subscriptionError ?? "usage stale")\(asOf)")
+                // Explain WHY the reading is grayed: a rate-limit countdown, a "refreshing the cached value"
+                // note on cold start, or the underlying error — so a stale value never looks broken/frozen.
+                let note: String
+                if let retryAt = snap.subscriptionRetryAt, retryAt > Date() {
+                    note = "rate limited · retry \(formatCountdown(to: retryAt))"
+                } else if snap.subscriptionSeeded && snap.subscriptionError == nil {
+                    note = "cached · refreshing…"
+                } else {
+                    note = snap.subscriptionError ?? "usage stale"
+                }
+                let asOf = snap.subscriptionAsOf.map { "  (as of \(clockTime($0)))" } ?? ""
+                line("  ⚠ \(note)\(asOf)")
             }
         } else if snap.subscriptionLoading {
             line("  loading usage…")
