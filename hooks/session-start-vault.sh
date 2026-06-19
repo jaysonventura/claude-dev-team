@@ -7,6 +7,9 @@ set +e
 # do no bootstrap work — keep the nested call fast and side-effect-free.
 [ "${CDT_IN_ENHANCER:-0}" = "1" ] && exit 0
 
+# Capture the hook payload (carries cwd/session_id) before any other processing. Nothing else reads stdin.
+_SS_INPUT="$(cat 2>/dev/null)"
+
 HOOKS_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
 CDT_HOME="$HOME/.claude"
 VAULT="$CDT_HOME/vault"
@@ -37,6 +40,7 @@ cp "$HOOKS_DIR/statusline.sh" "$BIN/cdt-statusline" 2>/dev/null && chmod +x "$BI
 # Python helpers the status line imports at runtime (must sit beside cdt-statusline in $BIN).
 cp "$HOOKS_DIR/cdt_emoji.py"      "$BIN/cdt_emoji.py"      2>/dev/null
 cp "$HOOKS_DIR/running_agents.py" "$BIN/running_agents.py" 2>/dev/null
+cp "$HOOKS_DIR/usage_cache.py"    "$BIN/usage_cache.py"    2>/dev/null
 cp "$HOOKS_DIR/deps.sh"    "$BIN/cdt-deps"     2>/dev/null && chmod +x "$BIN/cdt-deps"     2>/dev/null
 cp "$HOOKS_DIR/tokens.sh"  "$BIN/cdt-tokens"   2>/dev/null && chmod +x "$BIN/cdt-tokens"   2>/dev/null
 cp "$HOOKS_DIR/worktree.sh" "$BIN/cdt-worktree" 2>/dev/null && chmod +x "$BIN/cdt-worktree" 2>/dev/null
@@ -113,22 +117,9 @@ fi
 echo
 echo "_Triage every task (T0–T3); delegate under contracts; gate; ship; persist. Preferred defaults: **xhigh** effort + **Opus 4.8** (adjust via cdt-config). For lessons relevant to a task, run \`~/.claude/bin/cdt-recall \"<task>\"\`. Report milestones to the user._"
 
-# Reset per-session health metrics (context, duration, agent count) on every SessionStart/clear/compact.
-python3 - <<'PY' 2>/dev/null
-import os, json, time
-cache = os.path.join(os.path.expanduser("~/.claude"), ".cdt-usage.json")
-tmp = cache + ".ss.%d.tmp" % os.getpid()
-try:
-    existing = json.load(open(cache))
-except Exception:
-    existing = {}
-existing.update({"session_start": int(time.time()), "agent_count": 0,
-                 "ctx_tokens": 0, "ctx_mtime": 0.0})
-try:
-    with open(tmp, "w") as f:
-        json.dump(existing, f)
-    os.replace(tmp, cache)
-except Exception:
-    pass
-PY
+# Reset per-session health metrics (context, duration, agent count) for THIS workspace on every
+# SessionStart/clear/compact — keyed per-workspace so two terminals in different projects don't reset or
+# clobber each other's numbers (account-wide usage % stays global). Fail-open.
+_SS_CWD="$(printf '%s' "$_SS_INPUT" | sed -n 's/.*"cwd"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)"
+python3 "$HOOKS_DIR/usage_cache.py" reset "$_SS_CWD" 2>/dev/null
 exit 0

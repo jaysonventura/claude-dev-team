@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.46.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.47.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -448,7 +448,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.46.1**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.47.0**.
 
 ---
 
@@ -756,6 +756,12 @@ Each ` · `-separated segment:
 | 🤖 N | `🤖 23` | **subagents fired this session** (cumulative). Shown only when no wave is running |
 | 🔭 role×N | `🔭 Explore×3 · ⚙️ backend-engineer×1` | **running now** — the specialists currently in flight (role emoji + count), updating live as they start/finish. Replaces `🤖 N` during a wave; the plugin namespace is stripped (shows `backend-engineer`, not `cdt:backend-engineer`). Top 2 roles, then `+K` |
 | 🧭 i/N name | `🧭 1/3 Recon` | the **phase board** indicator on T2/T3 tasks, when a board is active (`CDT_PHASE_BOARD=on`) |
+
+**Scope — run multiple terminals safely.** The **per-session** segments (`🪟` context, `⏱` age, `🤖`/running
+agents, `🧭` phase) plus `🧠 model` and `⚡ effort` are scoped **per workspace**, so two terminals in
+different projects each show their *own* numbers (they don't clobber each other). Only `📊 N% wk` is
+**account-wide** — it's your subscription's weekly rate limit, so it reads the same everywhere on purpose.
+(Health metrics are keyed by workspace path; two sessions in the *same* project share them.)
 
 The same role emoji appear on the per-agent dispatch/finish lines in the transcript (`▶️ 🔭 Explore · …`,
 `✅ 🔭 Explore · 74.1k tok`). Note: Claude Code's **own** running-agents tree still shows the namespaced
