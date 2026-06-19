@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.46.1] — 2026-06-19
+### Docs
+- **Documented the status line.** New "Status line (cross-platform)" section in the README with a
+  per-segment legend for `CDT on · 🧠 opus · ⚡ xhigh · 📊 3% wk · 🪟 Nk · ⏱ Nh · 🤖 N` (plus the live
+  `🔭 Explore×3` running-agents and `🧭 i/N` phase segments), and refreshed the outdated inline example.
+  `docs/architecture.md` gains the `PreToolUse (Task)` dispatch hook + the status-line/running-agents wiring
+  in its Hooks section. No code change.
+
 ## [1.46.0] — 2026-06-19
 ### Added
 - **Live multi-agent status line — see what's running *now*, below "auto mode on".** The CDT status line

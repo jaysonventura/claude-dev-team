@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.46.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.46.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -448,7 +448,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.46.0**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.46.1**.
 
 ---
 
@@ -707,8 +707,9 @@ two-line shape that survives a crowded or notched menu bar. Click it for the ful
   <img src="assets/menubar-screenshot.png" alt="CDT Usage menu bar dropdown — subscription %, local tokens, and the interactive claude-dev-team control panel" width="300">
 </p>
 
-> **macOS only.** On **Windows/Linux** there's no menu bar — use the cross-platform **status line** for
-> the same usage display: `~/.claude/bin/cdt-config statusline on` (shows `CDT on · Opus · xhigh · 41% wk`).
+> **macOS only.** On **Windows/Linux** there's no menu bar — use the cross-platform **[status line](#status-line-cross-platform)**
+> for the same usage display: `~/.claude/bin/cdt-config statusline on` (shows
+> `CDT on · 🧠 opus · ⚡ xhigh · 📊 41% wk · 🪟 148k · ⏱ 7h · 🤖 23` — each segment explained below).
 
 **On macOS it auto-installs** on your first session after the plugin is installed — it builds, launches,
 and enables login auto-start automatically (set `CDT_MENUBAR_AUTO=0` in `~/.claude/claude-dev-team.env`
@@ -728,6 +729,38 @@ uninstall` removes the login item + binary (and stops auto-reinstall).
 **notarized DMG** that opens on any Mac with no Gatekeeper warnings (drag to Applications, like an App
 Store app), see [`menubar/RELEASING.md`](menubar/RELEASING.md) — it needs a Developer ID Application
 certificate + `notarytool` credentials, then `cd menubar && ./release.sh`.
+
+## Status line (cross-platform)
+
+The **status line** is the bottom-bar usage display — the menu bar's cross-platform equivalent (works on
+macOS, Linux, and Windows; no Swift/Keychain needed). Turn it on with `~/.claude/bin/cdt-config statusline on`
+(restart Claude Code to see it). It's **display-only and costs zero tokens** — a hook renders it from the
+session JSON Claude Code already provides, and it fails soft (any missing piece is just omitted).
+
+A typical line:
+
+```
+CDT on · 🧠 opus · ⚡ xhigh · 📊 3% wk · 🪟 148k · ⏱ 7h · 🔭 Explore×3 · 🧭 1/3 Recon
+```
+
+Each ` · `-separated segment:
+
+| Segment | Example | Meaning |
+|---------|---------|---------|
+| `CDT <on\|OFF>` | `CDT on` | whether claude-dev-team is enabled (`cdt-config on\|off`) |
+| 🧠 model | `🧠 opus` | the active session model |
+| ⚡ effort | `⚡ xhigh` | the reasoning-effort level |
+| 📊 N% wk | `📊 3% wk` | **weekly** subscription usage — your 7-day rate-limit utilization (cached to `~/.claude/.cdt-usage.json` for `cdt-budget` / Eco mode) |
+| 🪟 Nk | `🪟 148k` | current **context-window** size — input tokens in the active transcript, in thousands |
+| ⏱ Nh / Nm | `⏱ 7h` | **session age** since the last start / `/clear` / `/compact` |
+| 🤖 N | `🤖 23` | **subagents fired this session** (cumulative). Shown only when no wave is running |
+| 🔭 role×N | `🔭 Explore×3 · ⚙️ backend-engineer×1` | **running now** — the specialists currently in flight (role emoji + count), updating live as they start/finish. Replaces `🤖 N` during a wave; the plugin namespace is stripped (shows `backend-engineer`, not `cdt:backend-engineer`). Top 2 roles, then `+K` |
+| 🧭 i/N name | `🧭 1/3 Recon` | the **phase board** indicator on T2/T3 tasks, when a board is active (`CDT_PHASE_BOARD=on`) |
+
+The same role emoji appear on the per-agent dispatch/finish lines in the transcript (`▶️ 🔭 Explore · …`,
+`✅ 🔭 Explore · 74.1k tok`). Note: Claude Code's **own** running-agents tree still shows the namespaced
+`cdt:backend-engineer` — the namespace prefix on a plugin agent is fixed by Claude Code and only the
+CDT-rendered surfaces (this status line, the dispatch lines) show the short name.
 
 ## Configuration
 
