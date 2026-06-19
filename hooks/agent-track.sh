@@ -90,21 +90,7 @@ if [ -n "$SID" ] && [ -f "$HOOKS_DIR/scope-lib.sh" ]; then
   fi
 fi
 
-# Increment per-session agent count in the usage cache (for the status-line health display).
-python3 - <<'PY' 2>/dev/null
-import os, json
-cache = os.path.join(os.path.expanduser("~/.claude"), ".cdt-usage.json")
-tmp = cache + ".agt.%d.tmp" % os.getpid()
-try:
-    existing = json.load(open(cache))
-except Exception:
-    existing = {}
-existing["agent_count"] = existing.get("agent_count", 0) + 1
-try:
-    with open(tmp, "w") as f:
-        json.dump(existing, f)
-    os.replace(tmp, cache)
-except Exception:
-    pass
-PY
+# Increment THIS session's subagent count (per-workspace, for the status-line health display). Keyed by
+# workspace so two terminals in different projects keep separate counts. Fail-open.
+python3 "$HOOKS_DIR/usage_cache.py" incr "$_RCWD" 2>/dev/null
 exit 0

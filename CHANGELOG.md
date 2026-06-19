@@ -2,6 +2,18 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.47.0] — 2026-06-19
+### Fixed
+- **Status-line health metrics are now per-session — multiple terminals no longer clobber each other.**
+  `🪟` context size, `⏱` session age, and `🤖` subagent count were stored in a single shared
+  `~/.claude/.cdt-usage.json` field, so two terminals in **different projects** overwrote each other (the
+  context got clobbered by whichever rendered last, the age showed whichever session started last, and the
+  subagent count was the *sum* of both). These are now keyed **per workspace** (`hooks/usage_cache.py`):
+  each terminal shows its own numbers. Account-wide subscription usage (`📊 N% wk`) stays a single shared
+  value — correct, it's your rate limit. Stale per-session entries are pruned after 24 h. The SessionStart
+  (reset), SubagentStop (increment), and status-line (read/refresh) hooks all key the same way. New
+  multi-terminal isolation test in `validate.sh`.
+
 ## [1.46.1] — 2026-06-19
 ### Docs
 - **Documented the status line.** New "Status line (cross-platform)" section in the README with a

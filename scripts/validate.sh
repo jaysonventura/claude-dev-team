@@ -105,5 +105,28 @@ sys.exit(1 if errs else 0)
 PY
 then fail=1; else echo "  ok:   emoji map + running-agents add/remove/render"; fi
 
+echo "== per-session usage cache (usage_cache.py — multi-terminal isolation) =="
+if ! python3 - <<'PY'
+import os, sys, tempfile, json
+os.environ["HOME"] = tempfile.mkdtemp()                     # isolate the cache under a temp HOME
+os.makedirs(os.path.join(os.environ["HOME"], ".claude"), exist_ok=True)
+sys.path.insert(0, "hooks")
+import usage_cache as uc                                     # CACHE resolves under the temp HOME at import
+errs = []
+a, b = uc.skey("/proj/a"), uc.skey("/proj/b")
+uc.reset_session(a); uc.reset_session(b)
+uc.incr_agent(a); uc.incr_agent(a); uc.incr_agent(b)        # A×2, B×1 — must NOT clobber each other
+if uc.get_session(a).get("agent_count") != 2: errs.append("A count")
+if uc.get_session(b).get("agent_count") != 1: errs.append("B count clobbered by A")
+uc.update_ctx(a, 123, 1.0, {"weekly": 9})                  # A's context + account-wide weekly %
+d = json.load(open(uc.CACHE))
+if d.get("weekly") != 9: errs.append("account weekly not shared at top level")
+if d["sessions"]["/proj/a"]["ctx_tokens"] != 123: errs.append("A ctx not stored per-session")
+if d["sessions"]["/proj/b"]["agent_count"] != 1: errs.append("B not isolated after A write")
+for e in errs: print("  FAIL:", e)
+sys.exit(1 if errs else 0)
+PY
+then fail=1; else echo "  ok:   per-session metrics isolated; account usage shared"; fi
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "VALIDATION FAILED"; exit 1; fi

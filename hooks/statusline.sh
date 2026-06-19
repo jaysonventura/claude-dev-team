@@ -24,6 +24,10 @@ try:
     import running_agents as _run
 except Exception:
     _run = None
+try:
+    import usage_cache as _uc
+except Exception:
+    _uc = None
 
 home = os.path.expanduser("~/.claude")
 cache = os.environ["CACHE"]
@@ -32,13 +36,6 @@ try:
     d = json.loads(os.environ.get("IN", "") or "{}")
 except Exception:
     d = {}
-
-# Read existing cache to preserve session_start + agent_count written by other hooks.
-existing = {}
-try:
-    existing = json.load(open(cache))
-except Exception:
-    pass
 
 model = (d.get("model") or {}).get("display_name") or "?"
 effort = (d.get("effort") or {}).get("level") or ""
@@ -50,10 +47,14 @@ def up(k):
         return None
 wk = up("seven_day"); se = up("five_hour")
 
-# --- Context tokens: scan current project's JSONL (mtime-guarded to skip re-reads) ---
+# Per-session health metrics (context size, session age, subagents) are keyed by WORKSPACE so two terminals
+# in different projects don't clobber each other; account-wide session/weekly % stay global (top-level).
 ws = (d.get("workspace") or {}).get("current_dir") or d.get("cwd") or ""
-ctx_tokens = existing.get("ctx_tokens", 0)
-ctx_mtime  = existing.get("ctx_mtime", 0.0)
+sess = _uc.get_session(_uc.skey(ws)) if _uc else {}
+
+# --- Context tokens: scan current project's JSONL (mtime-guarded to skip re-reads) ---
+ctx_tokens = sess.get("ctx_tokens", 0)
+ctx_mtime  = sess.get("ctx_mtime", 0.0)
 if ws:
     encoded  = ws.replace("/", "-")          # /Users/foo/bar → -Users-foo-bar
     proj_dir = os.path.join(home, "projects", encoded)
@@ -75,24 +76,35 @@ if ws:
                 except Exception:
                     pass
 
-# --- Session duration ---
-session_start = existing.get("session_start", 0)
+# --- Session duration (this session's own start, set by SessionStart) ---
+session_start = sess.get("session_start", 0)
 dur_str = None
 if session_start > 0:
     elapsed = int(time.time()) - session_start
     dur_str = f"{elapsed // 3600}h" if elapsed >= 3600 else f"{elapsed // 60}m"
 
-# Merge-write cache: update rate-limit % and context fields, preserve session_start + agent_count.
+# Persist: account-wide usage % (top-level, shared across terminals) + THIS session's context size.
 if wk is not None or se is not None:
-    try:
-        existing.update({"session": se or 0, "weekly": wk or 0, "ts": int(time.time()),
-                         "ctx_tokens": ctx_tokens, "ctx_mtime": ctx_mtime})
-        tmp_f = cache + ".%d.tmp" % os.getpid()
-        with open(tmp_f, "w") as f:
-            json.dump(existing, f)
-        os.replace(tmp_f, cache)
-    except Exception:
-        pass
+    glob = {"session": se or 0, "weekly": wk or 0, "ts": int(time.time())}
+    if _uc:
+        try:
+            _uc.update_ctx(_uc.skey(ws), ctx_tokens, ctx_mtime, glob)
+        except Exception:
+            pass
+    else:                                   # legacy fallback (helper missing): keep usage % fresh globally
+        try:
+            ex = {}
+            try:
+                ex = json.load(open(cache))
+            except Exception:
+                pass
+            ex.update(glob)
+            tmp_f = cache + ".%d.tmp" % os.getpid()
+            with open(tmp_f, "w") as f:
+                json.dump(ex, f)
+            os.replace(tmp_f, cache)
+        except Exception:
+            pass
 
 parts = [f"CDT {os.environ['MODE']}", f"🧠 {model}"]
 if effort:
@@ -101,7 +113,7 @@ if wk is not None:
     parts.append(f"📊 {wk}% wk")
 
 # Health metrics: context size, session age.
-agent_count = existing.get("agent_count", 0)
+agent_count = sess.get("agent_count", 0)
 if ctx_tokens > 0:
     parts.append(f"🪟 {ctx_tokens // 1000}k" if ctx_tokens >= 1000 else f"🪟 {ctx_tokens}")
 if dur_str:
