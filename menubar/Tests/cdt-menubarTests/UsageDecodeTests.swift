@@ -1,4 +1,5 @@
 import XCTest
+import Security
 @testable import cdt_menubar
 
 /// Regression coverage for the resilient `/api/oauth/usage` decoder.
@@ -158,6 +159,22 @@ final class UsageDecodeTests: XCTestCase {
         let snap = UsageSnapshot()
         XCTAssertTrue(snap.subscriptionLoading)
         XCTAssertFalse(snap.subscriptionStale)
+    }
+
+    // MARK: - Keychain error classification (transient blip vs genuinely logged out)
+
+    func testKeychainTransientVsLoggedOut() {
+        // Transient: momentary unavailability (e.g. just after Claude Code rewrote the item) → retry quietly.
+        XCTAssertTrue(KeychainError.notFound(errSecInteractionNotAllowed).isTransient)
+        XCTAssertTrue(KeychainError.notFound(errSecAuthFailed).isTransient)
+        XCTAssertTrue(KeychainError.notFound(errSecNotAvailable).isTransient)
+        XCTAssertFalse(KeychainError.notFound(errSecInteractionNotAllowed).isLoggedOut)
+        // Logged out: the item genuinely isn't there → actionable.
+        XCTAssertTrue(KeychainError.notFound(errSecItemNotFound).isLoggedOut)
+        XCTAssertFalse(KeychainError.notFound(errSecItemNotFound).isTransient)
+        // noToken is neither (the item exists but the shape was unreadable).
+        XCTAssertFalse(KeychainError.noToken.isTransient)
+        XCTAssertFalse(KeychainError.noToken.isLoggedOut)
     }
 
     func testRetryAfterHeaderParsing() {
