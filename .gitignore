@@ -19,6 +19,10 @@ Thumbs.db
 # Node (if a consumer project nests this)
 node_modules/
 
+# Python bytecode cache (regenerated when the hook modules are imported; never tracked)
+__pycache__/
+*.pyc
+
 # Git worktrees created by cdt-worktree / claude --worktree (parallel isolation)
 .claude/worktrees/
 
