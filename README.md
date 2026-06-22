@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.50.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.51.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -46,9 +46,9 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 ## What you get
 
 - **Tiered triage (T0–T3)** — trivial edits run solo; features escalate to a parallel team.
-- **Autonomous orchestration** — a mode router + cost governor that, only when the work warrants it,
-  escalates to a *debating* **agent-team** (depth) or a *fan-out* **dynamic workflow** (breadth) —
-  gated, capped, and budget-aware so it stays cheap on Max. Off by default; opt in per engine.
+- **Autonomous orchestration** — a mode router that escalates to a *debating* **agent-team** (depth) or a
+  *fan-out* **dynamic workflow** (breadth) whenever the work benefits — **on by default**, kept capped and
+  budget-aware by a weekly safety valve so a big run can't lock you out on Max.
 - **Parallel isolation (git worktrees)** — `cdt-worktree` gives each parallel strand its own
   checkout+branch (interops with `claude --worktree`) for collision-free big features.
 - **Contract-driven dispatch** — every agent gets exclusive file ownership, a read-list, a verifiable
@@ -188,35 +188,31 @@ flowchart LR
 |-------|-------|-------------------|
 | `product-manager` | Opus | requirements + testable acceptance criteria + scope/non-goals (read-only, Wave 0) |
 | `architect` | Opus | design, interfaces, contracts (read-only) |
-| `backend-engineer` | **Sonnet** | APIs, server, data access, logic (`api/server/*`) |
-| `frontend-engineer` | **Sonnet** | web UI/components (`ui/client/*`) |
-| `mobile-engineer` | **Sonnet** | RN/Expo/Flutter/native (`mobile/app/*`) |
+| `backend-engineer` | **Opus** | APIs, server, data access, logic (`api/server/*`) |
+| `frontend-engineer` | **Opus** | web UI/components (`ui/client/*`) |
+| `mobile-engineer` | **Opus** | RN/Expo/Flutter/native (`mobile/app/*`) |
 | `ui-ux-engineer` | Opus | UX flows, design system/tokens, accessibility + visual-polish review (`design/*`) |
-| `qa-engineer` | **Sonnet** | tests + the gate chain (`test/*`) |
+| `qa-engineer` | **Opus** | tests + the gate chain (`test/*`) |
 | `code-reviewer` | Opus | independent correctness/scope review (read-only) |
 | `security-reviewer` | Opus | security review with **veto** (read-only) |
-| `devops-engineer` | **Sonnet** · hybrid | CI/CD, Docker, infra (`ci/* infra/*`) — destructive/prod infra escalates to Opus + security-veto |
-| `diagrams` | **Sonnet** | mermaid / figma visuals |
-| `data-engineer` | **Sonnet** · hybrid | schema, migrations, queries (`db/*`) — destructive/irreversible migration escalates to Opus + security-veto |
-| `technical-writer` | **Sonnet** | user-facing docs — README/guides/release notes/ADRs (`docs/*` prose) |
+| `devops-engineer` | **Opus** | CI/CD, Docker, infra (`ci/* infra/*`) — destructive/prod infra keeps the security-veto |
+| `diagrams` | **Opus** | mermaid / figma visuals |
+| `data-engineer` | **Opus** | schema, migrations, queries (`db/*`) — destructive/irreversible migration keeps the security-veto |
+| `technical-writer` | **Opus** | user-facing docs — README/guides/release notes/ADRs (`docs/*` prose) |
 | **Bug Council** (gated ×5) | **Opus** | root-cause-analyst · code-archaeologist · pattern-matcher · systems-thinker · adversarial-tester |
 | `fast-ops` | **Haiku** | the cheap "hands" tier — trivial mechanical ops **only** (gather, literal find/replace, rename, template fill); **never** dev/test/review/security |
 
-**Model routing — role-based, deterministic, and lint-enforced.** Cost-effectiveness comes from
-**pinning each agent to the right tier** (plus a trivial-only low tier), never from downgrading important
-work. **Opus** reasons, reviews, and diagnoses — `product-manager`, `architect`, `ui-ux-engineer`,
-`code-reviewer`, `security-reviewer`, and the gated **Bug Council ×5** are **pinned Opus**, independent of
-the session model; keep the orchestrator session on **Opus** for quality work. **Sonnet** is the
-**pinned throughput tier** — the engineering builders, qa, `diagrams`, and `technical-writer` run
-`model: sonnet` so the savings are the *default* (no need to remember to downshift the session). A Sonnet
-dispatch **escalates to Opus** (per-dispatch `model: opus`) on any hand-off trigger — architecture,
-security-sensitive work, production deploy, destructive infra/DB op, complex root-cause bug, release
-blocker, repeated test failures, or unclear requirements — and **`FULL:`** lifts the builders to Opus for
-the whole task. `data-engineer` / `devops-engineer` are Sonnet-by-default but **hybrid**
-(destructive/irreversible change → Opus + the mandatory security-veto). **Haiku** (`fast-ops`) is the
-**low tier for *trivial mechanical* ops only** — it never touches quality-sensitive work and escalates the
-instant a task needs judgment. All three tiers are enforced by `lint-agents.sh` (CI fails if a tier
-silently regresses).
+**Model routing — role-based, deterministic, and lint-enforced.** Every substantive agent is **pinned
+Opus** for production-grade output — the judgment/review panel (`product-manager`, `architect`,
+`ui-ux-engineer`, `code-reviewer`, `security-reviewer`), the **engineering builders** (`backend`,
+`frontend`, `mobile`, `data`, `devops`, `qa`, `diagrams`), **`technical-writer`**, and the gated **Bug
+Council ×5** are all Opus, independent of the session model; keep the orchestrator session on **Opus** too.
+(The earlier Sonnet throughput pin on the builders was reverted — builders run on Opus for quality.)
+`data-engineer` / `devops-engineer` keep the mandatory **security-veto** on destructive/irreversible
+changes. **Haiku** (`fast-ops`) is the **low tier for *trivial mechanical* ops only** — it never touches
+quality-sensitive work and escalates the instant a task needs judgment. The Opus floor + the one-Haiku
+rule are enforced by `lint-agents.sh` (CI fails if either regresses). For ad-hoc subtasks `cdt-route` may
+still advise Opus vs Sonnet by difficulty.
 
 ## Skills
 
@@ -456,7 +452,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.50.0**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.51.0**.
 
 ---
 
@@ -570,14 +566,13 @@ distills the shared files **once** into a manifest (`cdt-context pack <files…>
 signatures) that's injected into each agent's READ list and kept as a prompt-cache-friendly prefix. Fewer
 tokens, faster ramp.
 
-**Production-grade model right-sizing** — `cdt-route "<subtask>"` advises **Opus vs Sonnet** by difficulty
-(risk/ambiguity/architecture → Opus; substantive throughput → Sonnet). It **never** routes real work to
-Haiku — the production-grade floor is **lint-enforced** (`lint-agents.sh` fails CI if any non-`fast-ops`
-agent is pinned to Haiku). Cost-effectiveness comes from spending Opus only where it pays, never from a
-model that can't do the job.
+**Production-grade model floor** — the judgment roles **and the engineering builders** are pinned **Opus**
+for production-grade output (`lint-agents.sh` fails CI if a builder drops below it, or if any non-`fast-ops`
+agent is pinned to Haiku). For ad-hoc subtasks `cdt-route "<subtask>"` still advises Opus vs Sonnet by
+difficulty; only the trivial `fast-ops` hands tier runs Haiku.
 
 **Quality-via-parallelism (high-stakes work)** — for risk-flagged changes or findings you must trust, CDT
-spends a few *extra* parallel agents (bounded, Opus, never the Workflow engine): **adversarial verify**
+spends a few *extra* parallel agents on Opus (bounded agents, or a dynamic workflow for large verification sets): **adversarial verify**
 (`/cdt:adversarial` — 2-3 independent reviewers each try to *refute* it; rework if a majority do),
 **diverse-lens Wave-2 review** (each reviewer a distinct lens), and an optional **design judge-panel**
 (2-3 architect variants → judge → synthesize). Budget-gated; it deepens the Wave-2 review + security
@@ -595,49 +590,51 @@ open the *same* checkout — so you can spin up a worktree and drop a parallel s
 free**. Safe by design: names are validated (no path traversal), removal refuses a dirty/locked worktree
 unless you pass `--force`, and `.claude/worktrees/` is auto-added to `.gitignore`.
 
-> **Opt-in, on purpose.** Worktree setup has real cost — it's for *genuinely large, parallelizable*
-> work. Small tasks (T0–T2) stay bounded and in-place. This is **Phase 1 of the scaling track**
-> ([`docs/roadmap.md`](docs/roadmap.md)); the autonomous controller below drives the rest.
+> **On by default for parallel multi-writer waves.** Worktree setup has a small cost, so single-writer
+> waves and T0/T1 stay in-place — but whenever ≥2 agents write at once, each strand gets its own checkout
+> automatically. This is **Phase 1 of the scaling track** ([`docs/roadmap.md`](docs/roadmap.md)); the
+> autonomous controller below drives the rest.
 
 ---
 
 ## Autonomous orchestration (router + cost governor)
 
 On top of tiered triage, CDT runs an **autonomous mode router**: after scoring a task it reads the *work
-shape* and decides — on its own — whether to stay **BOUNDED** (the cheap default, ~all tasks) or escalate
-to **DEPTH** (an agent-team Bug Council that *debates*) or **BREADTH** (a dynamic workflow that fans out).
-Escalation fires **only on signature** — a stuck bug → a team; a large homogeneous set (audit/migration)
-→ a workflow — and **always at xhigh effort, Opus for judgment, never Haiku, never `max`**.
+shape* and decides whether to stay **BOUNDED** (contained work) or escalate to **DEPTH** (an agent-team
+Bug Council that *debates*) or **BREADTH** (a dynamic workflow that fans out). It escalates **freely
+whenever the shape benefits** — a stuck/ambiguous bug → a team; a large or homogeneous set
+(audit/migration/exhaustive review) → a workflow — and **always at xhigh effort, Opus for judgment, never
+Haiku, never `max`**.
 
-What keeps "autonomous" and "cost-effective on Max" both true is the **cost governor**. Before *any*
-escalation the orchestrator consults it:
+A lightweight **budget safety valve** keeps "use the big engines freely" and "don't lock yourself out on
+Max" both true. Before a big escalation the orchestrator does a quick check:
 
 ```
 ~/.claude/bin/cdt-auto status            # mode, engines, caps, live weekly-budget headroom
-~/.claude/bin/cdt-auto gate team|scale   # -> ALLOW (proceed) | ASK (confirm first) | DENY (stay bounded)
+~/.claude/bin/cdt-auto gate team|scale   # -> ALLOW (proceed) | ASK (confirm near ceiling) | DENY (autonomy off)
 ~/.claude/bin/cdt-auto explain "<task>"  # advisory: which mode the router would pick, and why
 ```
 
-The governor enforces the **autonomy leash**, each engine's on/off, and a **weekly-budget ceiling** — and
-**fails safe**: if it can't see your budget (telemetry off) it *asks* rather than self-running. Every
+With the engines on, the gate normally returns **ALLOW**; it **ASKs** only as you near the **weekly-budget
+ceiling** (or before the first un-measured fan-out), and **DENYs** only if you've turned autonomy off. Every
 escalation's real token cost lands in `/cdt:stats`.
 
 | Autonomy mode | Agent-teams (DEPTH) | Workflows (BREADTH) |
 |---|---|---|
 | `off` | — | — (pure bounded, like stock) |
-| **`assist`** (default) | **auto-summons** on stuck bugs (≤5, time-boxed) | **proposes + asks** first |
-| `auto` | auto-summons within budget | self-runs within the budget ceiling, else asks |
+| `assist` | **auto-summons** on stuck bugs (≤5, time-boxed) | **proposes + asks** first |
+| **`auto`** (default) | auto-summons within budget | self-runs within the budget ceiling, else asks |
 
 ```
-cdt-config autonomy off|assist|auto      # the leash (default: assist)
-cdt-config teams on|off                  # enable DEPTH (sets the experimental agent-teams flag)
-cdt-config scale on|off                  # enable BREADTH (needs Claude Code >= 2.1.154)
+cdt-config autonomy off|assist|auto      # the leash (default: auto)
+cdt-config teams on|off                  # DEPTH on by default (sets the experimental agent-teams flag)
+cdt-config scale on|off                  # BREADTH on by default (needs Claude Code >= 2.1.154)
 ```
 
-> **Safe by default.** The engines ship **off** — you opt in per machine. Even enabled, the default path
-> is BOUNDED; expensive modes are *summoned, capped, and measured*, never the default. This is the
-> scaling track's controller ([`docs/roadmap.md`](docs/roadmap.md)) — depth + breadth on demand, with the
-> per-agent token telemetry as the safety instrument.
+> **On by default, still measured.** The engines ship **on** — depth + breadth are first-class tools, not
+> a last resort. They stay *capped, measured, and logged*: a weekly-budget safety valve asks before a run
+> that would push you toward the Max ceiling, and the per-agent token telemetry records every escalation's
+> real cost. Turn an engine off per machine with `cdt-config teams off` / `cdt-config scale off`.
 
 ---
 
@@ -721,7 +718,7 @@ two-line shape that survives a crowded or notched menu bar. Click it for the ful
 
 > **macOS only.** On **Windows/Linux** there's no menu bar — use the cross-platform **[status line](#status-line-cross-platform)**
 > for the same usage display: `~/.claude/bin/cdt-config statusline on` (shows
-> `CDT on · 🧠 opus · ⚡ xhigh · 📊 41% wk · 🪟 148k · ⏱ 7h · 🤖 23` — each segment explained below).
+> `CDT on · Opus 4.8 · 12% session · 41% weekly` — each segment explained below).
 
 **On macOS it auto-installs** on your first session after the plugin is installed — it builds, launches,
 and enables login auto-start automatically (set `CDT_MENUBAR_AUTO=0` in `~/.claude/claude-dev-team.env`
@@ -747,12 +744,13 @@ certificate + `notarytool` credentials, then `cd menubar && ./release.sh`.
 The **status line** is the bottom-bar usage display — the menu bar's cross-platform equivalent (works on
 macOS, Linux, and Windows; no Swift/Keychain needed). Turn it on with `~/.claude/bin/cdt-config statusline on`
 (restart Claude Code to see it). It's **display-only and costs zero tokens** — a hook renders it from the
-session JSON Claude Code already provides, and it fails soft (any missing piece is just omitted).
+session JSON Claude Code already provides, and it fails soft (any missing piece is just omitted). It's
+**plain text — no emoji.**
 
-A typical line:
+The full line:
 
 ```
-CDT on · 🧠 opus · ⚡ xhigh · 📊 3% wk · 🪟 148k · ⏱ 7h · 🔭 Explore×3 · 🧭 1/3 Recon
+CDT on · Opus 4.8 · 12% session · 41% weekly
 ```
 
 Each ` · `-separated segment:
@@ -760,25 +758,17 @@ Each ` · `-separated segment:
 | Segment | Example | Meaning |
 |---------|---------|---------|
 | `CDT <on\|OFF>` | `CDT on` | whether claude-dev-team is enabled (`cdt-config on\|off`) |
-| 🧠 model | `🧠 opus` | the active session model |
-| ⚡ effort | `⚡ xhigh` | the reasoning-effort level |
-| 📊 N% wk | `📊 3% wk` | **weekly** subscription usage — your 7-day rate-limit utilization (cached to `~/.claude/.cdt-usage.json` for `cdt-budget` / Eco mode) |
-| 🪟 Nk | `🪟 148k` | current **context-window** size — input tokens in the active transcript, in thousands |
-| ⏱ Nh / Nm | `⏱ 7h` | **session age** since the last start / `/clear` / `/compact` |
-| 🤖 N | `🤖 23` | **subagents fired this session** (cumulative). Shown only when no wave is running |
-| 🔭 role×N | `🔭 Explore×3 · ⚙️ backend-engineer×1` | **running now** — the specialists currently in flight (role emoji + count), updating live as they start/finish. Replaces `🤖 N` during a wave; the plugin namespace is stripped (shows `backend-engineer`, not `cdt:backend-engineer`). Top 2 roles, then `+K` |
-| 🧭 i/N name | `🧭 1/3 Recon` | the **phase board** indicator on T2/T3 tasks, when a board is active (`CDT_PHASE_BOARD=on`) |
+| model | `Opus 4.8` | the active session model |
+| N% session | `12% session` | **current session** usage — your rolling 5-hour rate-limit utilization |
+| N% weekly | `41% weekly` | **weekly** usage — your 7-day rate-limit utilization |
 
-**Scope — run multiple terminals safely.** The **per-session** segments (`🪟` context, `⏱` age, `🤖`/running
-agents, `🧭` phase) plus `🧠 model` and `⚡ effort` are scoped **per workspace**, so two terminals in
-different projects each show their *own* numbers (they don't clobber each other). Only `📊 N% wk` is
-**account-wide** — it's your subscription's weekly rate limit, so it reads the same everywhere on purpose.
-(Health metrics are keyed by workspace path; two sessions in the *same* project share them.)
+Both percentages are **account-wide** (your subscription's rate limits read the same in every terminal).
+They're cached to `~/.claude/.cdt-usage.json` so `cdt-budget` / Eco mode can read them without the Keychain.
 
-The same role emoji appear on the per-agent dispatch/finish lines in the transcript (`▶️ 🔭 Explore · …`,
-`✅ 🔭 Explore · 74.1k tok`). Note: Claude Code's **own** running-agents tree still shows the namespaced
-`cdt:backend-engineer` — the namespace prefix on a plugin agent is fixed by Claude Code and only the
-CDT-rendered surfaces (this status line, the dispatch lines) show the short name.
+The per-agent dispatch/finish lines in the transcript are likewise plain text (`CDT dispatch: Explore`,
+`CDT done: Explore · 74.1k tok`); the plugin namespace is stripped (shows `backend-engineer`, not
+`cdt:backend-engineer`). Claude Code's **own** running-agents tree still shows the namespaced name — that
+prefix is fixed by Claude Code.
 
 ## Configuration
 
@@ -787,16 +777,16 @@ CDT-rendered surfaces (this status line, the dispatch lines) show the short name
 | session model | your choice | Sonnet = cheap throughput; Opus = max power |
 | `FULL:` / `T0:` prefixes | — | up/down-throttle a single request |
 | `CDT_MAX_ITERATIONS` | 5 | Task Loop hard cap |
-| `CDT_AUTONOMY` | assist | autonomous escalation leash: `off` / `assist` / `auto` |
-| `CDT_TEAMS` · `CDT_SCALE` | off · off | enable the DEPTH (agent-team) / BREADTH (workflow) engines |
-| `CDT_AUTONOMY_WEEKLY_CEILING` | 85 | governor pauses to ASK at/above this weekly usage % |
+| `CDT_AUTONOMY` | auto | autonomous escalation leash: `off` / `assist` / `auto` |
+| `CDT_TEAMS` · `CDT_SCALE` | on · on | the DEPTH (agent-team) / BREADTH (workflow) engines — on by default |
+| `CDT_AUTONOMY_WEEKLY_CEILING` | 85 | budget safety valve pauses to ASK at/above this weekly usage % |
 | `CDT_STOP_REMINDER` | 0 | `1` = remind once to run the mandate at session end |
 | `CDT_AGENT_ACTIVITY` | on | `on` / `compact` / `off` — pretty per-agent dispatch/finish lines + token cost in the CLI (display-only, **zero tokens**) |
 | `CDT_PHASE_BOARD` | on | `on` / `off` — per-wave **phase board** + a `phase i/N` status-line indicator on T2/T3 tasks (display-only) |
 
-Effort runs at your session level (xhigh, never `max`). **By default** the orchestrator uses **bounded**
-subagent dispatch per tier; the heavier engines (agent teams, dynamic workflows) are **never
-auto-invoked** — they're summoned only through the gated cost governor (see
+Effort runs at your session level (xhigh, never `max`). The heavier engines — **parallel git-worktree
+sessions** and **dynamic-workflow fan-out** — are **on by default** and used whenever the work benefits;
+a weekly-budget safety valve only ASKs as you near the rate-limit ceiling (see
 [Autonomous orchestration](#autonomous-orchestration-router--cost-governor)). Pin any agent's `model:` in
 `agents/*.md` to taste.
 
@@ -807,10 +797,10 @@ auto-invoked** — they're summoned only through the gated cost governor (see
 ~/.claude/bin/cdt-config off | on        # disable / enable the whole orchestration layer
 ~/.claude/bin/cdt-config effort xhigh    # default effort: low | medium | high | xhigh
 ~/.claude/bin/cdt-config model  opus     # default model (e.g. claude-opus-4-8 / opus / sonnet)
-~/.claude/bin/cdt-config autonomy assist # autonomous escalation: off | assist | auto  (see /cdt:auto)
-~/.claude/bin/cdt-config teams on|off    # enable the agent-team DEPTH engine (off by default)
-~/.claude/bin/cdt-config scale on|off    # enable the dynamic-workflow BREADTH engine (off by default)
-~/.claude/bin/cdt-config reset           # restore defaults: enabled, xhigh, Opus 4.8, autonomy=assist, engines off
+~/.claude/bin/cdt-config autonomy auto   # autonomous escalation: off | assist | auto  (see /cdt:auto)
+~/.claude/bin/cdt-config teams on|off    # the agent-team DEPTH engine (on by default)
+~/.claude/bin/cdt-config scale on|off    # the dynamic-workflow BREADTH engine (on by default)
+~/.claude/bin/cdt-config reset           # restore defaults: enabled, xhigh, Opus 4.8, autonomy=auto, engines on
 ```
 
 Defaults are **xhigh effort + Opus 4.8** (`claude-opus-4-8`). `off` makes the next session behave as
@@ -824,7 +814,7 @@ apply next session. The **macOS menu bar dropdown** also lets you change all of 
 
 ```
 ~/.claude/bin/cdt-config eco auto         # opt in to conserve when weekly usage is high (default: off)
-~/.claude/bin/cdt-config statusline on    # terminal status line: CDT on · Opus · xhigh · 41% wk
+~/.claude/bin/cdt-config statusline on    # terminal status line: CDT on · Opus 4.8 · 12% session · 41% weekly
 ~/.claude/bin/cdt-doctor                  # health-check the whole install
 ~/.claude/bin/cdt-budget                  # current usage % + Eco recommendation
 ~/.claude/bin/cdt-learn "<lesson>"        # teach the vault a durable lesson

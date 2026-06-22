@@ -10,9 +10,8 @@ err() { echo "  FAIL: $*"; fail=1; }
 # Agent classes (basenames without .md)
 READONLY="architect code-reviewer security-reviewer product-manager root-cause-analyst code-archaeologist pattern-matcher systems-thinker adversarial-tester"
 BUILDERS="backend-engineer frontend-engineer mobile-engineer data-engineer devops-engineer qa-engineer diagrams"
-OPUS="architect code-reviewer security-reviewer product-manager ui-ux-engineer root-cause-analyst code-archaeologist pattern-matcher systems-thinker adversarial-tester"
-# Throughput agents pinned model: sonnet — the cost floor can't silently regress back to Opus/inherit.
-SONNET="backend-engineer frontend-engineer mobile-engineer data-engineer devops-engineer qa-engineer diagrams technical-writer"
+# Every substantive agent is pinned model: opus (production-grade floor); only fast-ops may run lower.
+OPUS="architect code-reviewer security-reviewer product-manager ui-ux-engineer root-cause-analyst code-archaeologist pattern-matcher systems-thinker adversarial-tester backend-engineer frontend-engineer mobile-engineer data-engineer devops-engineer qa-engineer diagrams technical-writer"
 # Builders that MUST carry the two context7 doc tools for grounding (every builder except diagrams).
 CONTEXT7_BUILDERS="backend-engineer frontend-engineer mobile-engineer data-engineer devops-engineer qa-engineer"
 C7_RESOLVE="mcp__plugin_context7_context7__resolve-library-id"
@@ -51,14 +50,14 @@ for f in agents/*.md; do
     printf '%s' "$tools" | grep -q "$C7_DOCS" || err "$base: builder must carry context7 $C7_DOCS (grounding)" ;;
   esac
 
-  # 5. model pins — judgment/review/diagnosis stay Opus; throughput stays Sonnet (both directions locked).
-  case " $OPUS " in *" $base "*) [ "$model" = "opus" ] || err "$base: should be 'model: opus' (judgment/review/diagnosis role)" ;; esac
-  case " $SONNET " in *" $base "*) [ "$model" = "sonnet" ] || err "$base: should be 'model: sonnet' (throughput cost floor — escalate to Opus per-dispatch, don't pin up)" ;; esac
+  # 5. model pins — every substantive agent (judgment/review/diagnosis + builders + technical-writer)
+  #    is pinned Opus for production-grade output; the earlier builder Sonnet pin was reverted (locked in).
+  case " $OPUS " in *" $base "*) [ "$model" = "opus" ] || err "$base: should be 'model: opus' (production-grade Opus floor)" ;; esac
   [ "$base" = "fast-ops" ] && { [ "$model" = "haiku" ] || err "fast-ops must be 'model: haiku' (the only low tier)"; }
 
-  # 5b. PRODUCTION-GRADE MODEL FLOOR (Parallel Orchestration v2): only fast-ops may run on Haiku — no
-  #     substantive agent is ever pinned below the Sonnet+ floor. Cost-savings come above the floor.
-  [ "$model" = "haiku" ] && [ "$base" != "fast-ops" ] && err "$base: only fast-ops may use Haiku — substantive agents stay at the Sonnet+ production-grade floor"
+  # 5b. PRODUCTION-GRADE MODEL FLOOR: only fast-ops may run on Haiku — no substantive agent is ever
+  #     pinned below the production-grade floor. Cost-savings come from tiering, never from downgrading.
+  [ "$model" = "haiku" ] && [ "$base" != "fast-ops" ] && err "$base: only fast-ops may use Haiku — substantive agents stay at the production-grade floor"
 
   # 6. behavioral contract: a REPORT section + anti-hallucination/grounding language
   grep -qiE '^## REPORT|REPORT \(' "$f" || err "$base: missing a REPORT section"

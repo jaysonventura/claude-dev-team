@@ -110,7 +110,7 @@ statusline_state() {
 show() {
   local en eco; en="$(get_env CDT_ENABLED)"; [ -z "$en" ] && en="1"; eco="$(get_env CDT_ECO)"; [ -z "$eco" ] && eco="off"
   local eff mdl; eff="$(get_setting effortLevel)"; mdl="$(get_setting model)"
-  local au tm sc; au="$(get_env CDT_AUTONOMY)"; [ -z "$au" ] && au="assist"; tm="$(get_env CDT_TEAMS)"; [ -z "$tm" ] && tm="off"; sc="$(get_env CDT_SCALE)"; [ -z "$sc" ] && sc="off"
+  local au tm sc; au="$(get_env CDT_AUTONOMY)"; [ -z "$au" ] && au="auto"; tm="$(get_env CDT_TEAMS)"; [ -z "$tm" ] && tm="on"; sc="$(get_env CDT_SCALE)"; [ -z "$sc" ] && sc="on"
   local vg; vg="$(get_env CDT_VERIFY_GATE)"; [ -z "$vg" ] && vg="block"
   local sg; sg="$(get_env CDT_SCOPE_GATE)"; [ -z "$sg" ] && sg="warn"
   local mg; mg="$(get_env CDT_MEMORY_GATE)"; [ -z "$mg" ] && mg="warn"
@@ -127,7 +127,7 @@ show() {
   echo "  scope     : $sg   (warn | block | off — flag a subagent that wrote outside its exclusive contract)"
   echo "  memory    : $mg   (warn | block | off — nudge a team-tier session to persist a vault lesson)"
   echo "  autonomy  : $au   (off | assist | auto — autonomous escalation; details: cdt-auto status)"
-  echo "  teams     : $tm   ·  scale : $sc   (DEPTH/BREADTH engines; off by default, opt in to enable)"
+  echo "  teams     : $tm   ·  scale : $sc   (DEPTH/BREADTH engines; on by default — worktrees + dynamic workflows)"
   echo "  statusline: $(statusline_state)   (terminal status line)"
   echo "  agent-act : $aa   (on | compact | off — pretty per-agent dispatch/finish lines + token cost; display-only)"
   echo "  phase-brd : $pb   (on | off — per-wave phase board + status-line phase indicator on T2/T3 tasks)"
@@ -284,11 +284,11 @@ PY
     esac ;;
   reset)
     set_env CDT_ENABLED 1; set_env CDT_ECO off
-    set_env CDT_AUTONOMY assist; set_env CDT_TEAMS off; set_env CDT_SCALE off
-    set_env_setting CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS ""
+    set_env CDT_AUTONOMY auto; set_env CDT_TEAMS on; set_env CDT_SCALE on
+    set_env_setting CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS 1
     set_setting effortLevel "$DEFAULT_EFFORT"
     set_setting model "$DEFAULT_MODEL"
-    echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off, autonomy=assist, engines off)." ;;
+    echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off, autonomy=auto, engines on)." ;;
   *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|agent-activity <on|compact|off>|phase-board <on|off>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
 esac
 exit 0

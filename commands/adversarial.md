@@ -12,8 +12,8 @@ Target: $ARGUMENTS
    normal Wave-2 review is enough; say so and stop.
 2. Gather the concrete artifact first: the diff/change, the claim, and the real evidence (command output,
    the relevant `file:line`s). No hand-waving.
-3. Dispatch **2-3 independent reviewers in one message** (bounded, parallel, **Opus** — never the Workflow
-   engine, never Haiku), each with a tight contract to **REFUTE**:
+3. Dispatch **2-3 independent reviewers in one message** (parallel, **Opus**, never Haiku — bounded Agent
+   calls, or a dynamic workflow when the verification set is large), each with a tight contract to **REFUTE**:
    - "Try to prove this change is wrong / unsafe / incomplete. Find the failing case, the missed edge, the
      security hole. Default to **NOT PROVEN** if you can't be sure. Ground every point in a real
      `file:line` or command output."

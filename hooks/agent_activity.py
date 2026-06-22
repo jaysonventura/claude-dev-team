@@ -5,7 +5,7 @@
 #   contract-capture.sh (PreToolUse[Task]) -> CDT_EVENT=dispatch, hook payload on stdin
 #   agent-track.sh      (SubagentStop)      -> CDT_EVENT=stop, CDT_AGENT + CDT_TOKENS in env
 # Mode (CDT_AGENT_ACTIVITY in ~/.claude/claude-dev-team.env): on (default) | compact | off.
-#   on      = dispatch banner (▶️ agent · what) + finish line (✅ agent · N tok)
+#   on      = dispatch line ("CDT dispatch: agent · what") + finish line ("CDT done: agent · N tok")
 #   compact = finish line only (less noise, still shows who ran + token cost)
 #   off     = nothing
 # Fail-open: any error prints nothing and exits 0 (never blocks a dispatch).
@@ -15,25 +15,14 @@ import json
 
 HOME = os.environ.get("CDT_HOME") or os.path.expanduser("~/.claude")
 
-# Shared role→emoji map (also covers the auto-mode agents Explore/Plan/general-purpose). Falls back to a
-# local copy if the shared module isn't beside this file (e.g. an older partial install).
+# Shared role-name helper. Falls back to a local copy if the shared module isn't beside this file
+# (e.g. an older partial install). CDT output is plain text — no emoji.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
-    from cdt_emoji import emoji as _emoji, short as _short
+    from cdt_emoji import short as _short
 except Exception:                                     # pragma: no cover
-    _EMOJI = {
-        "product-manager": "📋", "architect": "🏛️", "ui-ux-engineer": "🎨",
-        "frontend-engineer": "💻", "backend-engineer": "⚙️", "mobile-engineer": "📱",
-        "data-engineer": "🗄️", "devops-engineer": "🚀", "qa-engineer": "🧪",
-        "security-reviewer": "🔒", "code-reviewer": "🔎", "technical-writer": "📝",
-        "diagrams": "📊", "fast-ops": "⚡", "Explore": "🔭", "Plan": "📐",
-    }
-
     def _short(role):
         return (role or "").split(":")[-1].strip() or "agent"
-
-    def _emoji(role):
-        return _EMOJI.get(_short(role), "🤖")
 
 
 def mode():
@@ -50,10 +39,6 @@ def mode():
 
 def short(agent):
     return _short(agent)
-
-
-def emoji(agent):
-    return _emoji(agent)
 
 
 def fmt_tokens(n):
@@ -89,7 +74,7 @@ def main():
         if not agent:
             return
         desc = (ti.get("description") or "").strip()
-        line = f"▶️ {emoji(agent)} {short(agent)}"
+        line = f"CDT dispatch: {short(agent)}"
         if desc:
             line += f" · {desc}"
         emit(line)
@@ -97,7 +82,7 @@ def main():
         agent = os.environ.get("CDT_AGENT", "")
         if not agent:
             return
-        emit(f"✅ {emoji(agent)} {short(agent)} · {fmt_tokens(os.environ.get('CDT_TOKENS', '0'))} tok")
+        emit(f"CDT done: {short(agent)} · {fmt_tokens(os.environ.get('CDT_TOKENS', '0'))} tok")
 
 
 try:
