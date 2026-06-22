@@ -2,6 +2,28 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.51.0] — 2026-06-22
+### Changed
+- **Engineering builders + technical-writer run on Opus — reverting the v1.50.0 Sonnet pin.** The seven
+  builders (`backend`, `frontend`, `mobile`, `data`, `devops`, `qa`, `diagrams`) and `technical-writer`
+  are now pinned **`model: opus`** for production-grade output. Combined with the judgment/review panel and
+  the Bug Council ×5 (already Opus), **every substantive agent is now Opus** — only `fast-ops` runs Haiku.
+  `lint-agents.sh` enforces this Opus floor (the Sonnet tier set was removed) so it can't silently regress.
+- **Worktrees + dynamic workflows are on by default.** The autonomy leash now defaults to **`auto`** and
+  both engines ship **on** (`CDT_TEAMS=on`, `CDT_SCALE=on`) — the orchestrator runs parallel git-worktree
+  sessions and orchestrates subagents at scale with dynamic workflows freely, whenever the work benefits.
+  The only governor left is a **weekly-budget safety valve** that ASKs (never silently DENYs) as you near
+  the rate-limit ceiling, so a big run can't lock you out on Max. Effort stays **xhigh — never `max`**.
+  Reframed across the `orchestration` skill, the README, and the `auto`/`adversarial` commands; `cdt-config
+  reset` now restores `autonomy=auto` + engines on.
+- **Status line is minimal, plain text.** It now shows exactly **`CDT on · <model> · <N>% session · <N>%
+  weekly`** — added the current-session (5-hour) %, and removed the effort, context-size, session-age,
+  running-agents, and phase-board segments. The session+weekly cache that `cdt-budget` / Eco mode read is
+  preserved.
+- **Removed all custom emoji from CLI/terminal output.** The status line, the per-agent dispatch/finish
+  lines (`CDT dispatch: <role>` / `CDT done: <role> · <N> tok`), and the running-agents segment are now
+  plain text; the shared role→emoji map (`cdt_emoji.py`) was reduced to the role-name helper.
+
 ## [1.50.0] — 2026-06-19
 ### Changed
 - **Model routing is now role-based, deterministic, and lint-enforced — cheaper by default without

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Live "running subagents" tracker for claude-dev-team's status-line segment.
 
-A tiny per-workspace set of the subagents currently in flight, so the status line can show what's running
-NOW (e.g. "🔭 Explore×3") instead of only a cumulative session count. Maintained by two display hooks:
+A tiny per-workspace set of the subagents currently in flight, so a caller can show what's running
+NOW (e.g. "Explore×3") instead of only a cumulative session count. Maintained by two display hooks:
   contract-capture.sh (PreToolUse[Task]) → `add`    (a dispatch starts an agent)
   agent-track.sh      (SubagentStop)      → `remove` (that agent finished)
 State: <workspace>/.claude/runtime/running-agents.json — git-ignored, display-only, fail-open.
@@ -20,13 +20,10 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
-    from cdt_emoji import emoji, short
-except Exception:                                   # pragma: no cover - fallback if the map is unavailable
+    from cdt_emoji import short
+except Exception:                                   # pragma: no cover - fallback if the helper is unavailable
     def short(role):
         return (role or "").split(":")[-1].strip() or "agent"
-
-    def emoji(role):
-        return "🤖"
 
 PRUNE = 1800   # seconds; entries older than this are assumed dead (a missed SubagentStop) and dropped
 
@@ -71,7 +68,7 @@ def remove(ws, role):
 
 
 def render(ws, max_roles=2):
-    """Compact status-line segment, e.g. "🔭 Explore×3 · ⚙️ backend-engineer×1". "" when nothing runs."""
+    """Compact running-agents segment, e.g. "Explore×3 · backend-engineer×1". "" when nothing runs."""
     agents = load(ws)
     if not agents:
         return ""
@@ -85,7 +82,7 @@ def render(ws, max_roles=2):
         return ""
     items = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
     shown = items[:max_roles]
-    seg = " · ".join("%s %s×%d" % (emoji(r), r, n) for r, n in shown)
+    seg = " · ".join("%s×%d" % (r, n) for r, n in shown)
     extra = len(items) - len(shown)
     if extra > 0:
         seg += " +%d" % extra

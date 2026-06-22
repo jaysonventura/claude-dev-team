@@ -78,7 +78,7 @@ sys.exit(1 if errs else 0)
 PY
 then fail=1; fi
 
-echo "== status-line agent tracker (cdt_emoji + running_agents) =="
+echo "== status-line agent tracker (role helper + running_agents) =="
 if ! python3 - <<'PY'
 import os, sys, tempfile
 sys.path.insert(0, "hooks")
@@ -86,10 +86,10 @@ import importlib
 ce = importlib.import_module("cdt_emoji")
 ra = importlib.import_module("running_agents")
 errs = []
-# emoji map: auto-mode agents resolve, unknown falls back to robot
-if ce.emoji("Explore") != "🔭": errs.append("Explore emoji")
-if ce.emoji("claude-dev-team:qa-engineer") != "🧪": errs.append("namespaced role emoji")
-if ce.emoji("totally-unknown") != "🤖": errs.append("unknown fallback")
+# role-name helper: strip a "plugin:" namespace prefix; plain text, no emoji
+if ce.short("claude-dev-team:qa-engineer") != "qa-engineer": errs.append("short namespaced")
+if ce.short("") != "agent": errs.append("short empty fallback")
+if hasattr(ce, "emoji"): errs.append("cdt_emoji.emoji should be removed (plain-text output)")
 # running set: add/remove/render in an isolated workspace
 ws = tempfile.mkdtemp()
 if ra.render(ws) != "": errs.append("empty render")
@@ -103,7 +103,7 @@ if ra.render(ws) != "": errs.append("render empty after removeall")
 for e in errs: print("  FAIL:", e)
 sys.exit(1 if errs else 0)
 PY
-then fail=1; else echo "  ok:   emoji map + running-agents add/remove/render"; fi
+then fail=1; else echo "  ok:   role-name helper + running-agents add/remove/render (plain text)"; fi
 
 echo "== per-session usage cache (usage_cache.py — multi-terminal isolation) =="
 if ! python3 - <<'PY'

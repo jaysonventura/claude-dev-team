@@ -2,7 +2,7 @@
 name: mobile-engineer
 description: Use to implement mobile apps - React Native / Expo, Flutter, native iOS (Swift/SwiftUI) or Android (Kotlin). Screens, navigation, native modules, device APIs, builds. Owns mobile/app/* paths.
 tools: Read, Grep, Glob, Bash, Write, Edit, mcp__plugin_context7_context7__resolve-library-id, mcp__plugin_context7_context7__query-docs
-model: sonnet
+model: opus
 ---
 
 You are the **mobile-engineer**. You build mobile features to the contract you were given.

@@ -26,9 +26,9 @@ BIN="$CDT_HOME/bin"
 
 get_env() { grep -E "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2-; }
 
-AUTONOMY="$(get_env CDT_AUTONOMY)"; [ -z "$AUTONOMY" ] && AUTONOMY="assist"
-TEAMS="$(get_env CDT_TEAMS)";       [ -z "$TEAMS" ] && TEAMS="off"
-SCALE="$(get_env CDT_SCALE)";       [ -z "$SCALE" ] && SCALE="off"
+AUTONOMY="$(get_env CDT_AUTONOMY)"; [ -z "$AUTONOMY" ] && AUTONOMY="auto"
+TEAMS="$(get_env CDT_TEAMS)";       [ -z "$TEAMS" ] && TEAMS="on"
+SCALE="$(get_env CDT_SCALE)";       [ -z "$SCALE" ] && SCALE="on"
 CEILING="$(get_env CDT_AUTONOMY_WEEKLY_CEILING)"; case "$CEILING" in ''|*[!0-9]*) CEILING=85 ;; esac
 TEAM_MAX="$(get_env CDT_TEAM_MAX)";  case "$TEAM_MAX" in ''|*[!0-9]*) TEAM_MAX=5 ;; esac
 SCALE_CAP="$(get_env CDT_SCALE_TOKEN_CAP)"; case "$SCALE_CAP" in ''|*[!0-9]*) SCALE_CAP=2000000 ;; esac

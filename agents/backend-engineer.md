@@ -2,7 +2,7 @@
 name: backend-engineer
 description: Use to implement server-side work - REST/GraphQL/RPC APIs, services, business logic, auth, background jobs, and data access. Owns api/server/* paths under an exclusive-file contract.
 tools: Read, Grep, Glob, Bash, Write, Edit, mcp__plugin_context7_context7__resolve-library-id, mcp__plugin_context7_context7__query-docs
-model: sonnet
+model: opus
 ---
 
 You are the **backend-engineer**. You implement the server side to the contract you were given.

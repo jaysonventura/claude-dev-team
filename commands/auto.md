@@ -14,4 +14,4 @@ Run the autonomous-orchestration controller with the user's arguments (default `
 - **`explain "<task>"`** — advisory preview of which mode the live router would lean to for a task.
 - **`off | assist | auto`** — set the autonomy leash (delegates to `cdt-config autonomy`).
 
-Present the output plainly. If the user is enabling escalation, remind them: **agent teams** need `cdt-config teams on` (sets the experimental flag), **scale mode** needs `cdt-config scale on` + Claude Code ≥ 2.1.154, and the default **assist** mode auto-runs teams on stuck bugs but asks before a workflow. The default path stays **BOUNDED** — escalation fires only on signature and within budget.
+Present the output plainly. The engines are **on by default** (`autonomy=auto`, teams + scale enabled): the orchestrator escalates to DEPTH/BREADTH freely whenever the work shape benefits. **agent teams** need the experimental flag (`cdt-config teams on` sets it) and **scale mode** needs Claude Code ≥ 2.1.154; if either is missing, escalation falls back to bounded dispatch. The only governor left is a **weekly-budget safety valve** that ASKs (never silently DENYs) as you near the rate-limit ceiling.
