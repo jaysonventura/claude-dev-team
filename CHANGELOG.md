@@ -2,6 +2,11 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.51.1] — 2026-06-22
+### Fixed
+- **CI green:** updated the `scripts/e2e.sh` status-line assertion to match the new plain-text line — it
+  checked for the old `wk` segment, but the status line now renders `… <N>% weekly`. No runtime change.
+
 ## [1.51.0] — 2026-06-22
 ### Changed
 - **Engineering builders + technical-writer run on Opus — reverting the v1.50.0 Sonnet pin.** The seven

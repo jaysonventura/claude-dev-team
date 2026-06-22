@@ -242,7 +242,7 @@ has "$(cat "$REPO/skills/orchestration/SKILL.md")" "automation-first" "orchestra
 
 echo "== 5. statusline -> budget (eco conserves when weekly is high) =="
 SL_JSON='{"model":{"display_name":"Opus"},"effort":{"level":"xhigh"},"rate_limits":{"seven_day":{"used_percentage":90},"five_hour":{"used_percentage":10}}}'
-has "$(printf '%s' "$SL_JSON" | "$BIN/cdt-statusline" 2>&1)" "wk" "statusline renders usage"
+has "$(printf '%s' "$SL_JSON" | "$BIN/cdt-statusline" 2>&1)" "weekly" "statusline renders usage"
 has "$(CDT_ECO_THRESHOLD=80 "$BIN/cdt-budget" 2>&1)" "CONSERVE" "budget recommends CONSERVE at high weekly usage"
 
 echo "== 6. config off/on flips the orchestration injection =="
