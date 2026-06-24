@@ -869,8 +869,8 @@ automatically at session end (Stop hook) when enabled, and can also be triggered
 `/cdt:obsidian` at any time.
 
 ```
-~/.claude/bin/cdt-config obsidian on|off              # enable / disable the session-end auto-sync (default: off)
-~/.claude/bin/cdt-config obsidian-vault <path>        # set the target vault path (default: ~/Documents/Obsidian/CDT/)
+~/.claude/bin/cdt-config obsidian-vault <path>        # set the vault path — this AUTO-ENABLES the sync (default: ~/Documents/Obsidian/CDT/)
+~/.claude/bin/cdt-config obsidian on|off              # force on, or disable even with a path set (shipped default: off until a path is set)
 ```
 
 The sync is **fail-open and idempotent** — a missing vault path or any error never interrupts your session.

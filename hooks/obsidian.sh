@@ -45,18 +45,27 @@ resolve_vault() {
   fi
 }
 
+# Enabled when sync is explicitly ON, OR a vault path has been configured
+# (setting a path auto-enables — "auto use"). An explicit `off` always wins.
 obsidian_enabled() {
-  local val
-  val="$(genv CDT_OBSIDIAN)"
-  [ "$val" = "on" ]
+  local val vault
+  val="${CDT_OBSIDIAN:-$(genv CDT_OBSIDIAN)}"
+  [ "$val" = "off" ] && return 1
+  [ "$val" = "on" ] && return 0
+  vault="${CDT_OBSIDIAN_VAULT:-$(genv CDT_OBSIDIAN_VAULT)}"
+  [ -n "$vault" ]
 }
 
 # ── sub-commands ──────────────────────────────────────────────────────────────
 
 cmd_status() {
   local obs_val vault_dir
-  obs_val="$(genv CDT_OBSIDIAN)"; [ -z "$obs_val" ] && obs_val="off"
   vault_dir="$(genv CDT_OBSIDIAN_VAULT)"
+  if obsidian_enabled; then
+    obs_val="on"; [ "$(genv CDT_OBSIDIAN)" != "on" ] && obs_val="on (auto — path set)"
+  else
+    obs_val="off"
+  fi
 
   echo "cdt-obsidian status:"
   echo "  obsidian sync : $obs_val"
@@ -75,8 +84,7 @@ cmd_status() {
     echo "  vault path    : not configured (default would be: $DEFAULT_OBS_VAULT)"
     echo "  last sync     : never"
     echo
-    echo "  Configure: cdt-config obsidian-vault ~/Documents/Obsidian/CDT"
-    echo "  Enable:    cdt-config obsidian on"
+    echo "  Enable:    cdt-config obsidian-vault ~/Documents/Obsidian/CDT   (setting a path auto-enables sync)"
   fi
   exit 0
 }

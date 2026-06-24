@@ -118,7 +118,9 @@ show() {
   local sa ea oc rd; sa="$(get_env CDT_SPEC_AUTO)"; [ -z "$sa" ] && sa="false"; ea="$(get_env CDT_EXTERNAL_AI_ALLOWED)"; [ -z "$ea" ] && ea="false"; oc="$(get_env CDT_OCR_ENABLED)"; [ -z "$oc" ] && oc="false"; rd="$(get_env CDT_REDACT)"; [ -z "$rd" ] && rd="true"
   local aa; aa="$(get_env CDT_AGENT_ACTIVITY)"; [ -z "$aa" ] && aa="on"
   local pb; pb="$(get_env CDT_PHASE_BOARD)"; [ -z "$pb" ] && pb="on"
-  local obs obsvault; obs="$(get_env CDT_OBSIDIAN)"; [ -z "$obs" ] && obs="off"; obsvault="$(get_env CDT_OBSIDIAN_VAULT)"; [ -z "$obsvault" ] && obsvault="(not set — default: ~/Documents/Obsidian/CDT)"
+  local obs obsvault obsraw; obsraw="$(get_env CDT_OBSIDIAN)"; obsvault="$(get_env CDT_OBSIDIAN_VAULT)"
+  if [ "$obsraw" = "off" ]; then obs="off"; elif [ "$obsraw" = "on" ]; then obs="on"; elif [ -n "$obsvault" ]; then obs="on (auto)"; else obs="off"; fi
+  [ -z "$obsvault" ] && obsvault="(not set — default: ~/Documents/Obsidian/CDT)"
   echo "claude-dev-team config:"
   echo "  status    : $([ "$en" = "0" ] && echo DISABLED || echo enabled)   (core CDT — cdt-config on|off)"
   echo "  effort    : ${eff:-(unset)}   (default $DEFAULT_EFFORT)"
@@ -213,7 +215,7 @@ case "${1:-show}" in
       echo "cdt-config: usage: cdt-config obsidian-vault <path>  (set the Obsidian CDT subfolder path)"
     else
       set_env CDT_OBSIDIAN_VAULT "$2"
-      echo "claude-dev-team: Obsidian vault path = $2  (enable sync: cdt-config obsidian on)"
+      echo "claude-dev-team: Obsidian vault path = $2  (sync auto-enabled — disable with: cdt-config obsidian off)"
     fi ;;
   effort)
     case "$2" in

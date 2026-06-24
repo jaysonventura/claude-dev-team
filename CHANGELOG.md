@@ -6,10 +6,11 @@ All notable changes to claude-dev-team. Versions follow semver.
 ### Added
 - **Obsidian bridge** — the CDT vault (`~/.claude/vault/`) can now be exported to an Obsidian vault as
   linked markdown with YAML frontmatter, `[[wikilinks]]`, and an index/MOC. A new `obsidian.sh` hook
-  implements the `cdt-obsidian` CLI (`sync` / `status` / `set` / `hook` subcommands). Enable with
-  `cdt-config obsidian on`; set a custom path with `cdt-config obsidian-vault <path>` (default:
-  `~/Documents/Obsidian/CDT/`). The sync fires automatically at session end (Stop hook, synchronous,
-  once-per-session guard, fail-open) and can be triggered manually with `/cdt:obsidian`.
+  implements the `cdt-obsidian` CLI (`sync` / `status` / `set` / `hook` subcommands). **Auto-use:** point
+  it at a vault with `cdt-config obsidian-vault <path>` (default `~/Documents/Obsidian/CDT/`) and the
+  session-end sync **enables itself** — no separate toggle; disable any time with `cdt-config obsidian off`.
+  The sync fires automatically at session end (Stop hook, synchronous, once-per-session guard, fail-open)
+  and can be triggered manually with `/cdt:obsidian`. Shipped default stays off until a path is set.
 - **Menu bar — Accounts section (cswap-powered):** a new **Accounts** section in the menu bar dropdown
   lists all your Claude accounts when [`cswap`](https://github.com/realiti4/claude-swap) 0.14+ is
   installed. Shows per-account 5-hour and 7-day usage, a **Switch** radio item per account (confirms
