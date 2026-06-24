@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.51.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.52.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -189,8 +189,8 @@ flowchart LR
 | `product-manager` | Opus | requirements + testable acceptance criteria + scope/non-goals (read-only, Wave 0) |
 | `architect` | Opus | design, interfaces, contracts (read-only) |
 | `backend-engineer` | **Opus** | APIs, server, data access, logic (`api/server/*`) |
-| `frontend-engineer` | **Opus** | web UI/components (`ui/client/*`) |
-| `mobile-engineer` | **Opus** | RN/Expo/Flutter/native (`mobile/app/*`) |
+| `frontend-engineer` | **Opus** | web UI/components (`ui/client/*`) — mandatory: `ui-ux-pro-max` + `web-design-guidelines` + `frontend-design` on every web-UI task |
+| `mobile-engineer` | **Opus** | RN/Expo/Flutter/native (`mobile/app/*`) — mandatory: `ui-ux-pro-max` on every screen; Apple HIG (iOS) and Material Design (Android) as hard bars |
 | `ui-ux-engineer` | Opus | UX flows, design system/tokens, accessibility + visual-polish review (`design/*`) |
 | `qa-engineer` | **Opus** | tests + the gate chain (`test/*`) |
 | `code-reviewer` | Opus | independent correctness/scope review (read-only) |
@@ -255,6 +255,7 @@ session; the bare `/command` form won't match).
 | `/cdt:budget` | show usage % + the Eco (conserve-when-low) recommendation |
 | `/cdt:learn <lesson>` | teach the vault a durable lesson (surfaced later by recall) |
 | `/cdt:menubar [install\|status\|...]` | macOS menu bar usage monitor (subscription % + local tokens) |
+| `/cdt:obsidian` | sync the CDT vault to your Obsidian vault (on-demand; also fires automatically at session end when enabled) |
 | `/cdt:version` | show the installed version (plugin + menu bar app) |
 
 ---
@@ -452,7 +453,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.51.1**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.52.0**.
 
 ---
 
@@ -711,6 +712,12 @@ two-line shape that survives a crowded or notched menu bar. Click it for the ful
   one's out it shows a **⬆ Update available — get vX.Y.Z** banner (click → release page) + a notification.
   The **Updates** submenu has **Check Now**, an **Auto-check** toggle, and the last-checked time. Notify-only
   — it never auto-installs (re-run `/cdt:menubar` or grab the DMG to update).
+- **Accounts** — when [`cswap`](https://github.com/realiti4/claude-swap) 0.14+ is installed, a new
+  **Accounts** section lists all your Claude accounts with their 5-hour and 7-day usage, a **Switch**
+  radio item per account (prompts for confirmation before switching), and a **Switch: Best** option that
+  picks the account with the most headroom. Switching delegates entirely to `cswap` — the menu bar never
+  writes to your Keychain. Install `cswap` with `uv tool install claude-swap`; without it the section
+  shows a brief install hint and gracefully hides.
 
 <p align="center">
   <img src="assets/menubar-screenshot.png" alt="CDT Usage menu bar dropdown — subscription %, local tokens, and the interactive claude-dev-team control panel" width="300">
@@ -855,6 +862,19 @@ its scope (overreach)** or **inside a peer's scope (collision)** is flagged. Ins
 ~/.claude/bin/cdt-config scope block       # stop until the sprawl is reconciled
 ~/.claude/bin/cdt-config scope off
 ```
+
+**Obsidian bridge (CDT vault → Obsidian):** export the CDT vault (`~/.claude/vault/`) to an Obsidian
+vault as linked markdown — YAML frontmatter, `[[wikilinks]]`, and an index/MOC. The sync fires
+automatically at session end (Stop hook) when enabled, and can also be triggered manually with
+`/cdt:obsidian` at any time.
+
+```
+~/.claude/bin/cdt-config obsidian-vault <path>        # set the vault path — this AUTO-ENABLES the sync (default: ~/Documents/Obsidian/CDT/)
+~/.claude/bin/cdt-config obsidian on|off              # force on, or disable even with a path set (shipped default: off until a path is set)
+```
+
+The sync is **fail-open and idempotent** — a missing vault path or any error never interrupts your session.
+Run `/cdt:obsidian` to sync on demand or check status with `cdt-obsidian status`.
 
 ## Security & privacy
 

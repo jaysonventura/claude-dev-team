@@ -130,6 +130,10 @@ final class MenuBarController: NSObject {
 
         menu.addItem(.separator())
 
+        // Accounts section — powered by cswap (claude-swap). Hidden when cswap is absent.
+        // The menu bar NEVER writes the Keychain; all account switching is delegated to cswap.
+        buildAccountsSection(menu: menu, header: header, line: line)
+
         // Local token usage (accurate)
         header("Tokens — today (local)")
         if snap.local.today.isEmpty {
@@ -225,6 +229,138 @@ final class MenuBarController: NSObject {
         menu.addItem(quit)
 
         statusItem.menu = menu
+    }
+
+    // MARK: - Accounts section (cswap integration)
+
+    /// Builds the Accounts NSMenu section. Gracefully degrades: when cswap is absent, shows a single
+    /// disabled install-hint item. Never touches the Keychain — all switching delegated to cswap.
+    private func buildAccountsSection(menu: NSMenu,
+                                      header: (String) -> Void,
+                                      line: (String) -> Void) {
+        guard AccountSwap.isAvailable else {
+            let hint = NSMenuItem(
+                title: "Multi-account: install claude-swap — `uv tool install claude-swap`",
+                action: nil, keyEquivalent: "")
+            hint.isEnabled = false
+            menu.addItem(hint)
+            menu.addItem(.separator())
+            return
+        }
+
+        let accounts = AccountSwap.list()
+
+        header("Accounts")
+
+        if accounts.isEmpty {
+            line("  no accounts configured")
+        } else {
+            for account in accounts {
+                let item = accountMenuItem(for: account)
+                menu.addItem(item)
+            }
+            // Auto-pick best (most quota remaining)
+            let bestItem = NSMenuItem(
+                title: "  Auto-pick best account",
+                action: #selector(switchBestClicked),
+                keyEquivalent: "")
+            bestItem.target = self
+            menu.addItem(bestItem)
+        }
+
+        menu.addItem(.separator())
+    }
+
+    /// Builds a menu item for one cswap account: "  email  5h:25% / 7d:16%".
+    private func accountMenuItem(for account: CswapAccount) -> NSMenuItem {
+        var label = "  \(account.email)"
+        // Append quota percentages if available.
+        if let fh = account.fiveHourPct, let sd = account.sevenDayPct {
+            label += "   \(fh)% / \(sd)%"
+        }
+        let item = NSMenuItem(title: label, action: #selector(switchAccountClicked(_:)), keyEquivalent: "")
+        item.target = self
+        // Encode the account number as the represented object (not email, to avoid free-form injection).
+        item.representedObject = account.number
+        item.state = account.active ? .on : .off
+        // Dim rate-limited accounts.
+        if account.rateLimited {
+            item.attributedTitle = NSAttributedString(
+                string: label + "  (rate limited)",
+                attributes: [.foregroundColor: NSColor.tertiaryLabelColor,
+                             .font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)])
+            item.isEnabled = false
+        } else {
+            item.attributedTitle = NSAttributedString(
+                string: label,
+                attributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)])
+        }
+        return item
+    }
+
+    /// Handles an account menu item click: confirms with the user, then switches via cswap.
+    /// Confirmation is REQUIRED — a single stray click must never silently change the active account.
+    @objc private func switchAccountClicked(_ sender: NSMenuItem) {
+        guard let number = sender.representedObject as? Int else { return }
+        // Strip leading whitespace from title for display.
+        let label = sender.title.trimmingCharacters(in: .whitespaces)
+        confirmAndSwitch(to: number, label: label)
+    }
+
+    /// Handles "Auto-pick best account" click.
+    @objc private func switchBestClicked() {
+        let alert = NSAlert()
+        alert.messageText = "Switch to best account?"
+        alert.informativeText = "claude-swap will switch to the account with the most remaining quota."
+        alert.addButton(withTitle: "Switch")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let success = AccountSwap.switchBest()
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                if success {
+                    // Trigger a usage refresh so the badge reflects the now-active account.
+                    // Note: macOS Keychain cache is ~30s; badge may lag slightly.
+                    self.onRefresh?()
+                    if let snap = self.lastSnap { self.render(snap) }
+                } else {
+                    let err = NSAlert()
+                    err.messageText = "Account switch failed"
+                    err.informativeText = "claude-swap could not switch accounts. Check that accounts are configured."
+                    err.runModal()
+                }
+            }
+        }
+    }
+
+    /// Shows a confirmation alert then calls cswap --switch-to on a background thread.
+    private func confirmAndSwitch(to number: Int, label: String) {
+        let alert = NSAlert()
+        alert.messageText = "Switch account?"
+        alert.informativeText = "Switch to account \(number) (\(label))?\nNote: macOS Keychain cache may take ~30s to apply."
+        alert.addButton(withTitle: "Switch")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            let success = AccountSwap.switchTo(number: number)
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                if success {
+                    // Trigger a usage refresh so the badge reflects the now-active account.
+                    // Note: macOS Keychain cache is ~30s; badge may lag slightly after switch.
+                    self.onRefresh?()
+                    if let snap = self.lastSnap { self.render(snap) }
+                } else {
+                    let err = NSAlert()
+                    err.messageText = "Account switch failed"
+                    err.informativeText = "claude-swap could not switch to account \(number). Check cswap is installed and accounts are configured."
+                    err.runModal()
+                }
+            }
+        }
     }
 
     /// A submenu of mutually-exclusive options; the current value is checkmarked. Selecting one runs

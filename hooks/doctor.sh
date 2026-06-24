@@ -14,7 +14,7 @@ genv(){ grep -E "^$1=" "$ENVF" 2>/dev/null | cut -d= -f2-; }
 echo "claude-dev-team — doctor"
 
 missing=""
-for c in cdt-stats cdt-phase cdt-task cdt-tokens cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps cdt-worktree cdt-auto cdt-version; do
+for c in cdt-stats cdt-phase cdt-task cdt-tokens cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps cdt-worktree cdt-auto cdt-version cdt-obsidian; do
   [ -x "$BIN/$c" ] || missing="$missing $c"
 done
 [ -z "$missing" ] && P "CLIs installed" || W "CLIs missing:$missing" "open a new Claude Code session (the SessionStart hook installs them)"
@@ -71,6 +71,32 @@ fi
 if command -v python3 >/dev/null 2>&1; then
   deps="$(python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/settings.json'))).get('enabledPlugins',{});print(sum(1 for k in d if any(x in k for x in ['superpowers','code-review','frontend-design','context7'])))" 2>/dev/null)"
   [ "${deps:-0}" -ge 1 ] && P "companion plugins enabled ($deps)" || W "companion plugins not detected" "they auto-install with the plugin (needs Claude Code >= 2.1.143)"
+fi
+
+# Obsidian vault bridge check
+obs_on="$(genv CDT_OBSIDIAN)"; obs_vault="$(genv CDT_OBSIDIAN_VAULT)"
+if [ "$obs_on" = "on" ]; then
+  if [ -n "$obs_vault" ]; then
+    if [ -d "$obs_vault" ]; then
+      if [ -w "$obs_vault" ]; then
+        last_obs="$(cat "$obs_vault/.cdt-last-sync" 2>/dev/null)"
+        if [ -n "$last_obs" ]; then
+          P "obsidian sync: ON → $obs_vault  (last sync: $last_obs)"
+        else
+          W "obsidian sync: ON → $obs_vault  (never synced)" "run: cdt-obsidian sync"
+        fi
+      else
+        F "obsidian vault not writable" "check permissions: $obs_vault"
+      fi
+    else
+      W "obsidian vault dir missing" "it will be created on first sync: $obs_vault"
+    fi
+  else
+    W "obsidian sync ON but no vault path set" "run: cdt-config obsidian-vault <path>"
+  fi
+else
+  [ -z "$obs_on" ] && obs_on="off"
+  P "obsidian sync: $obs_on  (enable: cdt-config obsidian on · path: cdt-config obsidian-vault <path>)"
 fi
 
 echo

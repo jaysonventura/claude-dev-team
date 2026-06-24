@@ -118,6 +118,9 @@ show() {
   local sa ea oc rd; sa="$(get_env CDT_SPEC_AUTO)"; [ -z "$sa" ] && sa="false"; ea="$(get_env CDT_EXTERNAL_AI_ALLOWED)"; [ -z "$ea" ] && ea="false"; oc="$(get_env CDT_OCR_ENABLED)"; [ -z "$oc" ] && oc="false"; rd="$(get_env CDT_REDACT)"; [ -z "$rd" ] && rd="true"
   local aa; aa="$(get_env CDT_AGENT_ACTIVITY)"; [ -z "$aa" ] && aa="on"
   local pb; pb="$(get_env CDT_PHASE_BOARD)"; [ -z "$pb" ] && pb="on"
+  local obs obsvault obsraw; obsraw="$(get_env CDT_OBSIDIAN)"; obsvault="$(get_env CDT_OBSIDIAN_VAULT)"
+  if [ "$obsraw" = "off" ]; then obs="off"; elif [ "$obsraw" = "on" ]; then obs="on"; elif [ -n "$obsvault" ]; then obs="on (auto)"; else obs="off"; fi
+  [ -z "$obsvault" ] && obsvault="(not set — default: ~/Documents/Obsidian/CDT)"
   echo "claude-dev-team config:"
   echo "  status    : $([ "$en" = "0" ] && echo DISABLED || echo enabled)   (core CDT — cdt-config on|off)"
   echo "  effort    : ${eff:-(unset)}   (default $DEFAULT_EFFORT)"
@@ -134,6 +137,7 @@ show() {
   echo "  toolkit   : $([ "$tk" = "0" ] && echo DISABLED || echo enabled)   (TS engine, SEPARATE from core CDT — cdt-config toolkit on|off · cdt enable|disable)"
   echo "    prompt-enhance : $pe (mode $pm, Haiku effort $pef)   (prompt-mode auto|always|off · prompt-enhance on|off)"
   echo "    spec-auto : $sa  ·  external-ai : $ea  ·  ocr : $oc  ·  redact : $rd"
+  echo "  obsidian  : $obs   vault: $obsvault   (cdt-config obsidian on|off · cdt-config obsidian-vault <path>)"
   echo "  effort/model apply on the next session (restart Claude Code). Toggle core CDT: cdt-config on|off · toolkit: cdt-config toolkit on|off"
 }
 
@@ -200,6 +204,19 @@ case "${1:-show}" in
       off) set_env CDT_PHASE_BOARD off; echo "claude-dev-team: phase board OFF." ;;
       *) echo "cdt-config: usage: cdt-config phase-board on|off" ;;
     esac ;;
+  obsidian)
+    case "$2" in
+      on)  set_env CDT_OBSIDIAN on;  echo "claude-dev-team: Obsidian sync ON  (vault exported to Obsidian at each session end via Stop hook)." ;;
+      off) set_env CDT_OBSIDIAN off; echo "claude-dev-team: Obsidian sync OFF." ;;
+      *) echo "cdt-config: usage: cdt-config obsidian on|off" ;;
+    esac ;;
+  obsidian-vault)
+    if [ -z "$2" ]; then
+      echo "cdt-config: usage: cdt-config obsidian-vault <path>  (set the Obsidian CDT subfolder path)"
+    else
+      set_env CDT_OBSIDIAN_VAULT "$2"
+      echo "claude-dev-team: Obsidian vault path = $2  (sync auto-enabled — disable with: cdt-config obsidian off)"
+    fi ;;
   effort)
     case "$2" in
       low|medium|high|xhigh) set_setting effortLevel "$2" ;;
@@ -289,6 +306,6 @@ PY
     set_setting effortLevel "$DEFAULT_EFFORT"
     set_setting model "$DEFAULT_MODEL"
     echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off, autonomy=auto, engines on)." ;;
-  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|agent-activity <on|compact|off>|phase-board <on|off>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
+  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|agent-activity <on|compact|off>|phase-board <on|off>|obsidian <on|off>|obsidian-vault <path>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
 esac
 exit 0

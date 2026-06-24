@@ -107,6 +107,11 @@ final class UsageStore {
     /// so would hammer the rate-limited endpoint: an active 429 cooldown is always respected, and a healthy
     /// reading newer than `subMinInterval` is reused rather than re-fetched (clicking Refresh repeatedly, or
     /// a flurry of wake events, can't trip a 429). Local token usage is unlimited, so it always refreshes.
+    ///
+    /// Also called after an AccountSwap switch (via onRefresh) to update the badge for the now-active
+    /// account. Note: macOS Keychain cache is ~30s after a switch, so the subscription % may lag briefly
+    /// before reflecting the new account. The badge grays (stale) during the lag and clears automatically
+    /// when the next live fetch lands with the correct token.
     func refreshNow() {
         refreshLocal()
         let now = Date()
