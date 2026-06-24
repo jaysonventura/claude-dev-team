@@ -75,15 +75,20 @@ fi
 
 # Obsidian vault bridge check
 obs_on="$(genv CDT_OBSIDIAN)"; obs_vault="$(genv CDT_OBSIDIAN_VAULT)"
-if [ "$obs_on" = "on" ]; then
+# Effective state honors auto-use: a configured vault path enables sync unless explicitly off.
+if [ "$obs_on" = "off" ]; then obs_eff="off"; obs_lbl="off"
+elif [ "$obs_on" = "on" ]; then obs_eff="on"; obs_lbl="ON"
+elif [ -n "$obs_vault" ]; then obs_eff="on"; obs_lbl="ON (auto)"
+else obs_eff="off"; obs_lbl="off"; fi
+if [ "$obs_eff" = "on" ]; then
   if [ -n "$obs_vault" ]; then
     if [ -d "$obs_vault" ]; then
       if [ -w "$obs_vault" ]; then
         last_obs="$(cat "$obs_vault/.cdt-last-sync" 2>/dev/null)"
         if [ -n "$last_obs" ]; then
-          P "obsidian sync: ON → $obs_vault  (last sync: $last_obs)"
+          P "obsidian sync: $obs_lbl → $obs_vault  (last sync: $last_obs)"
         else
-          W "obsidian sync: ON → $obs_vault  (never synced)" "run: cdt-obsidian sync"
+          W "obsidian sync: $obs_lbl → $obs_vault  (never synced)" "run: cdt-obsidian sync"
         fi
       else
         F "obsidian vault not writable" "check permissions: $obs_vault"
@@ -95,8 +100,7 @@ if [ "$obs_on" = "on" ]; then
     W "obsidian sync ON but no vault path set" "run: cdt-config obsidian-vault <path>"
   fi
 else
-  [ -z "$obs_on" ] && obs_on="off"
-  P "obsidian sync: $obs_on  (enable: cdt-config obsidian on · path: cdt-config obsidian-vault <path>)"
+  P "obsidian sync: off  (enable by setting a path: cdt-config obsidian-vault <path>)"
 fi
 
 echo
