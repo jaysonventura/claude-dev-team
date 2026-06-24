@@ -2,6 +2,29 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.52.0] — 2026-06-25
+### Added
+- **Obsidian bridge** — the CDT vault (`~/.claude/vault/`) can now be exported to an Obsidian vault as
+  linked markdown with YAML frontmatter, `[[wikilinks]]`, and an index/MOC. A new `obsidian.sh` hook
+  implements the `cdt-obsidian` CLI (`sync` / `status` / `set` / `hook` subcommands). Enable with
+  `cdt-config obsidian on`; set a custom path with `cdt-config obsidian-vault <path>` (default:
+  `~/Documents/Obsidian/CDT/`). The sync fires automatically at session end (Stop hook, synchronous,
+  once-per-session guard, fail-open) and can be triggered manually with `/cdt:obsidian`.
+- **Menu bar — Accounts section (cswap-powered):** a new **Accounts** section in the menu bar dropdown
+  lists all your Claude accounts when [`cswap`](https://github.com/realiti4/claude-swap) 0.14+ is
+  installed. Shows per-account 5-hour and 7-day usage, a **Switch** radio item per account (confirms
+  before switching), and a **Switch: Best** option. Switching delegates entirely to `cswap`; the menu
+  bar **never writes to your Keychain**. Install with `uv tool install claude-swap`. Without `cswap`
+  0.14+ the section shows an install hint and hides gracefully (degrades on 0.13.x which lacks `--json`).
+### Changed
+- **Premium-design bar is now mandatory for builders.** `frontend-engineer` is required to apply
+  `ui-ux-pro-max` + `web-design-guidelines` + `frontend-design` on **every** web-UI task — generic or
+  default AI aesthetics are a non-negotiable rejection bar, not a soft suggestion. `mobile-engineer`
+  is required to apply `ui-ux-pro-max` on **every** screen, with Apple Human Interface Guidelines
+  (iOS) and Material Design (Android) as hard acceptance bars. Both agents' `## Quality` sections were
+  updated from soft "auto-apply" language to an explicit mandate. YAML frontmatter, REPORT sections,
+  and anti-hallucination language are untouched; CI lint remains green.
+
 ## [1.51.1] — 2026-06-22
 ### Fixed
 - **CI green:** updated the `scripts/e2e.sh` status-line assertion to match the new plain-text line — it

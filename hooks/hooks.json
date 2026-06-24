@@ -67,6 +67,15 @@
             "async": false
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/obsidian.sh\" hook",
+            "async": false
+          }
+        ]
       }
     ],
     "SubagentStop": [
