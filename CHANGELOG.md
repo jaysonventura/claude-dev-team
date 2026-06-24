@@ -2,6 +2,13 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.52.1] — 2026-06-25
+### Fixed
+- **`cdt-doctor` now reports the Obsidian sync's *effective* state.** With the v1.52.0 auto-use behavior
+  (setting a vault path auto-enables the bridge), the doctor still read the raw `CDT_OBSIDIAN` toggle and
+  mislabeled a path-enabled vault as `off`. It now computes the effective state and shows
+  `ON (auto) → <vault>` — matching `cdt-obsidian status` and `cdt-config show`. Display-only; no behavior change.
+
 ## [1.52.0] — 2026-06-25
 ### Added
 - **Obsidian bridge** — the CDT vault (`~/.claude/vault/`) can now be exported to an Obsidian vault as
