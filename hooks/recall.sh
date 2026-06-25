@@ -120,4 +120,10 @@ else
   word="$(printf '%s' "$QUERY" | tr 'A-Z' 'a-z' | grep -oE '[a-z0-9]{4,}' | awk '{ print length, $0 }' | sort -rn | head -1 | cut -d" " -f2-)"
   [ -n "$word" ] && grep -i -- "$word" "$LEARN" 2>/dev/null | grep '^- \[' | head -n "$N"
 fi
+
+# Read-back: append relevant notes from the Obsidian vault (your curated knowledge), fail-open.
+# cdt-obsidian recall self-gates — it prints nothing when Obsidian is disabled/unconfigured.
+for _obs in "$(dirname "$0")/cdt-obsidian" "$(dirname "$0")/obsidian.sh"; do
+  [ -f "$_obs" ] && { bash "$_obs" recall "$QUERY" "$N" 2>/dev/null; break; }
+done
 exit 0

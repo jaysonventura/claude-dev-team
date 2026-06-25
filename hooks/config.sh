@@ -137,7 +137,8 @@ show() {
   echo "  toolkit   : $([ "$tk" = "0" ] && echo DISABLED || echo enabled)   (TS engine, SEPARATE from core CDT — cdt-config toolkit on|off · cdt enable|disable)"
   echo "    prompt-enhance : $pe (mode $pm, Haiku effort $pef)   (prompt-mode auto|always|off · prompt-enhance on|off)"
   echo "    spec-auto : $sa  ·  external-ai : $ea  ·  ocr : $oc  ·  redact : $rd"
-  echo "  obsidian  : $obs   vault: $obsvault   (cdt-config obsidian on|off · cdt-config obsidian-vault <path>)"
+  local obsroot; obsroot="$(get_env CDT_OBSIDIAN_RECALL_ROOT)"; [ -z "$obsroot" ] && obsroot="(vault root)"
+  echo "  obsidian  : $obs   vault: $obsvault   recall-root: $obsroot   (cdt-config obsidian on|off · obsidian-vault <path> · obsidian-recall-root <path>)"
   echo "  effort/model apply on the next session (restart Claude Code). Toggle core CDT: cdt-config on|off · toolkit: cdt-config toolkit on|off"
 }
 
@@ -216,6 +217,13 @@ case "${1:-show}" in
     else
       set_env CDT_OBSIDIAN_VAULT "$2"
       echo "claude-dev-team: Obsidian vault path = $2  (sync auto-enabled — disable with: cdt-config obsidian off)"
+    fi ;;
+  obsidian-recall-root)
+    if [ -z "$2" ]; then
+      echo "cdt-config: usage: cdt-config obsidian-recall-root <path>  (vault root that read-back recall searches)"
+    else
+      set_env CDT_OBSIDIAN_RECALL_ROOT "$2"
+      echo "claude-dev-team: Obsidian recall root = $2  (read-back recall searches here; default: the vault root)"
     fi ;;
   effort)
     case "$2" in
@@ -306,6 +314,6 @@ PY
     set_setting effortLevel "$DEFAULT_EFFORT"
     set_setting model "$DEFAULT_MODEL"
     echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off, autonomy=auto, engines on)." ;;
-  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|agent-activity <on|compact|off>|phase-board <on|off>|obsidian <on|off>|obsidian-vault <path>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
+  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|agent-activity <on|compact|off>|phase-board <on|off>|obsidian <on|off>|obsidian-vault <path>|obsidian-recall-root <path>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|reset}"; exit 0 ;;
 esac
 exit 0

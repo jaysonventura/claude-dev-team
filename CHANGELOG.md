@@ -2,6 +2,18 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.53.0] — 2026-06-25
+### Added
+- **Obsidian read-back recall (Obsidian → CDT).** The bridge is now bidirectional: at task start the
+  orchestrator's `cdt-recall` ranks your Obsidian vault — your *curated* notes plus the synced CDT
+  content — with a dependency-free **BM25** ranker (`hooks/obsidian_recall.py`) and surfaces the most
+  relevant notes alongside the vault's own lessons, so Obsidian knowledge actively informs CDT's work.
+  New `cdt-obsidian recall "<query>" [N]` subcommand (self-gating — silent when Obsidian is off/unconfigured;
+  fail-open). `hooks/recall.sh` appends its output automatically. Search root defaults to the whole vault
+  (the parent of the `CDT/` subfolder, so personal notes are included); override with the new
+  `cdt-config obsidian-recall-root <path>`. Pure stdlib, no embeddings, no network. Covered by
+  `scripts/test-obsidian-recall.sh` (ranking + subcommand gating), wired into `validate.sh`.
+
 ## [1.52.1] — 2026-06-25
 ### Fixed
 - **`cdt-doctor` now reports the Obsidian sync's *effective* state.** With the v1.52.0 auto-use behavior

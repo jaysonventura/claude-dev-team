@@ -50,6 +50,7 @@ cp "$HOOKS_DIR/contract.sh"  "$BIN/cdt-contract" 2>/dev/null && chmod +x "$BIN/c
 cp "$HOOKS_DIR/context.sh"   "$BIN/cdt-context"  2>/dev/null && chmod +x "$BIN/cdt-context"  2>/dev/null
 cp "$HOOKS_DIR/route.sh"     "$BIN/cdt-route"    2>/dev/null && chmod +x "$BIN/cdt-route"    2>/dev/null
 cp "$HOOKS_DIR/obsidian.sh"  "$BIN/cdt-obsidian" 2>/dev/null && chmod +x "$BIN/cdt-obsidian" 2>/dev/null
+cp "$HOOKS_DIR/obsidian_recall.py" "$BIN/obsidian_recall.py" 2>/dev/null  # BM25 read-back ranker (must sit beside cdt-obsidian in $BIN)
 
 # claude-dev-team-toolkit (TS engine): link the built bins onto PATH + dist-missing healthcheck.
 TOOLKIT_DIST="$(cd "$HOOKS_DIR/../toolkit/dist" 2>/dev/null && pwd)"
