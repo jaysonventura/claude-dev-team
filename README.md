@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.52.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.53.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -453,7 +453,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.52.1**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.53.0**.
 
 ---
 
@@ -871,10 +871,18 @@ automatically at session end (Stop hook) when enabled, and can also be triggered
 ```
 ~/.claude/bin/cdt-config obsidian-vault <path>        # set the vault path — this AUTO-ENABLES the sync (default: ~/Documents/Obsidian/CDT/)
 ~/.claude/bin/cdt-config obsidian on|off              # force on, or disable even with a path set (shipped default: off until a path is set)
+~/.claude/bin/cdt-config obsidian-recall-root <path>  # vault root that read-back recall searches (default: the vault root)
 ```
 
 The sync is **fail-open and idempotent** — a missing vault path or any error never interrupts your session.
 Run `/cdt:obsidian` to sync on demand or check status with `cdt-obsidian status`.
+
+**Read-back recall (Obsidian → CDT):** the bridge is bidirectional. At the start of a task the orchestrator's
+`cdt-recall` ranks your Obsidian vault — *your* curated notes plus the synced CDT content — with a
+dependency-free **BM25** ranker (`cdt-obsidian recall "<query>"`) and surfaces the most relevant notes
+alongside the vault's own lessons. So knowledge you keep in Obsidian actively informs CDT's work, not just
+the other way around. Self-gating (silent when Obsidian is off) and fail-open. Search root defaults to the
+whole vault; override with `cdt-config obsidian-recall-root <path>`.
 
 ## Security & privacy
 

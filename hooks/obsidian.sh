@@ -45,6 +45,20 @@ resolve_vault() {
   fi
 }
 
+resolve_recall_root() {
+  # Search root for read-back recall. Default: the whole Obsidian vault (the PARENT of the CDT
+  # subfolder) so the user's own curated notes are included — not just CDT's synced output.
+  # Override with CDT_OBSIDIAN_RECALL_ROOT (shell env > env file).
+  local r vault
+  r="${CDT_OBSIDIAN_RECALL_ROOT:-$(genv CDT_OBSIDIAN_RECALL_ROOT)}"
+  if [ -n "$r" ]; then printf '%s' "$r"; return; fi
+  vault="$(resolve_vault)"
+  case "$(basename "$vault")" in
+    CDT|cdt) dirname "$vault" ;;
+    *) printf '%s' "$vault" ;;
+  esac
+}
+
 # Enabled when sync is explicitly ON, OR a vault path has been configured
 # (setting a path auto-enables — "auto use"). An explicit `off` always wins.
 obsidian_enabled() {
@@ -320,6 +334,23 @@ cmd_hook() {
   exit 0
 }
 
+# Read-back recall: rank the Obsidian vault (your curated notes + synced CDT content) for a query
+# and print the top matches. Gated on enabled+configured; silent no-op otherwise (fail-open) so the
+# orchestrator's Wave-0 recall can always append it without risk.
+cmd_recall() {
+  local query="$1" n="${2:-5}" root helper out
+  obsidian_enabled || exit 0
+  [ -n "$query" ] || exit 0
+  command -v python3 >/dev/null 2>&1 || exit 0
+  root="$(resolve_recall_root)"
+  [ -d "$root" ] || exit 0
+  helper="$(dirname "$0")/obsidian_recall.py"
+  [ -f "$helper" ] || exit 0
+  out="$(python3 "$helper" "$root" "$query" "$n" 2>/dev/null)"
+  [ -n "$out" ] || exit 0
+  printf '## Relevant Obsidian notes\n%s\n' "$out"
+}
+
 # ── dispatch ──────────────────────────────────────────────────────────────────
 
 CMD="${1:-status}"
@@ -330,13 +361,15 @@ case "$CMD" in
   status) cmd_status ;;
   set)    cmd_set "$1" ;;
   hook)   cmd_hook   ;;
+  recall) cmd_recall "$1" "$2" ;;
   *)
-    echo "usage: cdt-obsidian {sync|status|set <path>|hook}"
+    echo "usage: cdt-obsidian {sync|status|set <path>|recall <query> [N]|hook}"
     echo
-    echo "  sync         export ~/.claude/vault into the configured Obsidian vault"
-    echo "  status       show configured path and last sync time"
-    echo "  set <path>   configure the Obsidian vault path"
-    echo "  hook         Stop-hook entrypoint (once/session, fail-open)"
+    echo "  sync             export ~/.claude/vault into the configured Obsidian vault"
+    echo "  status           show configured path and last sync time"
+    echo "  set <path>       configure the Obsidian vault path"
+    echo "  recall <q> [N]   rank the Obsidian vault for <q>; print the top-N notes (read-back)"
+    echo "  hook             Stop-hook entrypoint (once/session, fail-open)"
     exit 0
     ;;
 esac

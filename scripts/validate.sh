@@ -128,5 +128,12 @@ sys.exit(1 if errs else 0)
 PY
 then fail=1; else echo "  ok:   per-session metrics isolated; account usage shared"; fi
 
+echo "== obsidian read-back recall (BM25 ranker + CLI gating) =="
+if bash "$(dirname "$0")/test-obsidian-recall.sh" >/dev/null 2>&1; then
+  ok "obsidian_recall.py ranker + cdt-obsidian recall subcommand"
+else
+  err "obsidian recall tests (run: bash scripts/test-obsidian-recall.sh)"
+fi
+
 echo
 if [ "$fail" = 0 ]; then echo "ALL CHECKS PASSED"; else echo "VALIDATION FAILED"; exit 1; fi
