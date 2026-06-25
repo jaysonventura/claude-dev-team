@@ -11,7 +11,9 @@ func parseUsageCache(_ data: Data) -> (session: Int, weekly: Int, ts: Int?)? {
 
 /// Coordinates the two data sources at independent cadences:
 ///  - local token usage (#2): cheap, no rate limit → refresh every 60s
-///  - subscription % (#1): the undocumented endpoint rate-limits → poll gently (5 min) and back off on 429
+///  - subscription % (#1): the undocumented endpoint rate-limits → poll gently (10 min, jittered) and back
+///    off on 429. A launch guard also defers the first fetch when the on-disk cache is already fresh, so
+///    repeated relaunches don't each hit the endpoint (that burst is what the 429s actually come from).
 ///
 /// Both run off **repeating** timers added in `.common` run-loop mode, so a single hung/failed fetch can
 /// never break the poll chain (the bug that froze the subscription % for hours after one transient 429).
@@ -26,7 +28,9 @@ final class UsageStore {
 
     private let localInterval: TimeInterval = 60     // 1 min (local files)
     private let heartbeatInterval: TimeInterval = 20 // how often we re-evaluate whether to poll the endpoint
-    private let subNormal: TimeInterval = 300        // 5 min (endpoint, healthy)
+    private let subNormal: TimeInterval = subscriptionPollInterval   // healthy cadence (10 min; see UsageCache)
+    private let subJitter: TimeInterval = 60         // spread the next healthy poll by 0–60s so multiple
+                                                     // machines / clients don't sync up into a burst
     private let subError: TimeInterval = 60          // base retry after a non-429 failure — recover fast
     private let subAuthRetry: TimeInterval = 45      // 401/403: retry fast — Claude Code refreshes in ~60s
     private let subKeychainRetry: TimeInterval = 20   // transient Keychain blip: retry fast + quietly
@@ -87,9 +91,17 @@ final class UsageStore {
         RunLoop.main.add(lt, forMode: .common)
         localTimer = lt
 
-        // Subscription heartbeat — repeating + .common + never re-created, so polling can't die. It fetches
-        // immediately on launch, then re-checks every `heartbeatInterval` and fetches when backoff elapses.
-        nextSubFetch = Date()
+        // Subscription heartbeat — repeating + .common + never re-created, so polling can't die. It re-checks
+        // every `heartbeatInterval` and fetches when the schedule elapses.
+        // Launch guard: only fetch immediately when we DON'T already have a fresh on-disk reading. If the
+        // status line (or a prior menu-bar run) fetched within the last poll window, defer the first live
+        // fetch until that reading would go stale — so relaunching the app repeatedly can't burst the
+        // rate-limited endpoint. Missing/stale cache → fetch now for a live first paint.
+        if let age = usageCacheAge(), age >= 0, age < subNormal {
+            nextSubFetch = Date().addingTimeInterval(subNormal - age)
+        } else {
+            nextSubFetch = Date()
+        }
         let hb = Timer(timeInterval: heartbeatInterval, repeats: true) { [weak self] _ in self?.subTick() }
         RunLoop.main.add(hb, forMode: .common)
         heartbeat = hb
@@ -156,7 +168,7 @@ final class UsageStore {
                     self.subFailures = 0
                     self.kcFailures = 0
                     self.rateLimitedUntil = .distantPast            // recovered — clear any 429 cooldown
-                    self.nextSubFetch = Date().addingTimeInterval(self.subNormal)
+                    self.nextSubFetch = Date().addingTimeInterval(self.subNormal + Double.random(in: 0...self.subJitter))
                     self.subInFlight = false
                 }
             } catch {
@@ -256,8 +268,7 @@ final class UsageStore {
     /// replaced the instant a live fetch lands. Preserves the last-good plan label / Sonnet % if present.
     private func reseedFromCache(force: Bool = false) {
         guard force || snapshot.subscription == nil else { return }
-        let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/.cdt-usage.json")
-        guard let data = try? Data(contentsOf: url), let c = parseUsageCache(data) else { return }
+        guard let c = readUsageCache() else { return }
         snapshot.subscription = SubscriptionUsage(
             sessionPct: c.session, weeklyPct: c.weekly,
             sonnetPct: snapshot.subscription?.sonnetPct,
@@ -266,21 +277,5 @@ final class UsageStore {
         snapshot.subscriptionSeeded = true
         if let ts = c.ts { snapshot.subscriptionAsOf = Date(timeIntervalSince1970: TimeInterval(ts)) }
         controller.render(snapshot)
-    }
-
-    /// Persist the latest usage % to ~/.claude/.cdt-usage.json so `cdt-budget` / Eco mode work on macOS
-    /// without needing the status line enabled (the status line writes the same file cross-platform).
-    /// Merge-writes (preserves sibling fields like context size that other writers own).
-    private func writeUsageCache(session: Int, weekly: Int) {
-        let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/.cdt-usage.json")
-        var obj = (try? Data(contentsOf: url)).flatMap {
-            try? JSONSerialization.jsonObject(with: $0) as? [String: Any]
-        } ?? [:]
-        obj["session"] = session
-        obj["weekly"] = weekly
-        obj["ts"] = Int(Date().timeIntervalSince1970)
-        if let data = try? JSONSerialization.data(withJSONObject: obj) {
-            try? data.write(to: url)
-        }
     }
 }

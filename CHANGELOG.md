@@ -2,6 +2,29 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.54.0] — 2026-06-25
+### Changed
+- **Menu bar polls the usage endpoint gently (10 min, jittered) and the `status` CLI is cache-first —
+  to stop the 429 `rate limited` state.** The undocumented `/api/oauth/usage` endpoint throttles *bursts*,
+  and the bursts came from *event-driven* live calls across multiple clients (the app's launch fetch, the
+  status line, every `cdt-menubar status`), not the steady heartbeat. Three coordinated changes
+  (`menubar/Sources/cdt-menubar/`):
+  - **Cadence 5 min → 10 min, with 0–60s jitter** (`UsageStore.swift`). The session/weekly % move slowly,
+    so this loses no real freshness while halving steady-state load; jitter stops multiple machines syncing
+    into a burst.
+  - **Launch guard** — on launch the app no longer fires an immediate live fetch when the on-disk cache is
+    already fresh; it defers the first fetch until that reading would go stale. Relaunching repeatedly can
+    no longer burst the endpoint.
+  - **Cache-first `status`** (`CLI.swift`) — `cdt-menubar status` now reuses the menu bar's fresh on-disk
+    reading (labeled `(cached, as of …)`) instead of hitting the endpoint, and only fetches live when the
+    cache is missing/stale. A live fetch is persisted to the shared cache so `cdt-budget` / the next
+    `status` get it for free. New `cdt-menubar status --live` (`--fresh`) forces a live fetch (the only way
+    to see the plan label, Sonnet %, and reset countdowns, which the cache doesn't carry).
+  - Read/write of `~/.claude/.cdt-usage.json` is centralized in a new `UsageCache.swift` (single schema +
+    merge-write that preserves sibling fields other writers own); pure freshness math is unit-tested
+    (`UsageCacheTests.swift`). The existing 429 back-off (honors `Retry-After`, hard cooldown) is unchanged,
+    and the monitor remains strictly read-only on credentials (no OAuth minting).
+
 ## [1.53.0] — 2026-06-25
 ### Added
 - **Obsidian read-back recall (Obsidian → CDT).** The bridge is now bidirectional: at task start the
