@@ -1,11 +1,10 @@
 import AppKit
 
 // claude-dev-team menu bar usage monitor.
-// `--once`/`--print`: one-shot terminal readout (cache-first; add `--live`/`--fresh` to force a live fetch).
+// `--once`/`--print`: one-shot terminal readout (reads the CLI status line's usage cache; no network).
 // `--unregister`: remove the login item. Else: run the app.
 if CommandLine.arguments.contains("--once") || CommandLine.arguments.contains("--print") {
-    let forceLive = CommandLine.arguments.contains("--live") || CommandLine.arguments.contains("--fresh")
-    runOnce(forceLive: forceLive)
+    runOnce()
     exit(0)
 }
 if CommandLine.arguments.contains("--unregister") {

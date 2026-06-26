@@ -48,20 +48,20 @@ final class MenuBarController: NSObject {
         lastSnap = snap
         // --- compact menu bar item: two STACKED lines — session % on top, weekly % on bottom — so the
         //     item is only as wide as "48%" and survives a crowded / notched menu bar. Labels in dropdown.
-        if let sub = snap.subscription {
+        if let usage = snap.usage {
             statusItem.button?.title = ""
-            // When the reading is stale (last fetch failed, e.g. expired token) gray the numbers out so a
-            // frozen value never masquerades as live; otherwise color-code by threshold (80/90).
-            let stale = snap.subscriptionStale
+            // When the reading is stale (status line idle, cache aged out) gray the numbers so a frozen
+            // value never masquerades as live; otherwise color-code by threshold (80/90).
+            let stale = snap.usageStale
             statusItem.button?.image = stackedImage(
                 brand: "CDT",
-                top: "\(sub.sessionPct)%", topColor: stale ? .tertiaryLabelColor : color(for: sub.sessionPct),
-                bottom: "\(sub.weeklyPct)%", bottomColor: stale ? .tertiaryLabelColor : color(for: sub.weeklyPct))
+                top: "\(usage.sessionPct)%", topColor: stale ? .tertiaryLabelColor : color(for: usage.sessionPct),
+                bottom: "\(usage.weeklyPct)%", bottomColor: stale ? .tertiaryLabelColor : color(for: usage.weeklyPct))
         } else {
-            // No subscription data yet → a small single line. While the first fetch is still in flight show
-            // an ellipsis (not token counts) so the bar doesn't look "done"; afterwards show today's tokens.
+            // No usage data yet (the CLI status line hasn't written a reading) → a small single line showing
+            // today's local tokens, or just "CDT" before any tokens. The dropdown explains how to enable it.
             statusItem.button?.image = nil
-            let title = snap.subscriptionLoading ? "CDT …" : "CDT \(formatTokens(snap.local.todayTotal))"
+            let title = snap.local.todayTotal > 0 ? "CDT \(formatTokens(snap.local.todayTotal))" : "CDT"
             statusItem.button?.attributedTitle = NSAttributedString(
                 string: title,
                 attributes: [.foregroundColor: NSColor.labelColor, .font: NSFont.systemFont(ofSize: 11)])
@@ -95,37 +95,22 @@ final class MenuBarController: NSObject {
             menu.addItem(.separator())
         }
 
-        // Subscription section
-        // Plan tier (Pro/Max) comes from the Keychain credential fields, not the usage endpoint; show it
-        // when present ("Subscription · Max 5x"), else a neutral "Subscription" — never a guessed tier.
-        let planSuffix = snap.subscription?.planLabel.map { " · \($0)" } ?? ""
-        header("Subscription\(planSuffix)" + (snap.subscriptionStale ? "  —  stale" : ""))
-        if let sub = snap.subscription {
-            line("  Session  \(textBar(sub.sessionPct)) \(sub.sessionPct)%" +
-                 (sub.sessionResetIn.map { "  resets \($0)" } ?? ""))
-            line("  Weekly   \(textBar(sub.weeklyPct)) \(sub.weeklyPct)%" +
-                 (sub.weeklyResetIn.map { "  resets \($0)" } ?? ""))
-            if let s = sub.sonnetPct {
-                line("  Sonnet   \(textBar(s)) \(s)%")
+        // Usage section — session (5-hour) + weekly (7-day) %, sourced from the CLI status line's cache
+        // (Claude Code's native rate_limits). No endpoint, no Keychain — the menu bar only reads.
+        header("Usage" + (snap.usageStale ? "  —  stale" : ""))
+        if let usage = snap.usage {
+            line("  Session  \(textBar(usage.sessionPct)) \(usage.sessionPct)%")
+            line("  Weekly   \(textBar(usage.weeklyPct)) \(usage.weeklyPct)%")
+            if snap.usageStale {
+                // Reading aged past the freshness window — gray it and stamp when it was last current, so a
+                // value from an idle session never looks live.
+                let asOf = snap.usageAsOf.map { "  (as of \(clockTime($0)))" } ?? ""
+                line("  ⚠ no recent update from Claude Code\(asOf)")
             }
-            if snap.subscriptionStale {
-                // Explain WHY the reading is grayed: a rate-limit countdown, a "refreshing the cached value"
-                // note on cold start, or the underlying error — so a stale value never looks broken/frozen.
-                let note: String
-                if let retryAt = snap.subscriptionRetryAt, retryAt > Date() {
-                    note = "rate limited · retry \(formatCountdown(to: retryAt))"
-                } else if snap.subscriptionSeeded && snap.subscriptionError == nil {
-                    note = "cached · refreshing…"
-                } else {
-                    note = snap.subscriptionError ?? "usage stale"
-                }
-                let asOf = snap.subscriptionAsOf.map { "  (as of \(clockTime($0)))" } ?? ""
-                line("  ⚠ \(note)\(asOf)")
-            }
-        } else if snap.subscriptionLoading {
-            line("  loading usage…")
         } else {
-            line("  unavailable — " + (snap.subscriptionError ?? "endpoint/login"))
+            // Nothing written yet → the CDT status line isn't feeding the cache. Point the user at it.
+            line("  no usage yet — enable the CDT status line:")
+            line("    cdt-config statusline on")
         }
 
         menu.addItem(.separator())

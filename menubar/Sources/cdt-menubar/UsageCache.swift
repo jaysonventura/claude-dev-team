@@ -1,18 +1,19 @@
 import Foundation
 
-/// The shared on-disk usage cache (`~/.claude/.cdt-usage.json`) — the single file the menu bar, the status
-/// line, the `--once` CLI, and `cdt-budget` all read/write. Centralized here so every reader/writer agrees on
-/// the SAME schema and uses a merge-write that never clobbers a sibling field another writer owns (e.g. the
-/// per-workspace `sessions{}` the status line keeps). The account-wide subscription %s (`session`/`weekly`)
-/// are top-level + shared — they describe the account rate limit, not a single workspace.
+/// The shared on-disk usage cache (`~/.claude/.cdt-usage.json`). The CLI status line (`hooks/statusline.sh`)
+/// is the SOLE writer of the account-wide usage %s (`session`/`weekly`) — it reads them straight from Claude
+/// Code's native `rate_limits` payload (no OAuth endpoint, no Keychain, no rate limit) and merge-writes them
+/// at the top level. The menu bar, the `--once` CLI, and `cdt-budget` are READERS only. Centralized here so
+/// every reader agrees on the same schema and the tolerant parse (`parseUsageCache`) ignores the sibling
+/// fields other writers own (per-workspace `sessions{}`, context size, …).
 let usageCacheURL = FileManager.default.homeDirectoryForCurrentUser
     .appendingPathComponent(".claude/.cdt-usage.json")
 
-/// Healthy poll cadence for the subscription endpoint, in seconds (10 min). The menu bar polls at this
-/// interval and the `--once` CLI treats a cached reading younger than this as fresh — a SINGLE constant so
-/// the poll cadence and the cache-first window can't silently drift apart. The % moves slowly, so this
-/// gentle cadence loses no real freshness while halving steady-state load.
-let subscriptionPollInterval: TimeInterval = 600
+/// How long a cached reading is treated as current before the menu bar grays it (30 min). The status line
+/// rewrites it on every interaction, so a reading older than this means Claude Code has been idle (or the
+/// CDT status line isn't enabled). The %s move slowly, so a generous window avoids needless graying. A
+/// SINGLE constant so the menu bar and the `--once` CLI can't drift on what "fresh" means.
+let usageFreshWindow: TimeInterval = 1800
 
 /// Read + parse the cache. Returns nil when the file is missing or lacks both `session` and `weekly`
 /// (the tolerant parse lives in `parseUsageCache`, which ignores extra sibling fields).
@@ -35,24 +36,8 @@ func usageCacheFresh(ts: Int?, now: Date = Date(), maxAge: TimeInterval) -> Bool
     return age >= 0 && age < maxAge
 }
 
-/// Age (seconds) of the on-disk cached reading, or nil if it's missing / has no timestamp.
-func usageCacheAge(now: Date = Date()) -> TimeInterval? {
-    usageCacheAgeSeconds(ts: readUsageCache()?.ts, now: now)
-}
-
-/// Merge-write the account-wide subscription %s, preserving every sibling field other writers own, and
-/// stamp `ts` so freshness checks work. Best-effort (never throws — a usage cache is non-critical) and
-/// READ-ONLY with respect to credentials: it only persists already-fetched %s, never touches the Keychain.
-func writeUsageCache(session: Int, weekly: Int, now: Date = Date()) {
-    var obj = (try? Data(contentsOf: usageCacheURL)).flatMap {
-        try? JSONSerialization.jsonObject(with: $0) as? [String: Any]
-    } ?? [:]
-    obj["session"] = session
-    obj["weekly"] = weekly
-    obj["ts"] = Int(now.timeIntervalSince1970)
-    if let data = try? JSONSerialization.data(withJSONObject: obj) {
-        // Atomic write (temp file + rename) so a concurrent reader/writer — the status line's Python writer
-        // uses os.replace — never sees a half-written file or clobbers a sibling update mid-write.
-        try? data.write(to: usageCacheURL, options: .atomic)
-    }
+/// True when a reading should be shown grayed: it's older than `window`, undated, or clock-skewed into the
+/// future — anything we can't trust as current. The inverse of `usageCacheFresh`. Pure → unit-tested.
+func usageReadingIsStale(ts: Int?, now: Date = Date(), window: TimeInterval = usageFreshWindow) -> Bool {
+    !usageCacheFresh(ts: ts, now: now, maxAge: window)
 }

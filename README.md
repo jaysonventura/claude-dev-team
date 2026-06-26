@@ -254,7 +254,7 @@ session; the bare `/command` form won't match).
 | `/cdt:auto [status\|gate\|explain\|off\|assist\|auto]` | the autonomous mode router + cost governor (BOUNDED / DEPTH / BREADTH) |
 | `/cdt:budget` | show usage % + the Eco (conserve-when-low) recommendation |
 | `/cdt:learn <lesson>` | teach the vault a durable lesson (surfaced later by recall) |
-| `/cdt:menubar [install\|status\|...]` | macOS menu bar usage monitor (subscription % + local tokens) |
+| `/cdt:menubar [install\|status\|...]` | macOS menu bar usage monitor (session/weekly usage % + local tokens) |
 | `/cdt:obsidian` | sync the CDT vault to your Obsidian vault (on-demand; also fires automatically at session end when enabled) |
 | `/cdt:version` | show the installed version (plugin + menu bar app) |
 
@@ -696,8 +696,11 @@ A native Swift app (`menubar/`) puts your usage in the menu bar as a compact **`
 **current-session %** stacked over the **weekly %** (each color-coded 80/90) — a deliberately narrow,
 two-line shape that survives a crowded or notched menu bar. Click it for the full dropdown:
 
-- **Subscription %** — current session, weekly (all-models), and weekly Sonnet, each with a reset
-  countdown, from Anthropic's `oauth/usage` endpoint.
+- **Usage %** — current session (5-hour) and weekly (7-day), color-coded 80/90. These are read from the
+  **CLI status line's shared cache** (`~/.claude/.cdt-usage.json`), which the status line fills from Claude
+  Code's native `rate_limits` — so the menu bar makes **no network calls and reads no credentials**. Enable
+  the status line (`cdt-config statusline on`) to feed it; a reading that hasn't refreshed recently is grayed
+  with an "as of" time.
 - **Tokens today (local)** — your real token usage by model (with cache) and the 7-day total, summed
   from your own `~/.claude/projects` transcripts.
 - **`claude-dev-team` activity panel** — separate **Enabled (core CDT)** and **Toolkit engine** toggles, a
@@ -720,7 +723,7 @@ two-line shape that survives a crowded or notched menu bar. Click it for the ful
   shows a brief install hint and gracefully hides.
 
 <p align="center">
-  <img src="assets/menubar-screenshot.png" alt="CDT Usage menu bar dropdown — subscription %, local tokens, and the interactive claude-dev-team control panel" width="300">
+  <img src="assets/menubar-screenshot.png" alt="CDT Usage menu bar dropdown — session/weekly usage %, local tokens, and the interactive claude-dev-team control panel" width="300">
 </p>
 
 > **macOS only.** On **Windows/Linux** there's no menu bar — use the cross-platform **[status line](#status-line-cross-platform)**
@@ -736,10 +739,11 @@ to opt out). Manage it any time:
 /cdt:menubar restart       # or: install | start | stop | uninstall
 ```
 
-Requires macOS + the Swift toolchain (`xcode-select --install`); first launch shows a one-time Keychain
-approval (**Always Allow**). The subscription %s use an **undocumented** endpoint (the same one Claude
-Code calls) and may change — it **fails soft**, and your local token data always works. `cdt-menubar
-uninstall` removes the login item + binary (and stops auto-reinstall).
+Requires macOS + the Swift toolchain (`xcode-select --install`). The menu bar is a **pure reader** — it
+makes no network calls and never touches your Keychain. The session/weekly %s come from the CLI status
+line's cache (so turn the status line on with `cdt-config statusline on`); your local token data is summed
+from your transcripts and always works. `cdt-menubar uninstall` removes the login item + binary (and stops
+auto-reinstall).
 
 **Distributing a prebuilt app:** the build auto-signs with any available code-signing identity. To ship a
 **notarized DMG** that opens on any Mac with no Gatekeeper warnings (drag to Applications, like an App
@@ -890,11 +894,11 @@ whole vault; override with `cdt-config obsidian-recall-root <path>`.
 
 - **No telemetry, no outbound traffic.** The plugin sends nothing anywhere — no analytics. Everything
   runs and is stored locally.
-- **The menu bar app** (macOS, optional) reads Claude Code's existing OAuth token from your **Keychain**
-  (never logged) and calls Anthropic's `oauth/usage` endpoint over TLS — the token is only ever sent to
-  `api.anthropic.com`. That endpoint is **undocumented** (the same one Claude Code uses) and may change;
-  the app **fails soft** if it does. Token *counts* are summed from your own local `~/.claude/projects`
-  transcripts and are never transmitted.
+- **The menu bar app** (macOS, optional) is a **pure local reader** — it makes **no network calls** and
+  **reads no credentials** (no Keychain access at all). The session/weekly %s come from the CLI status
+  line's local cache (`~/.claude/.cdt-usage.json`), which the status line fills from Claude Code's own
+  `rate_limits`; token *counts* are summed from your own local `~/.claude/projects` transcripts. Nothing is
+  transmitted.
 - **Transparency — macOS first-session auto-build.** On macOS, the SessionStart hook compiles the
   plugin's *own* bundled Swift source and installs a login item ("CDT Usage") **once**, in the background,
   only if `swift` is already present. Opt out with `CDT_MENUBAR_AUTO=0` in `~/.claude/claude-dev-team.env`
@@ -912,8 +916,8 @@ whole vault; override with `cdt-config obsidian-recall-root <path>`.
 | Commands/agents don't show up | Restart the session or run `/reload-plugins`; confirm `claude plugin list` shows `claude-dev-team` enabled. Commands are **namespaced**: `/cdt:<cmd>`. |
 | Companion plugins didn't enable | You're on Claude Code &lt; 2.1.143 — update, or enable `superpowers` / `code-review` / `frontend-design` / `context7` once manually. |
 | `cdt-*: command not found` | In a **plain terminal** use the full path `~/.claude/bin/cdt-…` (the `!cdt-…` shorthand only works **inside** Claude Code's input box). |
-| Menu bar item missing (macOS) | Needs the Swift toolchain (`xcode-select --install`). Check `~/.claude/bin/cdt-menubar status`; approve the one-time Keychain prompt (**Always Allow**); `cdt-menubar restart`. It installs to **/Applications → "CDT Usage"**. |
-| Subscription shows "unavailable" | The undocumented usage endpoint or your login is unavailable — it **fails soft**; local token counts still work. Try **Refresh now** (⌘R). |
+| Menu bar item missing (macOS) | Needs the Swift toolchain (`xcode-select --install`). Check `~/.claude/bin/cdt-menubar status`; `cdt-menubar restart`. It installs to **/Applications → "CDT Usage"**. |
+| Menu bar shows "no usage yet" | The CLI status line isn't feeding the cache — enable it with `cdt-config statusline on`. The menu bar reads session/weekly % from that cache; local token counts work regardless. |
 | "Orchestration isn't dispatching agents" | By design — only **T2+** (multi-domain or risk) fans out; small tasks stay solo. See [Triage & tiers](#triage--tiers). Force it with a multi-domain/risk task or the `FULL:` prefix. |
 | No vault / DB / CLIs after install | The SessionStart hook bootstraps them — **restart your session once** after installing. |
 | Hooks/CLIs not running on **Windows** | Install **Git for Windows** + **Python 3**; if WSL is also present, pin `CLAUDE_CODE_GIT_BASH_PATH` (see the [Windows setup](#step-2--set-up-your-platform)). Then run `/cdt:doctor`. The menu bar is macOS-only — use `cdt-config statusline on`. |

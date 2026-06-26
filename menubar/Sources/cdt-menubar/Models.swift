@@ -1,35 +1,11 @@
 import Foundation
 
-// Real subscription usage from /api/oauth/usage (nil if the endpoint/login is unavailable).
-struct SubscriptionUsage {
-    let sessionPct: Int          // five_hour utilization (0-100)
-    let weeklyPct: Int           // seven_day
-    let sonnetPct: Int?          // seven_day_sonnet
-    let sessionResetIn: String?  // formatted countdown, e.g. "33m"
-    let weeklyResetIn: String?
-    let planLabel: String?       // e.g. "Max 5x" / "Pro" (from the Keychain plan fields); nil when unknown
-}
-
-/// Human-readable plan label from the Keychain credential fields (`subscriptionType` + `rateLimitTier`).
-/// Returns nil when the tier isn't present — never guess a tier that isn't in the data (the 1.22.1
-/// regression hardcoded "Claude Max" and mislabeled Pro users; this only ever reports the real field).
-func planLabel(subscriptionType: String?, rateLimitTier: String?) -> String? {
-    guard let raw = subscriptionType?.trimmingCharacters(in: .whitespaces), !raw.isEmpty else { return nil }
-    let base: String
-    switch raw.lowercased() {
-    case "max":        base = "Max"
-    case "pro":        base = "Pro"
-    case "free":       base = "Free"
-    case "team":       base = "Team"
-    case "enterprise": base = "Enterprise"
-    default:           base = raw.prefix(1).uppercased() + raw.dropFirst()   // title-case an unknown tier verbatim
-    }
-    // Append the rate multiplier only when the tier string clearly encodes one (e.g. "…_5x", "…_20x").
-    if let tier = rateLimitTier?.lowercased(),
-       let m = tier.range(of: "[0-9]+x", options: .regularExpression) {
-        return "\(base) \(tier[m])"
-    }
-    return base
+// Account usage %s, read from the CLI status line's shared cache (`~/.claude/.cdt-usage.json`). The status
+// line gets these straight from Claude Code's native `rate_limits` payload — no OAuth endpoint, no Keychain,
+// no rate limit. The menu bar is a pure reader of that cache.
+struct UsageReading {
+    let sessionPct: Int   // five_hour used % (0-100)
+    let weeklyPct: Int    // seven_day used %
 }
 
 // Accurate local token usage, summed from ~/.claude/projects/*/*.jsonl.
@@ -58,11 +34,9 @@ struct TeamActivity {
 
 // Everything the menu bar renders.
 struct UsageSnapshot {
-    var subscription: SubscriptionUsage?
-    var subscriptionError: String?
-    var subscriptionAsOf: Date?            // when `subscription` was last known good (live fetch or cache ts)
-    var subscriptionRetryAt: Date?         // when an active rate-limit (429) cooldown ends — for the countdown
-    var subscriptionSeeded = false         // showing the on-disk cache, no live fetch has landed yet this run
+    var usage: UsageReading?               // last reading from the CLI status-line cache (nil = none written yet)
+    var usageAsOf: Date?                   // the cache `ts` — for the "as of" label + staleness check
+    var usageStale = false                 // reading is older than `usageFreshWindow` → grayed, never live-looking
     var local = LocalUsage()
     var team = TeamActivity()
     var lastUpdated = Date()
@@ -72,15 +46,6 @@ struct UsageSnapshot {
     var update: ReleaseInfo?
     var updateLastChecked: Date?
     var updateAutoCheck = true
-
-    /// True when we're showing a non-live reading — either the last good one after a failed refresh
-    /// (e.g. expired token / rate limit) or the disk-cached one before the first live fetch lands. The
-    /// displayed %s are grayed so a non-live value never masquerades as fresh.
-    var subscriptionStale: Bool { subscription != nil && (subscriptionError != nil || subscriptionSeeded) }
-
-    /// True before any reading at all (no live fetch, no error, no cache seed). Lets the UI show
-    /// "loading…" on first paint instead of a premature "unavailable" while the request is in flight.
-    var subscriptionLoading: Bool { subscription == nil && subscriptionError == nil }
 }
 
 // MARK: - formatting helpers
@@ -102,20 +67,6 @@ func clockTime(_ d: Date, seconds: Bool = false) -> String {
     f.dateFormat = seconds ? "h:mm:ss a" : "h:mm a"
     f.amSymbol = "AM"; f.pmSymbol = "PM"
     return f.string(from: d)
-}
-
-func formatCountdown(to date: Date, now: Date = Date()) -> String {
-    let s = date.timeIntervalSince(now)
-    if s <= 0 { return "now" }
-    // Under a day → a countdown ("in 3h 47m"); a day or more away → an absolute time ("Fri 1:59 AM").
-    if s < 24 * 3600 {
-        let h = Int(s) / 3600
-        let m = (Int(s) % 3600) / 60
-        return h > 0 ? "in \(h)h \(m)m" : "in \(m)m"
-    }
-    let f = DateFormatter()
-    f.dateFormat = "EEE h:mm a"
-    return f.string(from: date)
 }
 
 // Bare role name for display: drop a "plugin:" namespace prefix

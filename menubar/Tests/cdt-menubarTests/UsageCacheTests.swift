@@ -1,9 +1,9 @@
 import XCTest
 @testable import cdt_menubar
 
-/// Covers the pure freshness math behind cache-first reads + the launch guard. These decide whether the CLI
-/// reuses the on-disk reading (vs hitting the rate-limited endpoint) and whether the menu bar defers its
-/// first fetch on launch — so the boundaries matter. No filesystem: `ts`/`now` are injected.
+/// Covers the pure freshness math behind the cache reader: the age of a reading and whether it's still
+/// within the window (above which the menu bar grays it). `usageReadingIsStale` is built on `usageCacheFresh`,
+/// so these boundaries underpin the displayed staleness. No filesystem: `ts`/`now` are injected.
 final class UsageCacheTests: XCTestCase {
     private let now = Date(timeIntervalSince1970: 10_000)
 
