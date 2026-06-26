@@ -2,6 +2,30 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.55.0] — 2026-06-26
+### Changed
+- **Menu bar drops its own subscription-% fetch and reads usage straight from the CLI status line —
+  killing the `/api/oauth/usage` 429s at the root.** The menu bar used to call the undocumented
+  `/api/oauth/usage` endpoint itself (reading the Keychain token), and that token-shared burst across
+  clients was the sole cause of the recurring `rate limited` state. It is now a **pure reader** of the
+  shared cache (`~/.claude/.cdt-usage.json`) that the CLI status line already fills from Claude Code's
+  native `rate_limits` payload — **no network call and no Keychain read anywhere in the app**
+  (`menubar/Sources/cdt-menubar/`):
+  - **Deleted** `SubscriptionAPI.swift` and `Keychain.swift` entirely, plus the whole backoff / heartbeat /
+    in-flight / rate-limit / token-rotation machinery in `UsageStore.swift` (≈280 → ≈115 lines). A cheap
+    30s timer re-reads the local cache; `refreshNow()` (and wake-from-sleep) just re-reads — nothing to
+    throttle.
+  - **Dropped from the dropdown:** the plan label (`Max 5x`), weekly-Sonnet %, reset countdowns, and the
+    429 retry note — all of which only existed because of the endpoint/Keychain path. The badge still shows
+    **session % over weekly %**; the dropdown shows **Usage → Session / Weekly**.
+  - **Staleness, not errors:** a reading older than 30 min is grayed with an "as of" time; when the cache
+    has never been written (the CDT status line isn't enabled), the dropdown prompts `cdt-config statusline
+    on` instead of showing an "unavailable" error.
+  - **`cdt-menubar status`** is now cache-only (no `--live`/`--fresh`, no live fetch); unknown flags are
+    ignored for compatibility.
+- Tests: removed the OAuth-decoder / `UsageError` / Retry-After / Keychain-classification / plan-label
+  suites; added cache-parse, staleness-boundary, and snapshot-state coverage (30 tests green).
+
 ## [1.54.0] — 2026-06-25
 ### Changed
 - **Menu bar polls the usage endpoint gently (10 min, jittered) and the `status` CLI is cache-first —

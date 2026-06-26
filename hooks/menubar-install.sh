@@ -3,7 +3,7 @@
 #   cdt-menubar install          build the .app into Applications + enable auto-start + launch (default)
 #   cdt-menubar build            compile + bundle into "CDT Usage.app"
 #   cdt-menubar start|stop|restart
-#   cdt-menubar status [--live]  one-shot terminal readout (no GUI); cache-first, --live forces a live fetch
+#   cdt-menubar status           one-shot terminal readout (no GUI); reads the CLI status line's usage cache
 #   cdt-menubar install-login    enable auto-start at login (LaunchAgent)
 #   cdt-menubar uninstall        remove the app + LaunchAgent
 # Override the install location with CDT_MENUBAR_APPS (default: ~/Applications).
@@ -81,7 +81,7 @@ start() {
 
 stop() { pkill -f "$APP_RE" 2>/dev/null && echo "Stopped." || echo "Not running."; }
 
-status() { [ -x "$APP" ] || build || return 1; "$APP" --once "$@"; }   # forwards flags, e.g. --live
+status() { [ -x "$APP" ] || build || return 1; "$APP" --once "$@"; }   # cache-only readout (extra flags ignored)
 
 install_login() {
   [ -x "$APP" ] || build || return 1
