@@ -103,9 +103,12 @@ final class MenuBarController: NSObject {
             line("  Weekly   \(textBar(usage.weeklyPct)) \(usage.weeklyPct)%")
             if snap.usageStale {
                 // Reading aged past the freshness window — gray it and stamp when it was last current, so a
-                // value from an idle session never looks live.
+                // value from an idle session never looks live. The status line (the sole writer) runs only in
+                // a terminal — not the VS Code/JetBrains chat panel — so point the user at the integrated
+                // terminal to refresh the account-wide reading.
                 let asOf = snap.usageAsOf.map { "  (as of \(clockTime($0)))" } ?? ""
                 line("  ⚠ no recent update from Claude Code\(asOf)")
+                line("    refresh: run claude in a terminal (VS Code: integrated terminal)")
             }
         } else {
             // Nothing written yet → the CDT status line isn't feeding the cache. Point the user at it.

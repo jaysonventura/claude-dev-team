@@ -20,8 +20,12 @@ func runOnce() {
         // A stale reading is stamped with when it was last current so it's never mistaken for live.
         let asOf = (snap.usageStale ? snap.usageAsOf : nil).map { "  (as of \(clockTime($0)))" } ?? ""
         print("  Usage: Session \(u.sessionPct)% · Weekly \(u.weeklyPct)%\(asOf)")
+        if snap.usageStale {
+            // The status line only runs in a terminal — tell IDE-panel users where to refresh it.
+            print("    refresh: run claude in a terminal (VS Code: integrated terminal)")
+        }
     } else {
-        print("  Usage: none yet — enable the CDT status line (cdt-config statusline on)")
+        print("  Usage: none yet — enable the CDT status line (cdt-config statusline on), then run claude in a terminal")
     }
 
     if snap.local.today.isEmpty {
