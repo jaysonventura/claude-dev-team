@@ -701,6 +701,13 @@ two-line shape that survives a crowded or notched menu bar. Click it for the ful
   Code's native `rate_limits` — so the menu bar makes **no network calls and reads no credentials**. Enable
   the status line (`cdt-config statusline on`) to feed it; a reading that hasn't refreshed recently is grayed
   with an "as of" time.
+  - **Keeping it fresh in VS Code / JetBrains (or any IDE):** the status line — the *only* thing that writes
+    the % — runs **only in a terminal**, never in the editor's Claude **chat panel**. So when you work in the
+    panel the % goes stale. The reading is **account-wide**, so one terminal session refreshes it everywhere:
+    run `claude` in your editor's **integrated terminal** (or any terminal) and the badge updates. The stale
+    dropdown line and `/cdt:budget` both point you here. (There is no token-free way to read the % from the
+    panel itself — Claude Code exposes `rate_limits` only to the status line, not to hooks, and persists it to
+    no file — so a terminal session is the no-network refresh path.)
 - **Tokens today (local)** — your real token usage by model (with cache) and the 7-day total, summed
   from your own `~/.claude/projects` transcripts.
 - **`claude-dev-team` activity panel** — separate **Enabled (core CDT)** and **Toolkit engine** toggles, a

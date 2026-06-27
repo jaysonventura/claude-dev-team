@@ -23,5 +23,8 @@ Notes to relay to the user:
 - `status` prints a one-shot terminal readout (no GUI). `uninstall` removes the LaunchAgent + binary.
 - The session/weekly %s come from the CLI status line's cache — enable it with `cdt-config statusline on`
   so the menu bar has data to show; the local token usage always works regardless.
+- The status line writes that cache **only from a terminal**, not the VS Code/JetBrains chat panel. If the %
+  shows **stale**, tell the user the figure is account-wide and running `claude` in the editor's **integrated
+  terminal** (or any terminal) refreshes the menu bar everywhere.
 
 After running, report the CLI output and remind the user where to look (menu bar icon).

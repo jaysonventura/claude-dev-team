@@ -2,6 +2,27 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.56.0] — 2026-06-27
+### Fixed
+- **Usage % now refreshes when you work in the VS Code / JetBrains panel — with no network and no
+  credentials.** The session/weekly % is written *only* by the CLI status line, and Claude Code runs the
+  status line **only in a terminal** — never in the editor's chat panel — so working in the panel left the
+  menu bar (and `/cdt:budget`) showing a stale reading. After confirming there is **no token-free way** to
+  read the % from the panel (Claude Code exposes `rate_limits` only to the status line, not to any hook, and
+  persists it to no file), the fix keeps the pure-reader / no-network architecture from v1.55.0 and instead
+  makes the **terminal refresh path** obvious: the reading is **account-wide**, so running `claude` in your
+  editor's **integrated terminal** (or any terminal) refreshes the badge everywhere.
+### Changed
+- **Actionable stale guidance on every usage surface.** The menu-bar dropdown stale line, the
+  `cdt-menubar status` readout, and `cdt-budget` now say *"refresh: run claude in a terminal (VS Code:
+  integrated terminal)"* instead of a vague "restart a session", and the "unavailable" path no longer implies
+  the menu bar itself can produce data.
+- **`/cdt:doctor` now checks the status line.** It reports `[warn] status line off — usage % won't refresh`
+  with the enable + integrated-terminal hint, since an off status line is the silent root cause of a never-
+  updating %.
+- Documented the terminal-refresh model in the README menu-bar section and the `/cdt:budget` + `/cdt:menubar`
+  command docs.
+
 ## [1.55.0] — 2026-06-26
 ### Changed
 - **Menu bar drops its own subscription-% fetch and reads usage straight from the CLI status line —

@@ -64,6 +64,13 @@ case "$mdl" in
   *)      W "model: $mdl (not Opus)" "for max quality: cdt-config model claude-opus-4-8" ;;
 esac
 
+# Usage display: the status line is the ONLY writer of the session/weekly % cache (the menu bar + cdt-budget
+# only READ it). Claude Code runs it solely in a TERMINAL — not the VS Code/JetBrains chat panel — so if it's
+# off, or you only ever use the IDE panel, the % never refreshes. Fix is one of: enable it + use a terminal.
+sl="$(command -v python3 >/dev/null 2>&1 && python3 -c "import json,os;p=os.path.expanduser('~/.claude/settings.json');d=json.load(open(p)) if os.path.exists(p) else {};print('on' if 'cdt-statusline' in ((d.get('statusLine') or {}).get('command') or '') else 'off')" 2>/dev/null)"
+[ "$sl" = "on" ] && P "status line on (feeds the usage % cache from any terminal)" \
+  || W "status line off — usage % won't refresh" "enable: cdt-config statusline on  (it runs in a terminal only; in VS Code/JetBrains use the integrated terminal)"
+
 if [ "$(uname)" = "Darwin" ]; then
   pgrep -f "CDT Usage.app/Contents/MacOS/cdt-menubar" >/dev/null 2>&1 && P "menu bar app running" || W "menu bar not running" "start: cdt-menubar install"
 fi
