@@ -26,5 +26,9 @@ Notes to relay to the user:
 - The status line writes that cache **only from a terminal**, not the VS Code/JetBrains chat panel. If the %
   shows **stale**, tell the user the figure is account-wide and running `claude` in the editor's **integrated
   terminal** (or any terminal) refreshes the menu bar everywhere.
+- For a hands-off refresh while working in the panel, the opt-in `cdt-config realtime-usage on` (off by default)
+  lets the menu bar poll the usage endpoint **read-only, at most ~once every 10 min and only when the terminal
+  reading is stale** — at the cost of an occasional Keychain prompt when Claude Code rotates its token. Force one
+  gated refresh now with `cdt-menubar --refresh-usage`.
 
 After running, report the CLI output and remind the user where to look (menu bar icon).

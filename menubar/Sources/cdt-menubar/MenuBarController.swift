@@ -109,6 +109,19 @@ final class MenuBarController: NSObject {
                 let asOf = snap.usageAsOf.map { "  (as of \(clockTime($0)))" } ?? ""
                 line("  ⚠ no recent update from Claude Code\(asOf)")
                 line("    refresh: run claude in a terminal (VS Code: integrated terminal)")
+                // Realtime OFF → offer it as an alternative to visiting the terminal (calm, one line).
+                if !snap.realtimeEnabled {
+                    line("    or enable realtime: cdt-config realtime-usage on")
+                }
+            }
+            // Realtime ON status (subtle): a 429 cooldown pauses live refresh, else a one-line reason.
+            if snap.realtimeEnabled {
+                if let retryAt = snap.usageRetryAt, retryAt > Date() {
+                    let mins = max(1, Int(ceil(retryAt.timeIntervalSinceNow / 60)))
+                    line("  live refresh paused — retry in \(mins)m")
+                } else if let reason = snap.usageFetchError {
+                    line("  \(reason)")
+                }
             }
         } else {
             // Nothing written yet → the CDT status line isn't feeding the cache. Point the user at it.
@@ -152,6 +165,14 @@ final class MenuBarController: NSObject {
         toolkitItem.state = cfg.toolkitEnabled ? .on : .off
         toolkitItem.representedObject = ["toolkit", cfg.toolkitEnabled ? "off" : "on"]
         menu.addItem(toolkitItem)
+
+        // Realtime usage (network) — opt-in throttled % refresh. OFF by default; the menu bar stays a pure
+        // cache reader (no Keychain, no network) unless the user turns this on (cdt-config realtime-usage).
+        let realtimeItem = NSMenuItem(title: "Realtime usage (network)", action: #selector(applyConfig(_:)), keyEquivalent: "")
+        realtimeItem.target = self
+        realtimeItem.state = cfg.realtimeUsage ? .on : .off
+        realtimeItem.representedObject = ["realtime-usage", cfg.realtimeUsage ? "off" : "on"]
+        menu.addItem(realtimeItem)
 
         // Prompt enhancement mode (cdt-config prompt-mode auto|always|off).
         menu.addItem(optionSubmenu("Prompt enhance", key: "prompt-mode", current: cfg.promptMode,

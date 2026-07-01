@@ -37,6 +37,12 @@ struct UsageSnapshot {
     var usage: UsageReading?               // last reading from the CLI status-line cache (nil = none written yet)
     var usageAsOf: Date?                   // the cache `ts` — for the "as of" label + staleness check
     var usageStale = false                 // reading is older than `usageFreshWindow` → grayed, never live-looking
+
+    // Opt-in realtime usage refresh (network). All default OFF; populated by UsageStore only when enabled.
+    var realtimeEnabled = false            // CDT_REALTIME_USAGE — drives the dropdown toggle + status lines
+    var usageRetryAt: Date?                // 429 cooldown end (future) → "live refresh paused — retry in Nm"
+    var usageFetchError: String?           // subtle one-line reason (e.g. token expired) — never alarmist
+
     var local = LocalUsage()
     var team = TeamActivity()
     var lastUpdated = Date()
