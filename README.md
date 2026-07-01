@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.54.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.57.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -453,7 +453,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.54.0**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.57.0**.
 
 ---
 
@@ -708,6 +708,16 @@ two-line shape that survives a crowded or notched menu bar. Click it for the ful
     dropdown line and `/cdt:budget` both point you here. (There is no token-free way to read the % from the
     panel itself — Claude Code exposes `rate_limits` only to the status line, not to hooks, and persists it to
     no file — so a terminal session is the no-network refresh path.)
+  - **Opt-in realtime refresh (`cdt-config realtime-usage on`, off by default):** if you'd rather the badge
+    update itself while you work in the panel, turn this on. The menu bar still reads the free status-line cache
+    as primary; it *additionally* polls `/api/oauth/usage` **at most once every ~10 minutes, and only when the
+    terminal reading is already stale (≥5 min old)** — so ≤6 calls/hour worst case, and zero while a terminal
+    keeps the cache fresh. It reads the OAuth token from the Keychain **read-only (never mints or refreshes a
+    token)**, honors the server's `Retry-After` on a 429, and merges the fresh %s back into the shared cache so
+    `/cdt:budget` benefits too. **Tradeoff:** enabling it brings back the occasional macOS Keychain prompt
+    (*"CDT Usage.app wants to use Claude Code-credentials"*) when Claude Code rotates its token (~1–3×/day) —
+    which is why it's opt-in and off by default. Force one gated refresh from a terminal with
+    `cdt-menubar --refresh-usage`.
 - **Tokens today (local)** — your real token usage by model (with cache) and the 7-day total, summed
   from your own `~/.claude/projects` transcripts.
 - **`claude-dev-team` activity panel** — separate **Enabled (core CDT)** and **Toolkit engine** toggles, a

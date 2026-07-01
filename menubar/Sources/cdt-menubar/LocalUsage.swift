@@ -77,6 +77,14 @@ struct CDTConfig {
     var effort = "—"
     var model = "—"          // raw, e.g. "claude-opus-4-8"
     var eco = "off"          // off by default — opt in with cdt-config eco on|auto
+    var realtimeUsage = false // opt-in throttled network usage refresh (CDT_REALTIME_USAGE); default OFF
+}
+
+/// PURE interpretation of a `CDT_REALTIME_USAGE=` value → on/off. On unless it's an explicit off token
+/// ("0" / "false" / "off") or empty. Extracted so the flag parse is unit-tested without touching the file.
+func parseRealtimeFlag(_ value: String) -> Bool {
+    let v = value.trimmingCharacters(in: .whitespaces).lowercased()
+    return !(v == "0" || v == "false" || v == "off" || v.isEmpty)
 }
 
 func readCDTConfig() -> CDTConfig {
@@ -97,6 +105,8 @@ func readCDTConfig() -> CDTConfig {
                 enhanceOff = (v == "0" || v == "false" || v == "off")
             } else if line.hasPrefix("CDT_ECO=") {
                 c.eco = String(line.dropFirst("CDT_ECO=".count)).trimmingCharacters(in: .whitespaces)
+            } else if line.hasPrefix("CDT_REALTIME_USAGE=") {
+                c.realtimeUsage = parseRealtimeFlag(String(line.dropFirst("CDT_REALTIME_USAGE=".count)))
             }
         }
         if enhanceOff { c.promptMode = "off" }

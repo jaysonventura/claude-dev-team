@@ -2,6 +2,33 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.57.0] — 2026-07-01
+### Added
+- **Opt-in realtime subscription-% refresh for the menu bar (`cdt-config realtime-usage on`, default OFF).**
+  Since v1.56.0 the session/weekly % is written *only* by the CLI status line, which Claude Code runs *only*
+  in a terminal — so working in the VS Code / JetBrains chat panel (or idling) leaves the badge stale. This
+  setting fills that gap **without changing the default no-network behavior**:
+  - **Still reads the free status-line cache as primary.** The network path is a *fallback*, not a replacement:
+    the menu bar polls `/api/oauth/usage` **at most once every ~10 minutes, and only when the terminal reading
+    is already stale (≥5 min old)** — so ≤6 calls/hour worst case, and **zero** while a terminal keeps the
+    cache fresh.
+  - **Read-only on credentials.** It reads the OAuth token from the Keychain **read-only and never mints or
+    refreshes a token** (minting would log you out of Claude Code). On a `429` it honors the server's
+    `Retry-After` cooldown everywhere — no bursts.
+  - **Merges the fresh %s back into the shared cache** (`~/.claude/.cdt-usage.json`), so `/cdt:budget` and the
+    next `cdt-menubar status` benefit from the same refresh.
+  - Env flag `CDT_REALTIME_USAGE` in `~/.claude/claude-dev-team.env`; toggle with `cdt-config realtime-usage
+    on|off`.
+- **`cdt-menubar --refresh-usage`** — a terminal command that forces one gated refresh now (subject to the
+  same cooldown / read-only rules).
+### Changed
+- **Tradeoff stated plainly (why it's opt-in and off by default):** enabling `realtime-usage` brings back the
+  occasional macOS Keychain prompt (*"CDT Usage.app wants to use Claude Code-credentials"*) when Claude Code
+  rotates its token (~1–3×/day). With the setting **off** (default) the menu bar is **100% unchanged from
+  v1.55/1.56** — a pure local-file reader with **no network and no Keychain access**.
+- Documented the realtime option in the README menu-bar section and the `/cdt:budget` + `/cdt:menubar` command
+  docs.
+
 ## [1.56.0] — 2026-06-27
 ### Fixed
 - **Usage % now refreshes when you work in the VS Code / JetBrains panel — with no network and no

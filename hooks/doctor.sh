@@ -71,6 +71,12 @@ sl="$(command -v python3 >/dev/null 2>&1 && python3 -c "import json,os;p=os.path
 [ "$sl" = "on" ] && P "status line on (feeds the usage % cache from any terminal)" \
   || W "status line off — usage % won't refresh" "enable: cdt-config statusline on  (it runs in a terminal only; in VS Code/JetBrains use the integrated terminal)"
 
+# Realtime usage: opt-in, throttled (<=1 network call/10 min) menu-bar refresh of the subscription %. Off by
+# default (pure local-file reader). Informational only — never a hard fail.
+rt="$(genv CDT_REALTIME_USAGE)"
+[ "$rt" = "1" ] && P "realtime usage: on  (menu bar polls the usage % ~10 min when the terminal reading is stale)" \
+  || echo "  [info] realtime usage: off (menu bar % refreshes only from terminal; enable: cdt-config realtime-usage on)"
+
 if [ "$(uname)" = "Darwin" ]; then
   pgrep -f "CDT Usage.app/Contents/MacOS/cdt-menubar" >/dev/null 2>&1 && P "menu bar app running" || W "menu bar not running" "start: cdt-menubar install"
 fi
