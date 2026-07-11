@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.57.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.58.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -352,8 +352,11 @@ install the missing ones via your package manager:
 **No Python packages to install** — every script uses the **python3 standard library only** (`json`,
 `sqlite3`, `re`, …). There is no `pip install` step.
 
-**Companion plugins auto-install** with claude-dev-team (declared as manifest `dependencies`):
-`superpowers`, `code-review`, `frontend-design`, `context7` (`figma` is optional).
+**Zero-config companions.** claude-dev-team **auto-installs its companion plugins** (declared as manifest
+`dependencies`): `superpowers`, `code-review`, `frontend-design`, `context7` (`figma` is optional). It also
+ships a `.mcp.json` that **auto-registers the `sequential-thinking` MCP server** — so a fresh install comes
+wired up with no manual MCP or plugin setup. (context7's MCP comes from its companion plugin, so it isn't
+double-registered.)
 
 **Platforms:** macOS · Linux · **Windows** — each has a step-by-step guide in
 [Step 2 — Set up your platform](#step-2--set-up-your-platform) below. The **menu bar is macOS-only**;
@@ -453,7 +456,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.57.0**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.58.0**.
 
 ---
 
@@ -696,11 +699,13 @@ A native Swift app (`menubar/`) puts your usage in the menu bar as a compact **`
 **current-session %** stacked over the **weekly %** (each color-coded 80/90) — a deliberately narrow,
 two-line shape that survives a crowded or notched menu bar. Click it for the full dropdown:
 
-- **Usage %** — current session (5-hour) and weekly (7-day), color-coded 80/90. These are read from the
+- **Usage %** — current session (5-hour) and weekly (7-day), color-coded 80/90. The **primary source** is the
   **CLI status line's shared cache** (`~/.claude/.cdt-usage.json`), which the status line fills from Claude
-  Code's native `rate_limits` — so the menu bar makes **no network calls and reads no credentials**. Enable
-  the status line (`cdt-config statusline on`) to feed it; a reading that hasn't refreshed recently is grayed
-  with an "as of" time.
+  Code's native `rate_limits` — a **free, local read: no network call, no credentials**. Enable the status
+  line (`cdt-config statusline on`) to feed it; a reading that hasn't refreshed recently is grayed with an "as
+  of" time. To keep the badge fresh while you work in an editor's chat panel, a **popup-free realtime refresh**
+  (on by default) *additionally* polls the usage endpoint — throttled, read-only, and prompt-free; see the
+  realtime bullet below.
   - **Keeping it fresh in VS Code / JetBrains (or any IDE):** the status line — the *only* thing that writes
     the % — runs **only in a terminal**, never in the editor's Claude **chat panel**. So when you work in the
     panel the % goes stale. The reading is **account-wide**, so one terminal session refreshes it everywhere:
@@ -708,15 +713,17 @@ two-line shape that survives a crowded or notched menu bar. Click it for the ful
     dropdown line and `/cdt:budget` both point you here. (There is no token-free way to read the % from the
     panel itself — Claude Code exposes `rate_limits` only to the status line, not to hooks, and persists it to
     no file — so a terminal session is the no-network refresh path.)
-  - **Opt-in realtime refresh (`cdt-config realtime-usage on`, off by default):** if you'd rather the badge
-    update itself while you work in the panel, turn this on. The menu bar still reads the free status-line cache
-    as primary; it *additionally* polls `/api/oauth/usage` **at most once every ~10 minutes, and only when the
-    terminal reading is already stale (≥5 min old)** — so ≤6 calls/hour worst case, and zero while a terminal
-    keeps the cache fresh. It reads the OAuth token from the Keychain **read-only (never mints or refreshes a
-    token)**, honors the server's `Retry-After` on a 429, and merges the fresh %s back into the shared cache so
-    `/cdt:budget` benefits too. **Tradeoff:** enabling it brings back the occasional macOS Keychain prompt
-    (*"CDT Usage.app wants to use Claude Code-credentials"*) when Claude Code rotates its token (~1–3×/day) —
-    which is why it's opt-in and off by default. Force one gated refresh from a terminal with
+  - **Realtime refresh (on by default, popup-free):** so the badge keeps updating even while you work in the
+    panel, the menu bar *additionally* polls `/api/oauth/usage` **at most once every ~10 minutes, and only when
+    the terminal reading is already stale (≥5 min old)** — so ≤6 calls/hour worst case, and zero while a
+    terminal keeps the cache fresh. It reads the OAuth token from the Keychain **read-only (never mints or
+    refreshes a token)**, honors the server's `Retry-After` on a 429 via a persisted cooldown, and merges the
+    fresh %s back into the shared cache so `/cdt:budget` benefits too. **No surprise dialogs:** the Keychain
+    read is **non-interactive**, so realtime never raises the macOS *"CDT Usage wants to access … keychain
+    password"* prompt on its own. If access isn't granted it **quietly falls back to the cached reading**
+    (a calm *"Realtime paused — grant Keychain access"* line) — no nagging. A prompt appears **only** when you
+    explicitly click **"Grant Keychain access for realtime usage…"** in the dropdown. Turn the whole thing off
+    with `cdt-config realtime-usage off`; force one gated refresh from a terminal with
     `cdt-menubar --refresh-usage`.
 - **Tokens today (local)** — your real token usage by model (with cache) and the 7-day total, summed
   from your own `~/.claude/projects` transcripts.
@@ -756,9 +763,11 @@ to opt out). Manage it any time:
 /cdt:menubar restart       # or: install | start | stop | uninstall
 ```
 
-Requires macOS + the Swift toolchain (`xcode-select --install`). The menu bar is a **pure reader** — it
-makes no network calls and never touches your Keychain. The session/weekly %s come from the CLI status
-line's cache (so turn the status line on with `cdt-config statusline on`); your local token data is summed
+Requires macOS + the Swift toolchain (`xcode-select --install`). The session/weekly %s come primarily from
+the CLI status line's cache — a free, local read (so turn the status line on with `cdt-config statusline
+on`); the **popup-free realtime refresh** (on by default) additionally polls the usage endpoint read-only
+and throttled to keep the badge fresh in an editor panel (disable with `cdt-config realtime-usage off`). Your
+local token data is summed
 from your transcripts and always works. `cdt-menubar uninstall` removes the login item + binary (and stops
 auto-reinstall).
 
@@ -911,11 +920,13 @@ whole vault; override with `cdt-config obsidian-recall-root <path>`.
 
 - **No telemetry, no outbound traffic.** The plugin sends nothing anywhere — no analytics. Everything
   runs and is stored locally.
-- **The menu bar app** (macOS, optional) is a **pure local reader** — it makes **no network calls** and
-  **reads no credentials** (no Keychain access at all). The session/weekly %s come from the CLI status
-  line's local cache (`~/.claude/.cdt-usage.json`), which the status line fills from Claude Code's own
-  `rate_limits`; token *counts* are summed from your own local `~/.claude/projects` transcripts. Nothing is
-  transmitted.
+- **The menu bar app** (macOS, optional) reads its **primary** figures locally — **no network, no
+  credentials**: the session/weekly %s come from the CLI status line's local cache
+  (`~/.claude/.cdt-usage.json`), which the status line fills from Claude Code's own `rate_limits`, and token
+  *counts* are summed from your own local `~/.claude/projects` transcripts. The only network/credential path
+  is the **popup-free realtime refresh** (on by default) — a throttled (≤6/hour), **read-only** poll of your
+  usage endpoint that reads the OAuth token **non-interactively** and **never mints or refreshes** it; turn it
+  off with `cdt-config realtime-usage off` to make the app a pure local reader. Nothing else is transmitted.
 - **Transparency — macOS first-session auto-build.** On macOS, the SessionStart hook compiles the
   plugin's *own* bundled Swift source and installs a login item ("CDT Usage") **once**, in the background,
   only if `swift` is already present. Opt out with `CDT_MENUBAR_AUTO=0` in `~/.claude/claude-dev-team.env`

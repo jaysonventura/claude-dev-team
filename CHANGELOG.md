@@ -2,6 +2,32 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.58.0] — 2026-07-12
+### Changed
+- **Menu-bar realtime usage % is now popup-free — and on by default.** The optional network refresh that
+  keeps the badge fresh while you work in the VS Code / JetBrains chat panel (introduced opt-in in v1.57.0)
+  now ships **on out of the box**, and it no longer surfaces the macOS *"CDT Usage wants to access … keychain
+  password"* dialog on its own:
+  - **The Keychain read is non-interactive.** The app reads the OAuth token without ever raising a prompt.
+    If macOS won't hand it over without interaction, the bar **quietly falls back to the cached reading** and
+    shows a calm *"Realtime paused — grant Keychain access"* line — no nagging, no surprise dialogs.
+  - **You grant access on your terms.** A prompt appears **only** when you explicitly click the new
+    **"Grant Keychain access for realtime usage…"** menu item; if you never do, the badge keeps working off
+    the cached reading.
+  - **Still rate-safe and read-only.** ≤6 fetches/hour, **zero** while a terminal keeps the status-line cache
+    fresh, honors the server's `429 Retry-After` via a persisted cooldown, and reads the token **read-only —
+    it never mints or refreshes a token** (minting would log you out of Claude Code).
+  - Turn it off entirely with `cdt-config realtime-usage off`.
+- **Commits no longer add a `Co-Authored-By: Claude` (or any-AI) trailer.** A repo `commit-msg` hook strips
+  the trailer, so it never lands in history; run **`scripts/setup-git-hooks.sh`** once to install the guard
+  locally. No past history was rewritten.
+### Added
+- **Zero-config companion setup — no manual MCP or plugin wiring.** The plugin now ships a `.mcp.json` that
+  **auto-registers the `sequential-thinking` MCP server**, and its manifest `dependencies` **auto-install the
+  companion plugins** (`superpowers`, `code-review`, `frontend-design`, `context7`) — so a fresh install comes
+  wired up, with skills auto-applying via the orchestration routing. (context7's MCP comes from the companion
+  plugin, so it isn't double-registered.)
+
 ## [1.57.0] — 2026-07-01
 ### Added
 - **Opt-in realtime subscription-% refresh for the menu bar (`cdt-config realtime-usage on`, default OFF).**

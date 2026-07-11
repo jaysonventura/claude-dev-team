@@ -1,0 +1,26 @@
+#!/bin/sh
+# commit-msg — strip Claude attribution from commit messages (going-forward only).
+#
+# Removes, in place from the message file ($1):
+#   - "Co-Authored-By:" trailers that mention Claude or the Anthropic noreply address
+#   - "Generated with ... Claude Code" attribution lines
+# Case-insensitive (git trailers are case-insensitive). Idempotent: re-running finds nothing to strip.
+# Only matching lines are dropped; every other line is preserved byte-for-byte. Never rewrites history.
+set -e
+
+msg_file="$1"
+[ -n "$msg_file" ] && [ -f "$msg_file" ] || exit 0
+
+tmp="$msg_file.cdt-scrub.$$"
+if grep -v -E -i \
+  '^[[:space:]]*Co-Authored-By:.*Claude|^[[:space:]]*Co-Authored-By:.*noreply@anthropic|Generated with .*Claude Code' \
+  "$msg_file" > "$tmp" 2>/dev/null; then :; fi
+
+# Safety: never blank a real message. Replace the original only when the scrubbed result is
+# non-empty, or the original was already empty — so a grep error/edge case can't truncate a commit.
+if [ -s "$tmp" ] || [ ! -s "$msg_file" ]; then
+  mv "$tmp" "$msg_file"
+else
+  rm -f "$tmp"
+fi
+exit 0

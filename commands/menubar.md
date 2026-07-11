@@ -6,8 +6,9 @@ allowed-tools: Bash
 
 Manage the **claude-dev-team menu bar usage monitor** (a native Swift app showing your Claude usage —
 current-session % and weekly % — plus accurate local token usage from your transcripts and dev-team
-activity). The usage %s are read from the CLI status line's shared cache (Claude Code's native
-`rate_limits`); the menu bar makes no network calls and reads no credentials.
+activity). The usage %s come primarily from the CLI status line's shared cache (Claude Code's native
+`rate_limits`) — a free, local read with no network and no credentials; a popup-free realtime refresh
+(on by default) additionally polls the usage endpoint read-only to keep the badge fresh in an editor panel.
 
 Run the control CLI with the requested action (default `install` = build + auto-start + launch):
 
@@ -16,8 +17,9 @@ Run the control CLI with the requested action (default `install` = build + auto-
 ```
 
 Notes to relay to the user:
-- macOS only; needs the Swift toolchain (`xcode-select --install` if missing). No Keychain prompt — the
-  menu bar reads no credentials.
+- macOS only; needs the Swift toolchain (`xcode-select --install` if missing). Popup-free — the Keychain
+  read for realtime usage is non-interactive, so it never raises a macOS Keychain prompt on its own; a prompt
+  appears only if the user clicks **"Grant Keychain access for realtime usage…"** in the dropdown.
 - `install` builds the app, enables auto-start at login (LaunchAgent), and launches it (look for the
   **▓** icon in the menu bar).
 - `status` prints a one-shot terminal readout (no GUI). `uninstall` removes the LaunchAgent + binary.
@@ -26,9 +28,10 @@ Notes to relay to the user:
 - The status line writes that cache **only from a terminal**, not the VS Code/JetBrains chat panel. If the %
   shows **stale**, tell the user the figure is account-wide and running `claude` in the editor's **integrated
   terminal** (or any terminal) refreshes the menu bar everywhere.
-- For a hands-off refresh while working in the panel, the opt-in `cdt-config realtime-usage on` (off by default)
-  lets the menu bar poll the usage endpoint **read-only, at most ~once every 10 min and only when the terminal
-  reading is stale** — at the cost of an occasional Keychain prompt when Claude Code rotates its token. Force one
-  gated refresh now with `cdt-menubar --refresh-usage`.
+- The hands-off refresh is **on by default (popup-free, throttled)**: the menu bar polls the usage endpoint
+  **read-only, at most ~once every 10 min and only when the terminal reading is stale** (≤6 calls/hour, zero
+  while a terminal keeps the cache fresh). The Keychain read is non-interactive, so if access isn't granted it
+  quietly falls back to the cached reading (a calm *"Realtime paused — grant Keychain access"* line). Disable
+  with `cdt-config realtime-usage off`; force one gated refresh now with `cdt-menubar --refresh-usage`.
 
 After running, report the CLI output and remind the user where to look (menu bar icon).

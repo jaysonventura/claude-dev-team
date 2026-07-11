@@ -3,6 +3,7 @@ import AppKit
 final class MenuBarController: NSObject {
     private let statusItem: NSStatusItem
     var onRefresh: (() -> Void)?
+    var onGrantKeychain: (() -> Void)?      // explicit, user-initiated Keychain grant (only interactive read)
     var onCheckUpdate: (() -> Void)?        // "Check Now" in the Updates submenu
     var onToggleAutoCheck: (() -> Void)?    // toggle "Auto-check on launch"
     private var lastSnap: UsageSnapshot?   // so config changes can rebuild the menu in place
@@ -114,9 +115,17 @@ final class MenuBarController: NSObject {
                     line("    or enable realtime: cdt-config realtime-usage on")
                 }
             }
-            // Realtime ON status (subtle): a 429 cooldown pauses live refresh, else a one-line reason.
+            // Realtime ON status (subtle): a Keychain denial (needs an explicit grant) takes precedence,
+            // then a 429 cooldown, then a one-line reason. All calm, never alarmist.
             if snap.realtimeEnabled {
-                if let retryAt = snap.usageRetryAt, retryAt > Date() {
+                if snap.keychainGrantNeeded {
+                    // Calm, gray status line + an actionable grant item (the ONLY place a prompt may appear).
+                    line("  Realtime paused — grant Keychain access")
+                    let grant = NSMenuItem(title: "  Grant Keychain access for realtime usage…",
+                                           action: #selector(grantKeychainClicked), keyEquivalent: "")
+                    grant.target = self
+                    menu.addItem(grant)
+                } else if let retryAt = snap.usageRetryAt, retryAt > Date() {
                     let mins = max(1, Int(ceil(retryAt.timeIntervalSinceNow / 60)))
                     line("  live refresh paused — retry in \(mins)m")
                 } else if let reason = snap.usageFetchError {
@@ -166,8 +175,8 @@ final class MenuBarController: NSObject {
         toolkitItem.representedObject = ["toolkit", cfg.toolkitEnabled ? "off" : "on"]
         menu.addItem(toolkitItem)
 
-        // Realtime usage (network) — opt-in throttled % refresh. OFF by default; the menu bar stays a pure
-        // cache reader (no Keychain, no network) unless the user turns this on (cdt-config realtime-usage).
+        // Realtime usage (network) — throttled % refresh, ON by default. Opt out with `cdt-config
+        // realtime-usage off` to keep the menu bar a pure cache reader (no Keychain, no network).
         let realtimeItem = NSMenuItem(title: "Realtime usage (network)", action: #selector(applyConfig(_:)), keyEquivalent: "")
         realtimeItem.target = self
         realtimeItem.state = cfg.realtimeUsage ? .on : .off
@@ -404,6 +413,7 @@ final class MenuBarController: NSObject {
     }
 
     @objc private func refreshClicked() { onRefresh?() }
+    @objc private func grantKeychainClicked() { onGrantKeychain?() }
     @objc private func checkUpdateClicked() { onCheckUpdate?() }
     @objc private func toggleAutoCheckClicked() { onToggleAutoCheck?() }
     @objc private func getUpdateClicked() {

@@ -77,14 +77,18 @@ struct CDTConfig {
     var effort = "—"
     var model = "—"          // raw, e.g. "claude-opus-4-8"
     var eco = "off"          // off by default — opt in with cdt-config eco on|auto
-    var realtimeUsage = false // opt-in throttled network usage refresh (CDT_REALTIME_USAGE); default OFF
+    var realtimeUsage = true // throttled network usage refresh (CDT_REALTIME_USAGE); default ON (popup-free + rate-safe)
 }
 
-/// PURE interpretation of a `CDT_REALTIME_USAGE=` value → on/off. On unless it's an explicit off token
-/// ("0" / "false" / "off") or empty. Extracted so the flag parse is unit-tested without touching the file.
+/// PURE interpretation of a `CDT_REALTIME_USAGE=` value → on/off. FROZEN semantics — must match the hooks
+/// side exactly:
+///   • absent/unset ⇒ ON (handled by the `CDTConfig` default; with no env line this is never called);
+///   • a trimmed, lowercased value in {0, off, false, no} ⇒ OFF;
+///   • any OTHER value (1, on, true, yes, empty, …) ⇒ ON.
+/// Extracted so the flag parse is exhaustively unit-tested without touching the env file.
 func parseRealtimeFlag(_ value: String) -> Bool {
     let v = value.trimmingCharacters(in: .whitespaces).lowercased()
-    return !(v == "0" || v == "false" || v == "off" || v.isEmpty)
+    return !(v == "0" || v == "off" || v == "false" || v == "no")
 }
 
 func readCDTConfig() -> CDTConfig {

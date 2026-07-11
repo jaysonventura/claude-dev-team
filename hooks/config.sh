@@ -116,7 +116,12 @@ show() {
   local mg; mg="$(get_env CDT_MEMORY_GATE)"; [ -z "$mg" ] && mg="warn"
   local tk pe pm pef; tk="$(get_env CDT_TOOLKIT_ENABLED)"; [ -z "$tk" ] && tk="1"; pe="$(get_env CDT_PROMPT_ENHANCE)"; [ -z "$pe" ] && pe="true"; pm="$(get_env CDT_PROMPT_ENHANCE_MODE)"; [ -z "$pm" ] && pm="auto"; pef="$(get_env CDT_PROMPT_EFFORT)"; [ -z "$pef" ] && pef="medium"
   local sa ea oc rd; sa="$(get_env CDT_SPEC_AUTO)"; [ -z "$sa" ] && sa="false"; ea="$(get_env CDT_EXTERNAL_AI_ALLOWED)"; [ -z "$ea" ] && ea="false"; oc="$(get_env CDT_OCR_ENABLED)"; [ -z "$oc" ] && oc="false"; rd="$(get_env CDT_REDACT)"; [ -z "$rd" ] && rd="true"
-  local rt; rt="$(get_env CDT_REALTIME_USAGE)"; [ "$rt" = "1" ] && rt="on" || rt="off"
+  # Realtime usage defaults ON (matches the menu bar): OFF only for explicit off tokens (0/off/false/no).
+  local rt rtraw; rtraw="$(get_env CDT_REALTIME_USAGE)"
+  case "$(printf '%s' "$rtraw" | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')" in
+    0|off|false|no) rt="off" ;;
+    *) rt="on" ;;
+  esac
   local aa; aa="$(get_env CDT_AGENT_ACTIVITY)"; [ -z "$aa" ] && aa="on"
   local pb; pb="$(get_env CDT_PHASE_BOARD)"; [ -z "$pb" ] && pb="on"
   local obs obsvault obsraw; obsraw="$(get_env CDT_OBSIDIAN)"; obsvault="$(get_env CDT_OBSIDIAN_VAULT)"
@@ -133,7 +138,7 @@ show() {
   echo "  autonomy  : $au   (off | assist | auto — autonomous escalation; details: cdt-auto status)"
   echo "  teams     : $tm   ·  scale : $sc   (DEPTH/BREADTH engines; on by default — worktrees + dynamic workflows)"
   echo "  statusline: $(statusline_state)   (terminal status line)"
-  echo "  realtime  : $rt   (menu bar realtime usage %; default off — polls network ~10 min when terminal reading is stale)"
+  echo "  realtime  : $rt   (menu bar realtime usage %; default on — throttled, popup-free network poll ~10 min only when the terminal reading is stale; turn off: cdt-config realtime-usage off)"
   echo "  agent-act : $aa   (on | compact | off — pretty per-agent dispatch/finish lines + token cost; display-only)"
   echo "  phase-brd : $pb   (on | off — per-wave phase board + status-line phase indicator on T2/T3 tasks)"
   echo "  toolkit   : $([ "$tk" = "0" ] && echo DISABLED || echo enabled)   (TS engine, SEPARATE from core CDT — cdt-config toolkit on|off · cdt enable|disable)"
@@ -248,8 +253,8 @@ case "${1:-show}" in
     esac ;;
   realtime-usage)
     case "$2" in
-      on|off) set_env CDT_REALTIME_USAGE "$([ "$2" = on ] && echo 1 || echo 0)"; echo "claude-dev-team: realtime-usage = $2 (menu bar polls usage % every ~10 min via network when the terminal reading is stale; default off)." ;;
-      *) echo "cdt-config: usage: cdt-config realtime-usage on|off" ;;
+      on|off) set_env CDT_REALTIME_USAGE "$([ "$2" = on ] && echo 1 || echo 0)"; echo "claude-dev-team: realtime-usage = $2 (default on — menu bar makes a throttled, popup-free usage-% network poll ~10 min only when the terminal reading is stale; read-only creds. Turn off: cdt-config realtime-usage off)." ;;
+      *) echo "cdt-config: usage: cdt-config realtime-usage on|off  (default on)" ;;
     esac ;;
   verify)
     case "$2" in

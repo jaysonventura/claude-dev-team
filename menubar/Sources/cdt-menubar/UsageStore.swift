@@ -28,8 +28,8 @@ final class UsageStore {
     private let localInterval: TimeInterval = 60   // 1 min — local token files
     private let usageInterval: TimeInterval = 30   // 30 s — re-read the (local, cheap) status-line cache
 
-    // --- Opt-in realtime usage (network) state. Every field is inert unless CDT_REALTIME_USAGE is on; the
-    //     gate short-circuits on realtime-off so none of this ever reads the Keychain or hits the network.
+    // --- Realtime usage (network) state — ON by default (opt out: cdt-config realtime-usage off). Every field
+    //     is inert while realtime is off; the gate short-circuits so none of this reads the Keychain or network.
     private var lastCacheTs: Int?               // ts of the last cache reading (drives the staleness gate)
     private var lastRealtimeAttempt: Date?      // last fetch attempt (10-min hard floor is measured from here)
     private var cooldownUntil: Date?            // 429 back-off end — cleared ONLY by a successful fetch
@@ -37,6 +37,7 @@ final class UsageStore {
     private var lastTokenFingerprint: String?   // failing token's fp — a change means Claude Code rotated it
     private var fetchError: String?             // subtle status line for the dropdown (nil = quiet)
     private var fetchInFlight = false           // one in-flight fetch at a time
+    private var keychainDenied = false          // last auto read was a persistent no-UI denial → pause + offer Grant
 
     // App self-update check (notify-only). Owned here so its result renders into the same menu snapshot.
     private let updateChecker = UpdateChecker(currentVersion: cdtVersion() ?? "0.0.0")
@@ -44,6 +45,7 @@ final class UsageStore {
     init(controller: MenuBarController) {
         self.controller = controller
         controller.onRefresh = { [weak self] in self?.refreshNow() }
+        controller.onGrantKeychain = { [weak self] in self?.grantKeychainNow() }
         controller.onCheckUpdate = { [weak self] in self?.updateChecker.checkNow(force: true) }
         controller.onToggleAutoCheck = { [weak self] in
             guard let self = self else { return }
@@ -117,6 +119,7 @@ final class UsageStore {
         // otherwise the subtle fetch-error reason. Both are calm, gray, disabled lines in the dropdown.
         snapshot.usageRetryAt = (realtimeOn && cooldownUntil.map { $0 > now } == true) ? cooldownUntil : nil
         snapshot.usageFetchError = realtimeOn ? fetchError : nil
+        snapshot.keychainGrantNeeded = realtimeOn && keychainDenied
         snapshot.lastUpdated = now
         controller.render(snapshot)
 
@@ -124,13 +127,13 @@ final class UsageStore {
     }
 
     /// Considers ONE throttled network fetch. Realtime OFF short-circuits FIRST — no Keychain, no request —
-    /// so default users stay a pure reader. When on, the pure gate decides the normal cadence; a separate
+    /// so opted-out users stay a pure reader. When on, the pure gate decides the normal cadence; a separate
     /// fast-recovery path handles an expired token (retry ~45s, or immediately on token rotation) without
     /// ever overriding the 429 cooldown.
     private func maybeFetchRealtime(realtimeOn: Bool, now: Date) {
         guard realtimeOn else {
             // Pure-reader mode: drop any lingering live-refresh state so nothing stale renders if toggled off.
-            cooldownUntil = nil; tokenErrorRetryAt = nil; fetchError = nil
+            cooldownUntil = nil; tokenErrorRetryAt = nil; fetchError = nil; keychainDenied = false
             return
         }
         guard !fetchInFlight else { return }
@@ -176,6 +179,7 @@ final class UsageStore {
         tokenErrorRetryAt = nil
         lastTokenFingerprint = nil
         fetchError = nil
+        keychainDenied = false   // a successful read means we're trusted again → drop any grant prompt
 
         let ts = Int(now.timeIntervalSince1970)
         writeUsageCacheMerging(session: reading.sessionPct, weekly: reading.weeklyPct, ts: ts)
@@ -187,6 +191,7 @@ final class UsageStore {
         snapshot.usageStale = false
         snapshot.usageRetryAt = nil
         snapshot.usageFetchError = nil
+        snapshot.keychainGrantNeeded = false
         snapshot.lastUpdated = now
         controller.render(snapshot)
     }
@@ -214,14 +219,22 @@ final class UsageStore {
                 fetchError = ue.errorDescription
             }
         } else if let ke = error as? KeychainError {
-            if ke.isTransient {
-                // Momentary Keychain lock (ACL reset after Claude Code rewrote the item). Keep the cached
-                // reading, no scary UI, and allow a next-tick retry (don't burn the 10-min floor on a blip).
-                lastRealtimeAttempt = nil
-                fetchError = nil
+            if ke.isInteractionRequired {
+                // Persistent no-UI denial: the app isn't in the item's trusted-app ACL (macOS reset it when
+                // Claude Code rewrote the credential) or the keychain is locked. The non-interactive read
+                // never prompted — it returned a denial code. Do NOT next-tick retry (that would be a ~30s
+                // busy loop under default-ON); keep `lastRealtimeAttempt = now` so the 10-min floor governs
+                // the next automatic try, and surface an explicit Grant. Cleared by a successful read (Grant
+                // or the periodic floor retry).
+                keychainDenied = true
+                fetchError = nil            // the dedicated "paused — grant" line renders instead
             } else if ke.isLoggedOut {
+                // Item genuinely absent → Claude Code isn't logged in. The 10-min floor already applies
+                // (lastRealtimeAttempt = now), so this doesn't busy-loop either.
+                keychainDenied = false
                 fetchError = "not logged in to Claude Code"
             } else {
+                keychainDenied = false
                 fetchError = nil
             }
         } else {
@@ -231,7 +244,34 @@ final class UsageStore {
 
         snapshot.usageRetryAt = (cooldownUntil.map { $0 > now } == true) ? cooldownUntil : nil
         snapshot.usageFetchError = fetchError
+        snapshot.keychainGrantNeeded = keychainDenied
         controller.render(snapshot)
+    }
+
+    /// The ONE interactive Keychain read, from the explicit "Grant Keychain access…" menu item. Runs OFF the
+    /// main thread so the system Keychain dialog can't freeze the menu, then applies the result on main. On
+    /// success (user clicked "Always Allow") the app is trusted again: drop the denial and trigger an
+    /// immediate refresh (reset `lastRealtimeAttempt` so the 10-min floor doesn't hold it back). Still
+    /// strictly READ-ONLY (`grantKeychainAccess` does a single `SecItemCopyMatching`).
+    private func grantKeychainNow() {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let result = grantKeychainAccess()
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                switch result {
+                case .success:
+                    self.keychainDenied = false
+                    self.fetchError = nil
+                    self.lastRealtimeAttempt = nil   // allow an immediate fetch now that we're trusted
+                    self.refreshUsage()              // re-render (grant line clears) + trigger the gated fetch
+                case .failure:
+                    // User declined / still not granted — stay paused and keep offering Grant.
+                    self.keychainDenied = true
+                    self.snapshot.keychainGrantNeeded = true
+                    self.controller.render(self.snapshot)
+                }
+            }
+        }
     }
 
     private func refreshLocal() {
