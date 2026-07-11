@@ -17,7 +17,8 @@ If the reading is **stale** (or the user works mainly in the VS Code/JetBrains *
 status line — the only writer of the % — runs **only in a terminal**. The figure is account-wide, so running
 `claude` in the editor's **integrated terminal** (or any terminal) refreshes it everywhere.
 
-For a hands-off refresh in the panel, mention the opt-in `~/.claude/bin/cdt-config realtime-usage on` (off by
-default): the menu bar then polls the usage endpoint **read-only, at most ~once every 10 min and only when the
-terminal reading is stale**, and merges the result into this same cache — at the cost of an occasional Keychain
-prompt when Claude Code rotates its token.
+A hands-off refresh keeps the panel figure fresh **on by default (popup-free, throttled)**: the menu bar polls
+the usage endpoint **read-only, at most ~once every 10 min and only when the terminal reading is stale**, and
+merges the result into this same cache. The Keychain read is non-interactive (no macOS prompt on its own); if
+access isn't granted it falls back to the cached reading. Disable with
+`~/.claude/bin/cdt-config realtime-usage off`.

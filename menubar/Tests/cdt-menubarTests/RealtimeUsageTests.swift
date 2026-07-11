@@ -1,11 +1,11 @@
 import XCTest
 @testable import cdt_menubar
 
-/// Covers the opt-in realtime usage layer's PURE decision + IO helpers:
+/// Covers the realtime usage layer's PURE decision + IO helpers (realtime is ON by default):
 ///   • `shouldFetchRealtimeUsage` — the full throttle truth table (this is what guarantees ≤6 fetches/hour
 ///     and ZERO fetches when realtime is off or the terminal reading is fresh);
 ///   • `mergeUsageJSON` — the atomic cache merge preserves every sibling field the status line owns;
-///   • `parseRealtimeFlag` — the config flag interpretation (default OFF).
+///   • `parseRealtimeFlag` — the config flag interpretation (FROZEN default-ON semantics).
 /// No clock, no filesystem, no network — `now`/`ts` are injected.
 final class RealtimeUsageTests: XCTestCase {
 
@@ -126,27 +126,35 @@ final class RealtimeUsageTests: XCTestCase {
         XCTAssertEqual(obj.count, 3)
     }
 
-    // MARK: - config flag parse (default OFF)
+    // MARK: - config flag parse (FROZEN default-ON semantics — must match the hooks side exactly)
 
     func testRealtimeFlagOnTokens() {
+        // Anything NOT in the off-set is ON — including the four "on" words, "1", empty, and whitespace-only.
         XCTAssertTrue(parseRealtimeFlag("1"))
         XCTAssertTrue(parseRealtimeFlag("on"))
         XCTAssertTrue(parseRealtimeFlag("true"))
-        XCTAssertTrue(parseRealtimeFlag("  1 "))     // trimmed
-        XCTAssertTrue(parseRealtimeFlag("ON"))       // case-insensitive
+        XCTAssertTrue(parseRealtimeFlag("yes"))
+        XCTAssertTrue(parseRealtimeFlag(""))         // empty ⇒ ON
+        XCTAssertTrue(parseRealtimeFlag("   "))       // whitespace-only ⇒ ON
+        XCTAssertTrue(parseRealtimeFlag("  1 "))      // trimmed
+        XCTAssertTrue(parseRealtimeFlag("ON"))        // case-insensitive
+        XCTAssertTrue(parseRealtimeFlag("YES"))
     }
 
     func testRealtimeFlagOffTokens() {
+        // The ONLY off tokens: 0 / off / false / no (trimmed, case-insensitive).
         XCTAssertFalse(parseRealtimeFlag("0"))
-        XCTAssertFalse(parseRealtimeFlag("false"))
         XCTAssertFalse(parseRealtimeFlag("off"))
-        XCTAssertFalse(parseRealtimeFlag(""))
-        XCTAssertFalse(parseRealtimeFlag("   "))
+        XCTAssertFalse(parseRealtimeFlag("false"))
+        XCTAssertFalse(parseRealtimeFlag("no"))
+        XCTAssertFalse(parseRealtimeFlag("  OFF "))   // trimmed + case-insensitive
+        XCTAssertFalse(parseRealtimeFlag("No"))
     }
 
-    func testRealtimeDefaultIsOff() {
-        // A fresh config (env line absent) must default OFF — the pure-reader guarantee.
-        XCTAssertFalse(CDTConfig().realtimeUsage)
+    func testRealtimeDefaultIsOn() {
+        // A fresh config (env line absent) must default ON — the owner enabled it now that it's popup-free
+        // and rate-safe. `readCDTConfig` only overrides this when a `CDT_REALTIME_USAGE=` line is present.
+        XCTAssertTrue(CDTConfig().realtimeUsage)
     }
 
     // MARK: - persisted 429 back-off (survives restart; honored by the --refresh-usage CLI)

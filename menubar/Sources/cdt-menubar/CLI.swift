@@ -46,16 +46,22 @@ func runOnce() {
 }
 
 /// Terminal-runnable e2e of the FULL realtime path (Keychain → network → parse → atomic cache merge).
-/// Honors the opt-in flag: with realtime OFF and no `--force` it does nothing and exits non-zero. On a real
+/// Honors the realtime flag (ON by default): with realtime OFF and no `--force` it does nothing and exits non-zero. On a real
 /// fetch it merges `{session, weekly, ts}` into the cache and prints a one-line outcome. NEVER prints the
 /// token. Returns the process exit code (0 = success, non-zero = off/failure).
 func runRefreshUsage(force: Bool) -> Int32 {
     guard readCDTConfig().realtimeUsage || force else {
-        print("Realtime usage: off — enable with `cdt-config realtime-usage on` (or pass --force)")
+        print("""
+        Realtime usage: off — enable with `cdt-config realtime-usage on` (or pass --force for a one-off).
+          The refresh does ONE gated, non-interactive Keychain read → network fetch → merge into the usage
+          cache. It NEVER shows a password dialog: if this app isn't trusted for the credential it prints a
+          "grant Keychain access" hint instead of prompting (run `--grant` once to trust it). Read-only —
+          never mints or writes a credential; --force overrides the realtime flag, never the 429 cooldown.
+        """)
         return 1
     }
 
-    // Honor an active server 429 back-off even under --force: --force overrides the opt-in flag, NEVER the
+    // Honor an active server 429 back-off even under --force: --force overrides the realtime flag, NEVER the
     // rate limit. This is what stops a scripted `--refresh-usage` loop from bursting the endpoint.
     let now = Date()
     if let until = readPersistedCooldown(), until > now {
@@ -78,9 +84,36 @@ func runRefreshUsage(force: Bool) -> Int32 {
         }
         let reason: String
         if let ue = error as? UsageError { reason = ue.errorDescription ?? "usage fetch failed" }
-        else if let ke = error as? KeychainError { reason = ke.errorDescription ?? "keychain error" }
+        else if let ke = error as? KeychainError {
+            if ke.isInteractionRequired {
+                // The non-interactive read was DENIED (this app isn't in the credential's trusted-app ACL,
+                // or the keychain is locked) — but NO dialog appeared. Point the user at the explicit grant.
+                reason = "paused — Keychain access needed. Run `cdt-menubar --grant` (then click \"Always Allow\"), or use the menu bar's \"Grant Keychain access\" item."
+            } else {
+                reason = ke.errorDescription ?? "keychain error"
+            }
+        }
         else { reason = "network error — \(error.localizedDescription)" }
         print("Realtime usage: \(reason)")
         return 2
+    }
+}
+
+/// One-shot INTERACTIVE Keychain grant — the ONLY CLI path that may show a system dialog. Does a single
+/// interactive read so the user can consciously click "Always Allow", re-adding this app to the credential's
+/// trusted-app ACL. Strictly READ-ONLY (one `SecItemCopyMatching`; never mints/writes a token, never prints
+/// it). On success it immediately proves the non-interactive path with one silent refresh. This is the
+/// terminal-runnable proof of the full path.
+func runGrantKeychain() -> Int32 {
+    print("Requesting Keychain access — a system dialog may appear; click \"Always Allow\".")
+    switch grantKeychainAccess() {
+    case .failure(let e):
+        print("Keychain access not granted: \(e.errorDescription ?? "denied").")
+        return 1
+    case .success:
+        print("Keychain access granted — this app is now trusted for the credential.")
+        // Prove the SILENT (non-interactive) path now works. --force overrides the realtime flag, never the
+        // persisted 429 cooldown.
+        return runRefreshUsage(force: true)
     }
 }

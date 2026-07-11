@@ -1,7 +1,7 @@
 import Foundation
 
-// Opt-in, throttled realtime usage — the ONLY place the menu bar reaches the network. Default users never
-// hit this: the gate short-circuits when `realtimeOn` is false, so no Keychain read and no request happen.
+// Throttled realtime usage — the ONLY place the menu bar reaches the network. ON by default; opt out with
+// `cdt-config realtime-usage off`, and the gate short-circuits (`realtimeOn` false) so no Keychain read or request.
 
 /// Hard floor between fetch attempts (10 min). This is the user's cadence — the endpoint moves slowly and a
 /// shared OAuth token bursting it was the sole cause of the old 429 storms, so we never poll faster.

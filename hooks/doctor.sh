@@ -71,11 +71,13 @@ sl="$(command -v python3 >/dev/null 2>&1 && python3 -c "import json,os;p=os.path
 [ "$sl" = "on" ] && P "status line on (feeds the usage % cache from any terminal)" \
   || W "status line off — usage % won't refresh" "enable: cdt-config statusline on  (it runs in a terminal only; in VS Code/JetBrains use the integrated terminal)"
 
-# Realtime usage: opt-in, throttled (<=1 network call/10 min) menu-bar refresh of the subscription %. Off by
-# default (pure local-file reader). Informational only — never a hard fail.
+# Realtime usage: default-ON, throttled (<=1 network call/10 min, popup-free) menu-bar refresh of the
+# subscription %. OFF only when explicitly set to an off token (0/off/false/no). Informational — never a fail.
 rt="$(genv CDT_REALTIME_USAGE)"
-[ "$rt" = "1" ] && P "realtime usage: on  (menu bar polls the usage % ~10 min when the terminal reading is stale)" \
-  || echo "  [info] realtime usage: off (menu bar % refreshes only from terminal; enable: cdt-config realtime-usage on)"
+case "$(printf '%s' "$rt" | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')" in
+  0|off|false|no) echo "  [info] realtime usage: off (explicitly disabled — menu bar % refreshes only from a terminal; re-enable: cdt-config realtime-usage on)" ;;
+  *) P "realtime usage: on  (default; menu bar makes a throttled, popup-free usage-% poll ~10 min when the terminal reading is stale)" ;;
+esac
 
 if [ "$(uname)" = "Darwin" ]; then
   pgrep -f "CDT Usage.app/Contents/MacOS/cdt-menubar" >/dev/null 2>&1 && P "menu bar app running" || W "menu bar not running" "start: cdt-menubar install"

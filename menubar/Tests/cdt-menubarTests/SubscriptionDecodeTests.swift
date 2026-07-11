@@ -108,19 +108,20 @@ final class SubscriptionDecodeTests: XCTestCase {
         XCTAssertGreaterThan(httpDate ?? 0, 0)
     }
 
-    // MARK: - Keychain error classification (transient blip vs genuinely logged out)
+    // MARK: - Keychain error classification (persistent no-UI denial vs genuinely logged out)
 
-    func testKeychainTransientVsLoggedOut() {
-        // Transient: momentary unavailability (e.g. just after Claude Code rewrote the item) → retry quietly.
-        XCTAssertTrue(KeychainError.notFound(errSecInteractionNotAllowed).isTransient)
-        XCTAssertTrue(KeychainError.notFound(errSecAuthFailed).isTransient)
-        XCTAssertTrue(KeychainError.notFound(errSecNotAvailable).isTransient)
+    func testKeychainInteractionRequiredVsLoggedOut() {
+        // Interaction-required: a background read was DENIED without ever prompting (app not in the trusted
+        // ACL, or keychain locked) → pause + offer an explicit Grant. Same status family we suppress UI for.
+        XCTAssertTrue(KeychainError.notFound(errSecInteractionNotAllowed).isInteractionRequired)
+        XCTAssertTrue(KeychainError.notFound(errSecAuthFailed).isInteractionRequired)
+        XCTAssertTrue(KeychainError.notFound(errSecNotAvailable).isInteractionRequired)
         XCTAssertFalse(KeychainError.notFound(errSecInteractionNotAllowed).isLoggedOut)
-        // Logged out: the item genuinely isn't there → actionable.
+        // Logged out: the item genuinely isn't there → actionable, but NOT a grant case.
         XCTAssertTrue(KeychainError.notFound(errSecItemNotFound).isLoggedOut)
-        XCTAssertFalse(KeychainError.notFound(errSecItemNotFound).isTransient)
+        XCTAssertFalse(KeychainError.notFound(errSecItemNotFound).isInteractionRequired)
         // noToken is neither (the item exists but the shape was unreadable).
-        XCTAssertFalse(KeychainError.noToken.isTransient)
+        XCTAssertFalse(KeychainError.noToken.isInteractionRequired)
         XCTAssertFalse(KeychainError.noToken.isLoggedOut)
     }
 }

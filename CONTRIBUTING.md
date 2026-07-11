@@ -39,6 +39,13 @@ throwaway sandbox and exercises the full chain (CLIs, doctor, recall, stats, eco
 - **Update docs + `CHANGELOG.md`** for any user-visible change, and bump the version in
   `.claude-plugin/plugin.json` (the README badge and `menubar` app read from there).
 
+## Commit messages
+
+- **No AI co-author trailer.** Do **not** add a `Co-Authored-By: Claude` (or any other AI) trailer to your
+  commits. A repo `commit-msg` hook strips it automatically — run **`scripts/setup-git-hooks.sh`** once to
+  install the local guard. No past history was rewritten; this only affects new commits.
+- Write focused, imperative subjects that say **what** changed and **why**.
+
 ## Pull requests
 
 1. Branch from `main`, make focused changes, run `bash scripts/validate.sh`.
