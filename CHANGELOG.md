@@ -2,6 +2,42 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.59.0] — 2026-07-12
+### Added
+- **Plugin bootstrap & routing — CDT now knows the companion plugins as data, and recommends them for
+  you.** A verified registry (`config/plugins.json`, **13 plugins**) is the single source of truth for
+  detection, health, routing, and conflict rules. Identifiers are real
+  (`<name>@claude-plugins-official`); `ui-ux-pro-max` is a local CDT skill (no install). Verified against
+  the `claude plugin` CLI on **Claude Code 2.x**.
+- **`cdt-plugins` CLI (`/cdt:plugins`).** Inspect and manage the companions from one place:
+  - Read verbs — **`list` / `status`**, **`doctor`**, **`explain <id>`**, **`sync`** — are idempotent and
+    take `--json` on `list` / `status` / `doctor`. `doctor` exits non-zero only when a **required** plugin
+    or a core dependency is broken.
+  - Write verbs — **`enable <id>` / `disable <id>` / `install <id>` / `update <id>`** — shell out to the
+    real `claude plugin` CLI. There is deliberately **no `uninstall`** and **no auto-authentication**.
+- **Advisory routing (`cdt-plugin-route`).** Repo-signal + task-keyword rules recommend a plugin or skill
+  with a one-line reason each — transparent GUIDANCE that **never blocks**. CDT stays authoritative:
+  `orchestrator → task classification → CDT specialist → plugin/skill (advisory) → validation →
+  cdt-verify`. Disabled plugins are never recommended; CDT-owned lanes (e.g. code review, planning/TDD)
+  defer to CDT.
+- **Superpowers modes** — `off` · `manual` · `selective` (default) · `always` — so Superpowers skills are
+  suggested only where they help and **never duplicate CDT's planning / review / TDD**.
+- **Config knobs (`cdt-config`).** `plugins-enabled` (default on), `plugin-auto-install` (default **off**),
+  `plugin-auto-update` (default **off**), `plugin-auto-route` (default on), `plugin-scope` (`user|project`,
+  default `project`), `superpowers-mode` (default `selective`), `plugin-strict` (default **on**). Per-plugin
+  `enabled/disabled/manual/auto` overrides persist in `~/.claude/.cdt/plugins-state.json` and survive
+  plugin updates.
+### Security
+- **Third-party plugins never auto-execute.** `plugin-strict` (default **on**) gates auto-install of any
+  non-`official` plugin — the exact `claude plugin …` command is printed, not run. No `curl | sh`; every
+  install identifier is validated against a strict grammar and arg-escaped; captured CLI output is
+  **redacted** for tokens/secrets. LSP binaries (`typescript-language-server`, `intelephense`,
+  `sourcekit-lsp`), the `terraform` CLI, Playwright browsers, and `github` / `sentry` auth are **not**
+  auto-provisioned — the tools **warn and print the exact remediation** instead. Companion plugins
+  (`superpowers`, `code-review`, `frontend-design`, `context7`) still auto-install via manifest
+  dependencies; `sequential-thinking` still auto-registers via `.mcp.json`.
+- **Full reference:** [`docs/plugins.md`](docs/plugins.md).
+
 ## [1.58.0] — 2026-07-12
 ### Changed
 - **Menu-bar realtime usage % is now popup-free — and on by default.** The optional network refresh that

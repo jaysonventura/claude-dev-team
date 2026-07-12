@@ -8,9 +8,45 @@ err(){ echo "  FAIL: $*"; fail=1; }
 ok(){ echo "  ok:   $*"; }
 
 echo "== JSON manifests =="
-for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json hooks/hooks.json; do
+for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json hooks/hooks.json config/plugins.json; do
   python3 -m json.tool "$f" >/dev/null 2>&1 && ok "$f" || err "$f does not parse"
 done
+
+echo "== plugin registry (config/plugins.json) schema =="
+if ! python3 - <<'PY'
+import json, re, sys
+REQ = {"id","displayName","type","marketplace","installIdentifier","enabledByDefault","required","scope",
+       "categories","dependencies","activationRules","conflicts","needsAuth","securityLevel","fallbackBehavior"}
+rx = re.compile(r'^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$')
+try:
+    d = json.load(open("config/plugins.json"))
+except Exception as e:
+    print("  FAIL: config/plugins.json does not parse:", e); sys.exit(1)
+rows = d.get("plugins") if isinstance(d, dict) else None
+if not isinstance(rows, list) or not rows:
+    print("  FAIL: config/plugins.json has no plugins[]"); sys.exit(1)
+bad = 0; ids = []
+for p in rows:
+    if not isinstance(p, dict):
+        print("  FAIL: plugin row is not an object"); bad = 1; continue
+    pid = p.get("id")
+    miss = REQ - set(p)
+    if miss: print("  FAIL: plugin '%s' missing keys: %s" % (pid, ", ".join(sorted(miss)))); bad = 1
+    if pid: ids.append(pid)
+    if p.get("type") == "cdt-skill":
+        if p.get("installIdentifier") is not None:
+            print("  FAIL: cdt-skill '%s' must have null installIdentifier" % pid); bad = 1
+    else:
+        ii = p.get("installIdentifier")
+        if not (isinstance(ii, str) and rx.match(ii)):
+            print("  FAIL: plugin '%s' bad installIdentifier: %r" % (pid, ii)); bad = 1
+dups = sorted(set(x for x in ids if ids.count(x) > 1))
+if dups: print("  FAIL: duplicate plugin ids: %s" % ", ".join(dups)); bad = 1
+if not bad:
+    print("  ok:   %d plugin rows — required keys present, ids unique, identifiers valid" % len(rows))
+sys.exit(1 if bad else 0)
+PY
+then fail=1; fi
 
 echo "== hooks.json command paths exist + executable =="
 if ! python3 - <<'PY'

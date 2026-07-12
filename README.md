@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.58.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.59.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -30,7 +30,7 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 
 - [What you get](#what-you-get) · [Why](#why)
 - [Architecture](#architecture) · [Execution model](#execution-model) · [Triage & tiers](#triage--tiers)
-- [The team](#the-team) · [Skills](#skills) · [Commands](#commands)
+- [The team](#the-team) · [Skills](#skills) · [Commands](#commands) · [Plugin bootstrap & routing](#plugin-bootstrap--routing)
 - [Installation](#installation) · [Requirements](#requirements)
 - [Usage examples](#usage-examples) · [Autonomy & debugging](#autonomy--debugging)
 - [Parallel isolation (git worktrees)](#parallel-isolation-git-worktrees) · [Autonomous orchestration](#autonomous-orchestration-router--cost-governor)
@@ -255,8 +255,78 @@ session; the bare `/command` form won't match).
 | `/cdt:budget` | show usage % + the Eco (conserve-when-low) recommendation |
 | `/cdt:learn <lesson>` | teach the vault a durable lesson (surfaced later by recall) |
 | `/cdt:menubar [install\|status\|...]` | macOS menu bar usage monitor (session/weekly usage % + local tokens) |
+| `/cdt:plugins [list \| doctor \| explain <id> \| sync \| enable/disable/install/update <id>]` | inspect & manage the companion plugins (registry-driven, read-only detection; `--json` on list/status/doctor) — see [Plugin bootstrap & routing](#plugin-bootstrap--routing) |
 | `/cdt:obsidian` | sync the CDT vault to your Obsidian vault (on-demand; also fires automatically at session end when enabled) |
 | `/cdt:version` | show the installed version (plugin + menu bar app) |
+
+---
+
+## Plugin bootstrap & routing
+
+CDT ships knowing the official companion plugins **as data**. A verified registry
+(`config/plugins.json`, **13 plugins**) is the single source of truth for **detection, health, routing,
+and conflict rules** — so CDT can tell you which plugin fits a task, whether it's healthy, and never
+front-run its own agents with one. Verified against the `claude plugin` CLI on **Claude Code 2.x**.
+
+The registry knows the four official companions that auto-install (`superpowers`, `code-review`,
+`frontend-design`, `context7`), the language LSPs (`typescript-lsp`, `php-lsp`, `swift-lsp`), MCP/tooling
+plugins (`playwright`, `github`, `sentry`), `terraform`, `laravel-boost`, and the local `ui-ux-pro-max`
+skill. Install identifiers are real (`<name>@claude-plugins-official`); `ui-ux-pro-max` is a CDT-local
+skill with **nothing to install**.
+
+**Inspect & manage — `cdt-plugins` (`/cdt:plugins`):**
+
+```
+~/.claude/bin/cdt-plugins list            # health table: registry ⨝ installed ⨝ enabled ⨝ deps ⨝ overlay
+~/.claude/bin/cdt-plugins status --json   # same, machine-readable {id: status}
+~/.claude/bin/cdt-plugins doctor          # exits non-zero only if a REQUIRED plugin / core dep is broken
+~/.claude/bin/cdt-plugins explain github  # type, routing rules, deps, auth, security & fallback for one id
+~/.claude/bin/cdt-plugins sync            # print the exact `claude plugin install/enable …` for gaps
+~/.claude/bin/cdt-plugins enable <id>     # overlay=enabled  + claude plugin enable
+~/.claude/bin/cdt-plugins disable <id>    # overlay=disabled + claude plugin disable
+~/.claude/bin/cdt-plugins install <id>    # claude plugin install (third-party gated by strict mode)
+~/.claude/bin/cdt-plugins update <id>     # claude plugin update
+```
+
+Read verbs (`list`/`status`/`doctor`/`explain`/`sync`) are **idempotent** and never mutate anything;
+`--json` is available on `list` / `status` / `doctor`. Write verbs shell out to the real `claude plugin`
+CLI. There is deliberately **no `uninstall`** (no destructive removal), and needs-auth plugins only get a
+`/mcp` hint — CDT **never auto-authenticates**.
+
+**Advisory routing.** `cdt-plugin-route "<task>"` matches repo signals (e.g. `package.json`, `*.tf`,
+`Package.swift`) and task keywords to **recommend** a plugin or skill with a one-line reason each. It is
+transparent guidance that **never blocks**, and CDT stays authoritative:
+
+```text
+CDT orchestrator → task classification → CDT specialist → plugin/skill (advisory) → validation → cdt-verify
+```
+
+Disabled plugins are never recommended, and any plugin that overlaps a CDT-owned lane **defers to CDT**
+(e.g. `code-review` yields to CDT's code-reviewer; `superpowers` never touches CDT's planning / review /
+TDD). Superpowers has four modes — `off` · `manual` · `selective` (default; only high-complexity/risk
+tasks) · `always` — set via `cdt-config superpowers-mode`.
+
+**Config (defaults):**
+
+```
+~/.claude/bin/cdt-config plugins-enabled on|off        # advisory subsystem on/off        (default on)
+~/.claude/bin/cdt-config plugin-auto-install on|off    # auto-run installs                (default OFF — opt-in)
+~/.claude/bin/cdt-config plugin-auto-update on|off     # auto-run updates                 (default OFF — user-gated)
+~/.claude/bin/cdt-config plugin-auto-route on|off      # advisory routing hints           (default on)
+~/.claude/bin/cdt-config plugin-scope user|project     # where CDT enables plugins        (default project)
+~/.claude/bin/cdt-config superpowers-mode <off|manual|selective|always>   #             (default selective)
+~/.claude/bin/cdt-config plugin-strict on|off          # gate third-party auto-install    (default on)
+```
+
+Per-plugin `enabled/disabled/manual/auto` overrides persist in `~/.claude/.cdt/plugins-state.json` and
+**survive plugin updates**.
+
+**Security posture.** `plugin-strict` (default **on**) gates auto-install of any non-`official` plugin —
+the exact `claude plugin …` command is printed, never run. No `curl | sh`; install identifiers are
+grammar-validated and arg-escaped; captured CLI output is **redacted** for tokens/secrets. Language-server
+binaries, the `terraform` CLI, Playwright browsers, and `github` / `sentry` auth are **not**
+auto-provisioned — the tools warn and print the exact remediation instead. Full reference, routing table,
+and troubleshooting: **[docs/plugins.md](docs/plugins.md)**.
 
 ---
 
@@ -456,7 +526,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.58.0**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.59.0**.
 
 ---
 
@@ -820,6 +890,12 @@ prefix is fixed by Claude Code.
 | `CDT_STOP_REMINDER` | 0 | `1` = remind once to run the mandate at session end |
 | `CDT_AGENT_ACTIVITY` | on | `on` / `compact` / `off` — pretty per-agent dispatch/finish lines + token cost in the CLI (display-only, **zero tokens**) |
 | `CDT_PHASE_BOARD` | on | `on` / `off` — per-wave **phase board** + a `phase i/N` status-line indicator on T2/T3 tasks (display-only) |
+| `CDT_PLUGINS_ENABLED` | 1 | advisory plugin subsystem (detection / health / routing); `cdt-config plugins-enabled on\|off` |
+| `CDT_PLUGIN_AUTO_INSTALL` · `CDT_PLUGIN_AUTO_UPDATE` | 0 · 0 | **off by default** — CDT never installs/updates plugins without opt-in |
+| `CDT_PLUGIN_AUTO_ROUTE` | 1 | advisory plugin/skill routing hints (never blocks) |
+| `CDT_PLUGIN_SCOPE` | project | where CDT prefers to enable plugins — `user` / `project` |
+| `CDT_SUPERPOWERS_MODE` | selective | `off` / `manual` / `selective` / `always` — never duplicates CDT's plan/review/TDD |
+| `CDT_PLUGIN_STRICT` | 1 | gate auto-install of non-official plugins (see [Plugin bootstrap & routing](#plugin-bootstrap--routing)) |
 
 Effort runs at your session level (xhigh, never `max`). The heavier engines — **parallel git-worktree
 sessions** and **dynamic-workflow fan-out** — are **on by default** and used whenever the work benefits;
