@@ -235,7 +235,7 @@ All settings persist in `~/.claude/claude-dev-team.env`; set them via `cdt-confi
 | `CDT_PLUGIN_AUTO_INSTALL` | `0` | `plugin-auto-install on\|off` | let `sync` actually run installs (opt-in) |
 | `CDT_PLUGIN_AUTO_UPDATE` | `0` | `plugin-auto-update on\|off` | plugin updates stay user-gated |
 | `CDT_PLUGIN_AUTO_ROUTE` | `1` | `plugin-auto-route on\|off` | advisory routing hints (never blocks) |
-| `CDT_PLUGIN_SCOPE` | `project` | `plugin-scope user\|project` | scope passed to `claude plugin … -s <scope>` |
+| `CDT_PLUGIN_SCOPE` | *(per-plugin)* | `plugin-scope user\|project` | overrides the scope passed to `claude plugin … -s <scope>`; **unset ⇒ each plugin's own registry scope** (not a uniform `project`) |
 | `CDT_SUPERPOWERS_MODE` | `selective` | `superpowers-mode off\|manual\|selective\|always` | Superpowers gate |
 | `CDT_PLUGIN_STRICT` | `1` | `plugin-strict on\|off` | gate auto-install of non-official plugins |
 
