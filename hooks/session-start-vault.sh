@@ -51,6 +51,22 @@ cp "$HOOKS_DIR/context.sh"   "$BIN/cdt-context"  2>/dev/null && chmod +x "$BIN/c
 cp "$HOOKS_DIR/route.sh"     "$BIN/cdt-route"    2>/dev/null && chmod +x "$BIN/cdt-route"    2>/dev/null
 cp "$HOOKS_DIR/obsidian.sh"  "$BIN/cdt-obsidian" 2>/dev/null && chmod +x "$BIN/cdt-obsidian" 2>/dev/null
 cp "$HOOKS_DIR/obsidian_recall.py" "$BIN/obsidian_recall.py" 2>/dev/null  # BM25 read-back ranker (must sit beside cdt-obsidian in $BIN)
+# Advisory plugin subsystem: the plugins CLI, its sourced library, and the advisory router.
+cp "$HOOKS_DIR/plugins.sh"      "$BIN/cdt-plugins"        2>/dev/null && chmod +x "$BIN/cdt-plugins"      2>/dev/null
+cp "$HOOKS_DIR/plugins-lib.sh"  "$BIN/cdt-plugins-lib.sh" 2>/dev/null  # sourced by cdt-plugin-route (must sit beside it in $BIN)
+cp "$HOOKS_DIR/plugin-route.sh" "$BIN/cdt-plugin-route"   2>/dev/null && chmod +x "$BIN/cdt-plugin-route" 2>/dev/null
+# Seed the plugin registry into ~/.claude/.cdt — copy only if missing or the shipped copy is newer. Atomic.
+_PLREG_SRC="$HOOKS_DIR/../config/plugins.json"
+_PLREG_DST="$CDT_HOME/.cdt/plugins-registry.json"
+if [ -f "$_PLREG_SRC" ]; then
+  mkdir -p "$CDT_HOME/.cdt" 2>/dev/null
+  if [ ! -f "$_PLREG_DST" ] || [ "$_PLREG_SRC" -nt "$_PLREG_DST" ]; then
+    _PLREG_TMP="$(mktemp "$CDT_HOME/.cdt/.plugins-registry.XXXXXX" 2>/dev/null)"
+    if [ -n "$_PLREG_TMP" ] && cp "$_PLREG_SRC" "$_PLREG_TMP" 2>/dev/null; then
+      mv "$_PLREG_TMP" "$_PLREG_DST" 2>/dev/null || rm -f "$_PLREG_TMP" 2>/dev/null
+    fi
+  fi
+fi
 
 # claude-dev-team-toolkit (TS engine): link the built bins onto PATH + dist-missing healthcheck.
 TOOLKIT_DIST="$(cd "$HOOKS_DIR/../toolkit/dist" 2>/dev/null && pwd)"

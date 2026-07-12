@@ -124,6 +124,16 @@ show() {
   esac
   local aa; aa="$(get_env CDT_AGENT_ACTIVITY)"; [ -z "$aa" ] && aa="on"
   local pb; pb="$(get_env CDT_PHASE_BOARD)"; [ -z "$pb" ] && pb="on"
+  # Plugin subsystem (advisory) — defaults when unset: enabled, auto-install/update OFF, auto-route ON,
+  # scope=project, superpowers=selective, strict ON.
+  local pen pai pau par psc spm pst
+  pen="$(get_env CDT_PLUGINS_ENABLED)"; [ -z "$pen" ] && pen="1"
+  pai="$(get_env CDT_PLUGIN_AUTO_INSTALL)"; [ -z "$pai" ] && pai="0"
+  pau="$(get_env CDT_PLUGIN_AUTO_UPDATE)"; [ -z "$pau" ] && pau="0"
+  par="$(get_env CDT_PLUGIN_AUTO_ROUTE)"; [ -z "$par" ] && par="1"
+  psc="$(get_env CDT_PLUGIN_SCOPE)"; [ -z "$psc" ] && psc="project"
+  spm="$(get_env CDT_SUPERPOWERS_MODE)"; [ -z "$spm" ] && spm="selective"
+  pst="$(get_env CDT_PLUGIN_STRICT)"; [ -z "$pst" ] && pst="1"
   local obs obsvault obsraw; obsraw="$(get_env CDT_OBSIDIAN)"; obsvault="$(get_env CDT_OBSIDIAN_VAULT)"
   if [ "$obsraw" = "off" ]; then obs="off"; elif [ "$obsraw" = "on" ]; then obs="on"; elif [ -n "$obsvault" ]; then obs="on (auto)"; else obs="off"; fi
   [ -z "$obsvault" ] && obsvault="(not set — default: ~/Documents/Obsidian/CDT)"
@@ -141,6 +151,9 @@ show() {
   echo "  realtime  : $rt   (menu bar realtime usage %; default on — throttled, popup-free network poll ~10 min only when the terminal reading is stale; turn off: cdt-config realtime-usage off)"
   echo "  agent-act : $aa   (on | compact | off — pretty per-agent dispatch/finish lines + token cost; display-only)"
   echo "  phase-brd : $pb   (on | off — per-wave phase board + status-line phase indicator on T2/T3 tasks)"
+  echo "  plugins   : $([ "$pen" = "0" ] && echo DISABLED || echo enabled)   (advisory plugin subsystem — detection/health/routing; cdt-config plugins-enabled on|off)"
+  echo "    auto-install : $([ "$pai" = "1" ] && echo on || echo off)  ·  auto-update : $([ "$pau" = "1" ] && echo on || echo off)  ·  auto-route : $([ "$par" = "1" ] && echo on || echo off)   (install/update default OFF — opt-in; route default ON)"
+  echo "    scope : $psc  ·  superpowers : $spm  ·  strict : $([ "$pst" = "1" ] && echo on || echo off)   (plugin-scope <user|project> · superpowers-mode <off|manual|selective|always> · plugin-strict on|off)"
   echo "  toolkit   : $([ "$tk" = "0" ] && echo DISABLED || echo enabled)   (TS engine, SEPARATE from core CDT — cdt-config toolkit on|off · cdt enable|disable)"
   echo "    prompt-enhance : $pe (mode $pm, Haiku effort $pef)   (prompt-mode auto|always|off · prompt-enhance on|off)"
   echo "    spec-auto : $sa  ·  external-ai : $ea  ·  ocr : $oc  ·  redact : $rd"
@@ -256,6 +269,41 @@ case "${1:-show}" in
       on|off) set_env CDT_REALTIME_USAGE "$([ "$2" = on ] && echo 1 || echo 0)"; echo "claude-dev-team: realtime-usage = $2 (default on — menu bar makes a throttled, popup-free usage-% network poll ~10 min only when the terminal reading is stale; read-only creds. Turn off: cdt-config realtime-usage off)." ;;
       *) echo "cdt-config: usage: cdt-config realtime-usage on|off  (default on)" ;;
     esac ;;
+  plugins-enabled)
+    case "$2" in
+      on|off) set_env CDT_PLUGINS_ENABLED "$([ "$2" = on ] && echo 1 || echo 0)"; echo "claude-dev-team: plugins subsystem = $2 (advisory plugin detection/health/routing; default on)." ;;
+      *) echo "cdt-config: usage: cdt-config plugins-enabled on|off  (default on)" ;;
+    esac ;;
+  plugin-auto-install)
+    case "$2" in
+      on|off) set_env CDT_PLUGIN_AUTO_INSTALL "$([ "$2" = on ] && echo 1 || echo 0)"; echo "claude-dev-team: plugin auto-install = $2 (default off — CDT never installs plugins without opt-in)." ;;
+      *) echo "cdt-config: usage: cdt-config plugin-auto-install on|off  (default off)" ;;
+    esac ;;
+  plugin-auto-update)
+    case "$2" in
+      on|off) set_env CDT_PLUGIN_AUTO_UPDATE "$([ "$2" = on ] && echo 1 || echo 0)"; echo "claude-dev-team: plugin auto-update = $2 (default off — plugin updates stay user-gated)." ;;
+      *) echo "cdt-config: usage: cdt-config plugin-auto-update on|off  (default off)" ;;
+    esac ;;
+  plugin-auto-route)
+    case "$2" in
+      on|off) set_env CDT_PLUGIN_AUTO_ROUTE "$([ "$2" = on ] && echo 1 || echo 0)"; echo "claude-dev-team: plugin auto-route = $2 (advisory plugin/skill routing hints; default on — never blocks)." ;;
+      *) echo "cdt-config: usage: cdt-config plugin-auto-route on|off  (default on)" ;;
+    esac ;;
+  plugin-scope)
+    case "$2" in
+      user|project) set_env CDT_PLUGIN_SCOPE "$2"; echo "claude-dev-team: plugin scope = $2 (where CDT prefers to enable plugins; default project)." ;;
+      *) echo "cdt-config: usage: cdt-config plugin-scope user|project  (default project)" ;;
+    esac ;;
+  superpowers-mode)
+    case "$2" in
+      off|manual|selective|always) set_env CDT_SUPERPOWERS_MODE "$2"; echo "claude-dev-team: superpowers-mode = $2 (off = never · manual = user-invoked only · selective = only high-complexity/risk, never CDT's plan/review/TDD · always = suggest, advisory). Default selective." ;;
+      *) echo "cdt-config: usage: cdt-config superpowers-mode off|manual|selective|always  (default selective)" ;;
+    esac ;;
+  plugin-strict)
+    case "$2" in
+      on|off) set_env CDT_PLUGIN_STRICT "$([ "$2" = on ] && echo 1 || echo 0)"; echo "claude-dev-team: plugin strict = $2 (default on — validate plugin identifiers/health before use)." ;;
+      *) echo "cdt-config: usage: cdt-config plugin-strict on|off  (default on)" ;;
+    esac ;;
   verify)
     case "$2" in
       block|warn|off) set_env CDT_VERIFY_GATE "$2"; echo "claude-dev-team: verify gate = $2  (block = stop a session that edited files but ran no test/build/lint afterward · warn = notice only · off = disabled)." ;;
@@ -326,6 +374,6 @@ PY
     set_setting effortLevel "$DEFAULT_EFFORT"
     set_setting model "$DEFAULT_MODEL"
     echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off, autonomy=auto, engines on)." ;;
-  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|agent-activity <on|compact|off>|phase-board <on|off>|obsidian <on|off>|obsidian-vault <path>|obsidian-recall-root <path>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|realtime-usage <on|off>|reset}"; exit 0 ;;
+  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|agent-activity <on|compact|off>|phase-board <on|off>|plugins-enabled <on|off>|plugin-auto-install <on|off>|plugin-auto-update <on|off>|plugin-auto-route <on|off>|plugin-scope <user|project>|superpowers-mode <off|manual|selective|always>|plugin-strict <on|off>|obsidian <on|off>|obsidian-vault <path>|obsidian-recall-root <path>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|realtime-usage <on|off>|reset}"; exit 0 ;;
 esac
 exit 0

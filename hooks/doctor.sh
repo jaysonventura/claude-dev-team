@@ -3,6 +3,7 @@
 # a fix hint for anything not green. Read-only, fail-open.
 set +e
 CDT_HOME="$HOME/.claude"; BIN="$CDT_HOME/bin"; ENVF="$CDT_HOME/claude-dev-team.env"
+DR_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"   # repo hooks/ dir when run from source (fallback paths)
 ok=0; warn=0; bad=0
 P(){ echo "  [ok]   $1"; ok=$((ok+1)); }
 W(){ echo "  [warn] $1 — $2"; warn=$((warn+1)); }
@@ -14,7 +15,7 @@ genv(){ grep -E "^$1=" "$ENVF" 2>/dev/null | cut -d= -f2-; }
 echo "claude-dev-team — doctor"
 
 missing=""
-for c in cdt-stats cdt-phase cdt-task cdt-tokens cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps cdt-worktree cdt-auto cdt-version cdt-obsidian; do
+for c in cdt-stats cdt-phase cdt-task cdt-tokens cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps cdt-worktree cdt-auto cdt-version cdt-obsidian cdt-plugins; do
   [ -x "$BIN/$c" ] || missing="$missing $c"
 done
 [ -z "$missing" ] && P "CLIs installed" || W "CLIs missing:$missing" "open a new Claude Code session (the SessionStart hook installs them)"
@@ -86,6 +87,19 @@ fi
 if command -v python3 >/dev/null 2>&1; then
   deps="$(python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/settings.json'))).get('enabledPlugins',{});print(sum(1 for k in d if any(x in k for x in ['superpowers','code-review','frontend-design','context7'])))" 2>/dev/null)"
   [ "${deps:-0}" -ge 1 ] && P "companion plugins enabled ($deps)" || W "companion plugins not detected" "they auto-install with the plugin (needs Claude Code >= 2.1.143)"
+fi
+
+# Plugin subsystem (advisory) — delegate to the plugins doctor and surface its summary. Never fatal:
+# prefer the generated bin, fall back to the repo hooks/plugins.sh, else note it isn't installed yet.
+pl_sum=""
+if [ -x "$BIN/cdt-plugins" ]; then
+  pl_sum="$("$BIN/cdt-plugins" doctor 2>/dev/null | grep -v '^[[:space:]]*$' | tail -1)"
+  [ -n "$pl_sum" ] && P "plugins: $pl_sum" || W "plugins doctor returned nothing" "run: cdt-plugins doctor"
+elif [ -f "$DR_DIR/plugins.sh" ]; then
+  pl_sum="$(bash "$DR_DIR/plugins.sh" doctor 2>/dev/null | grep -v '^[[:space:]]*$' | tail -1)"
+  [ -n "$pl_sum" ] && P "plugins (repo): $pl_sum" || W "plugins subsystem not generated yet" "open a new Claude Code session (SessionStart installs cdt-plugins)"
+else
+  W "plugins subsystem not installed" "open a new Claude Code session to generate cdt-plugins"
 fi
 
 # Obsidian vault bridge check
