@@ -165,7 +165,9 @@ RISK = ["auth","login","password","oauth","token","payment","billing","stripe","
         "vulnerab","injection"," xss","csrf"]
 HARD = ["architect","design ","redesign","refactor","ambiguous","tricky","complex","concurrency",
         "race condition","deadlock","distributed","algorithm","optimi","performance","root cause",
-        "debug","review","audit","tradeoff","decide","strategy","api design","data model"]
+        "debug","tradeoff","decide","strategy","api design","data model"]
+# NOTE: "review"/"audit" are intentionally NOT in HARD — they're word-matched in CDT_OWNED (below) so a
+# real review/audit defers to CDT, while HARD stays substring-matched and would spuriously fire on "preview".
 CDT_OWNED = ["brainstorm","roadmap","planning"," plan ","plan the","write a plan","review","audit",
              "code review","tdd","test-driven","test driven","write tests","failing test","unit test"]
 high_complexity = has_sub(RISK) or has_sub(HARD)

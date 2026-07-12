@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.59.1] — 2026-07-12
+### Fixed
+- **Plugin routing:** a task mentioning `preview` no longer triggers a spurious `superpowers` advisory
+  (the complexity classifier substring-matched `review`/`audit`; these are now word-matched via the
+  CDT-owned deferral only). Advisory-only — it never blocked anything.
+- **Docs:** clarified that `CDT_PLUGIN_SCOPE` unset uses each plugin's own registry scope (not a uniform
+  `project`).
+
 ## [1.59.0] — 2026-07-12
 ### Added
 - **Plugin bootstrap & routing — CDT now knows the companion plugins as data, and recommends them for
