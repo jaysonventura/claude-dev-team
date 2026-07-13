@@ -50,6 +50,7 @@ cp "$HOOKS_DIR/contract.sh"  "$BIN/cdt-contract" 2>/dev/null && chmod +x "$BIN/c
 cp "$HOOKS_DIR/context.sh"   "$BIN/cdt-context"  2>/dev/null && chmod +x "$BIN/cdt-context"  2>/dev/null
 cp "$HOOKS_DIR/route.sh"     "$BIN/cdt-route"    2>/dev/null && chmod +x "$BIN/cdt-route"    2>/dev/null
 cp "$HOOKS_DIR/obsidian.sh"  "$BIN/cdt-obsidian" 2>/dev/null && chmod +x "$BIN/cdt-obsidian" 2>/dev/null
+cp "$HOOKS_DIR/attribution.sh" "$BIN/cdt-attribution" 2>/dev/null && chmod +x "$BIN/cdt-attribution" 2>/dev/null
 cp "$HOOKS_DIR/obsidian_recall.py" "$BIN/obsidian_recall.py" 2>/dev/null  # BM25 read-back ranker (must sit beside cdt-obsidian in $BIN)
 # Advisory plugin subsystem: the plugins CLI, its sourced library, and the advisory router.
 cp "$HOOKS_DIR/plugins.sh"      "$BIN/cdt-plugins"        2>/dev/null && chmod +x "$BIN/cdt-plugins"      2>/dev/null
@@ -110,6 +111,18 @@ if [ "$(uname)" = "Darwin" ] && command -v swift >/dev/null 2>&1; then
   if [ "$AUTO" != "0" ] && [ ! -f "$CDT_HOME/.cdt-menubar-disabled" ] && [ -f "$CDT_HOME/.cdt-menubar-installed" ] && [ -x "$BIN/cdt-menubar" ]; then
     ( "$BIN/cdt-menubar" auto-update >/dev/null 2>&1 ) &
   fi
+fi
+
+# 2b) No AI attribution: guarantee Claude Code adds no "Co-Authored-By: Claude" trailer, no "Generated with
+# Claude Code" PR footer and no session trailer — by enforcing its OWN settings keys (the real source; the
+# trailer comes from a system-prompt instruction Claude Code injects when attribution is on). Writes
+# ~/.claude/settings.json only when a key is actually wrong, and prints one line only when it changed
+# something; silent + zero-write when compliant. Fail-open (always exits 0).
+# Gated by the kill-switch: a DISABLED CDT must behave as stock Claude Code, so read CDT_ENABLED here and
+# skip enforcement when it is off (the disabled-exit in section 4 below is the same switch).
+_CDT_EN_ATTR="$(grep -E '^CDT_ENABLED=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+if [ "$_CDT_EN_ATTR" != "0" ] && [ -x "$BIN/cdt-attribution" ]; then
+  "$BIN/cdt-attribution" 2>/dev/null
 fi
 
 # 3) Initialize the state DB.

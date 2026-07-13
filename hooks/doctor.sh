@@ -15,7 +15,7 @@ genv(){ grep -E "^$1=" "$ENVF" 2>/dev/null | cut -d= -f2-; }
 echo "claude-dev-team — doctor"
 
 missing=""
-for c in cdt-stats cdt-phase cdt-task cdt-tokens cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps cdt-worktree cdt-auto cdt-version cdt-obsidian cdt-plugins; do
+for c in cdt-stats cdt-phase cdt-task cdt-tokens cdt-menubar cdt-recall cdt-advise cdt-pr cdt-config cdt-doctor cdt-learn cdt-budget cdt-statusline cdt-deps cdt-worktree cdt-auto cdt-version cdt-obsidian cdt-plugins cdt-attribution; do
   [ -x "$BIN/$c" ] || missing="$missing $c"
 done
 [ -z "$missing" ] && P "CLIs installed" || W "CLIs missing:$missing" "open a new Claude Code session (the SessionStart hook installs them)"
@@ -83,6 +83,25 @@ esac
 if [ "$(uname)" = "Darwin" ]; then
   pgrep -f "CDT Usage.app/Contents/MacOS/cdt-menubar" >/dev/null 2>&1 && P "menu bar app running" || W "menu bar not running" "start: cdt-menubar install"
 fi
+
+# No-AI-attribution: commits/PRs must carry no "Co-Authored-By: Claude", no "Generated with Claude Code"
+# footer and no session trailer. Source of truth = settings.json (includeCoAuthoredBy + attribution.*);
+# cdt-attribution --check reads it read-only (exit 0 = compliant, 1 = would change).
+attr_cmd=()
+if [ -x "$BIN/cdt-attribution" ]; then attr_cmd=("$BIN/cdt-attribution")
+elif [ -f "$DR_DIR/attribution.sh" ]; then attr_cmd=(bash "$DR_DIR/attribution.sh"); fi
+na="$(genv CDT_NO_AI_ATTRIBUTION)"
+case "$(printf '%s' "$na" | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')" in
+  0|off|false|no) echo "  [info] no-AI-attribution: enforcement off (explicitly disabled — settings.json not re-applied; re-enable: cdt-config attribution on)" ;;
+  *)
+    if [ ${#attr_cmd[@]} -eq 0 ]; then
+      W "no-AI-attribution: cdt-attribution not installed" "open a new Claude Code session (the SessionStart hook installs it)"
+    elif "${attr_cmd[@]}" --check >/dev/null 2>&1; then
+      P "no-AI-attribution: in effect  (no Co-Authored-By / Generated-with-Claude-Code / session trailer on commits or PRs)"
+    else
+      W "no-AI-attribution: NOT in effect" "settings.json is missing the keys — fix: cdt-config attribution on  (detail: cdt-attribution --check)"
+    fi ;;
+esac
 
 if command -v python3 >/dev/null 2>&1; then
   deps="$(python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.claude/settings.json'))).get('enabledPlugins',{});print(sum(1 for k in d if any(x in k for x in ['superpowers','code-review','frontend-design','context7'])))" 2>/dev/null)"

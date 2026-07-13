@@ -41,9 +41,13 @@ throwaway sandbox and exercises the full chain (CLIs, doctor, recall, stats, eco
 
 ## Commit messages
 
-- **No AI co-author trailer.** Do **not** add a `Co-Authored-By: Claude` (or any other AI) trailer to your
-  commits. A repo `commit-msg` hook strips it automatically — run **`scripts/setup-git-hooks.sh`** once to
-  install the local guard. No past history was rewritten; this only affects new commits.
+- **No AI co-author trailer.** Do **not** add a `Co-Authored-By: Claude` (or any other AI) trailer — or a
+  "Generated with Claude Code" line — to your commits. **If you run CDT you get this for free, with nothing
+  to install:** the SessionStart hook keeps `includeCoAuthoredBy` / `attribution.*` off in
+  `~/.claude/settings.json`, so Claude Code never emits the trailer on any repo (verify:
+  `cdt-attribution --check`). If you **don't** run CDT, `scripts/setup-git-hooks.sh` remains available as an
+  optional belt-and-braces guard: it points `core.hooksPath` at `scripts/git-hooks`, whose `commit-msg` hook
+  scrubs the trailer from new commits in this repo. Either way, no past history was rewritten.
 - Write focused, imperative subjects that say **what** changed and **why**.
 
 ## Pull requests
