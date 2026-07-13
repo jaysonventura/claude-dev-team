@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.59.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.60.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -74,6 +74,10 @@ It is built to be **cost-effective on Claude Max while staying high quality**: c
 - **Completion mandate** (tier-scaled) — simplify, review, reuse-audit, dead-code scan, learn, ship.
 - **SQLite cost analytics** with **real per-agent token telemetry** (`/cdt:stats` ranks which roles
   cost the most) so you can see and tune spend on Max.
+- **No AI attribution on your commits or PRs** — no `Co-Authored-By: Claude` trailer, no
+  `🤖 Generated with [Claude Code]` footer, no session link. Enforced in Claude Code's own settings at
+  SessionStart (the only source that actually controls it), verifiable with `cdt-attribution --check`.
+  See **[Configuration](#configuration)**.
 - **A markdown vault** for durable memory (learnings, ADRs, session logs).
 - **8 quality skills** (karpathy guidelines, clean TS, code-splitting, gauge-improvements, RCA, web
   design, ui/ux pro-max, technical-writing) plus first-class reuse of the official `superpowers`, `code-review`,
@@ -526,7 +530,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.59.0**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.60.0**.
 
 ---
 
@@ -896,6 +900,7 @@ prefix is fixed by Claude Code.
 | `CDT_PLUGIN_SCOPE` | project | where CDT prefers to enable plugins — `user` / `project` |
 | `CDT_SUPERPOWERS_MODE` | selective | `off` / `manual` / `selective` / `always` — never duplicates CDT's plan/review/TDD |
 | `CDT_PLUGIN_STRICT` | 1 | gate auto-install of non-official plugins (see [Plugin bootstrap & routing](#plugin-bootstrap--routing)) |
+| `CDT_NO_AI_ATTRIBUTION` | 1 | keep AI attribution off commits/PRs; `cdt-config attribution on\|off` |
 
 Effort runs at your session level (xhigh, never `max`). The heavier engines — **parallel git-worktree
 sessions** and **dynamic-workflow fan-out** — are **on by default** and used whenever the work benefits;
@@ -968,6 +973,31 @@ its scope (overreach)** or **inside a peer's scope (collision)** is flagged. Ins
 ~/.claude/bin/cdt-config scope block       # stop until the sprawl is reconciled
 ~/.claude/bin/cdt-config scope off
 ```
+
+**No AI attribution on commits & PRs (on by default):** with CDT installed, your commits carry no
+`Co-Authored-By: Claude` trailer, your PRs carry no `🤖 Generated with [Claude Code]` footer, and neither
+carries a `Claude-Session` link. Those trailers are emitted by Claude Code itself, so the only reliable
+switch is **its own settings** — a `CLAUDE.md` rule or a repo git hook can't guarantee it on every machine.
+So SessionStart ensures these keys in `~/.claude/settings.json`:
+
+```json
+"includeCoAuthoredBy": false,
+"attribution": { "commit": "", "pr": "", "sessionUrl": false }
+```
+
+The write is a **safe merge** (your other keys survive), **idempotent** (nothing is written when the keys
+are already correct), atomic, and fail-open — a `settings.json` that doesn't parse as JSON is left
+untouched. Claude Code reads settings at startup, so enforcement **applies from the next session**.
+
+```
+~/.claude/bin/cdt-attribution --check     # verify: exit 0 = compliant, 1 = would change (never writes)
+~/.claude/bin/cdt-config attribution on   # default — enforce on every session (applies immediately too)
+~/.claude/bin/cdt-config attribution off  # stop enforcing (does NOT re-enable attribution — see below)
+```
+
+`off` only stops CDT re-applying the keys; it **never reverts your `settings.json`**, so attribution stays
+hidden until you flip those keys back yourself. `cdt-doctor` reports the state as a health check, and
+`cdt-config` shows it as `no-attrib`.
 
 **Obsidian bridge (CDT vault → Obsidian):** export the CDT vault (`~/.claude/vault/`) to an Obsidian
 vault as linked markdown — YAML frontmatter, `[[wikilinks]]`, and an index/MOC. The sync fires

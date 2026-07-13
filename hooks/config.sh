@@ -6,6 +6,7 @@
 #   cdt-config off | disable         turn it OFF (acts as stock Claude Code next session)
 #   cdt-config effort <low|medium|high|xhigh>   set the default effort (default: xhigh)
 #   cdt-config model  <opus|sonnet|haiku|claude-opus-4-8|...>   set the default model (default: Opus 4.8)
+#   cdt-config attribution on|off    enforce NO AI attribution on commits/PRs (default on; see cdt-attribution)
 #   cdt-config reset                 restore defaults: enabled, xhigh, Opus 4.8
 #
 # enable/disable lives in ~/.claude/claude-dev-team.env (read by the SessionStart hook).
@@ -122,6 +123,12 @@ show() {
     0|off|false|no) rt="off" ;;
     *) rt="on" ;;
   esac
+  # No-AI-attribution enforcement defaults ON: OFF only for explicit off tokens (0/off/false/no).
+  local na naraw; naraw="$(get_env CDT_NO_AI_ATTRIBUTION)"
+  case "$(printf '%s' "$naraw" | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')" in
+    0|off|false|no) na="off" ;;
+    *) na="on" ;;
+  esac
   local aa; aa="$(get_env CDT_AGENT_ACTIVITY)"; [ -z "$aa" ] && aa="on"
   local pb; pb="$(get_env CDT_PHASE_BOARD)"; [ -z "$pb" ] && pb="on"
   # Plugin subsystem (advisory) — defaults when unset: enabled, auto-install/update OFF, auto-route ON,
@@ -149,6 +156,7 @@ show() {
   echo "  teams     : $tm   ·  scale : $sc   (DEPTH/BREADTH engines; on by default — worktrees + dynamic workflows)"
   echo "  statusline: $(statusline_state)   (terminal status line)"
   echo "  realtime  : $rt   (menu bar realtime usage %; default on — throttled, popup-free network poll ~10 min only when the terminal reading is stale; turn off: cdt-config realtime-usage off)"
+  echo "  no-attrib : $na   (default on — enforces settings.json so commits/PRs get NO 'Co-Authored-By: Claude', no 'Generated with Claude Code' footer, no session trailer; verify: cdt-attribution --check)"
   echo "  agent-act : $aa   (on | compact | off — pretty per-agent dispatch/finish lines + token cost; display-only)"
   echo "  phase-brd : $pb   (on | off — per-wave phase board + status-line phase indicator on T2/T3 tasks)"
   echo "  plugins   : $([ "$pen" = "0" ] && echo DISABLED || echo enabled)   (advisory plugin subsystem — detection/health/routing; cdt-config plugins-enabled on|off)"
@@ -212,6 +220,27 @@ case "${1:-show}" in
       on)  set_env CDT_REDACT true;  echo "claude-dev-team: artifact redaction ON (recommended)." ;;
       off) set_env CDT_REDACT false; echo "claude-dev-team: ⚠ artifact redaction OFF — secrets/PII will NOT be masked in artifacts." ;;
       *) echo "cdt-config: usage: cdt-config redact on|off" ;;
+    esac ;;
+  attribution)
+    # The AI-attribution trailers are emitted by Claude Code itself (system-prompt instruction), so the only
+    # real switch is its settings.json. `on` persists the knob AND applies immediately via cdt-attribution.
+    case "$2" in
+      on|enable)
+        set_env CDT_NO_AI_ATTRIBUTION 1
+        echo "claude-dev-team: no-AI-attribution ENFORCED — no 'Co-Authored-By: Claude' trailer, no 'Generated with Claude Code' PR footer, no session trailer."
+        if [ -x "$BIN/cdt-attribution" ]; then
+          CDT_NO_AI_ATTRIBUTION=1 CDT_SETTINGS="$SETTINGS" CDT_ENV_FILE="$ENV_FILE" "$BIN/cdt-attribution"
+        elif [ -f "$(dirname "$0")/attribution.sh" ]; then
+          CDT_NO_AI_ATTRIBUTION=1 CDT_SETTINGS="$SETTINGS" CDT_ENV_FILE="$ENV_FILE" bash "$(dirname "$0")/attribution.sh"
+        else
+          echo "  (cdt-attribution not installed yet — it lands on the next Claude Code session)"
+        fi
+        echo "  settings.json is the source of truth (applies next session). Verify: cdt-attribution --check" ;;
+      off|disable)
+        set_env CDT_NO_AI_ATTRIBUTION 0
+        echo "claude-dev-team: no-AI-attribution enforcement OFF — CDT will stop re-applying it each session."
+        echo "  Your settings.json was NOT reverted: attribution stays hidden. To let Claude Code attribute again, flip the keys yourself (includeCoAuthoredBy + attribution.commit/pr/sessionUrl)." ;;
+      *) echo "cdt-config: usage: cdt-config attribution on|off  (default on — strips AI attribution from commits/PRs; off only stops enforcing, it does not re-enable attribution)" ;;
     esac ;;
   agent-activity)
     case "$2" in
@@ -374,6 +403,6 @@ PY
     set_setting effortLevel "$DEFAULT_EFFORT"
     set_setting model "$DEFAULT_MODEL"
     echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off, autonomy=auto, engines on)." ;;
-  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|agent-activity <on|compact|off>|phase-board <on|off>|plugins-enabled <on|off>|plugin-auto-install <on|off>|plugin-auto-update <on|off>|plugin-auto-route <on|off>|plugin-scope <user|project>|superpowers-mode <off|manual|selective|always>|plugin-strict <on|off>|obsidian <on|off>|obsidian-vault <path>|obsidian-recall-root <path>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|realtime-usage <on|off>|reset}"; exit 0 ;;
+  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|attribution <on|off>|agent-activity <on|compact|off>|phase-board <on|off>|plugins-enabled <on|off>|plugin-auto-install <on|off>|plugin-auto-update <on|off>|plugin-auto-route <on|off>|plugin-scope <user|project>|superpowers-mode <off|manual|selective|always>|plugin-strict <on|off>|obsidian <on|off>|obsidian-vault <path>|obsidian-recall-root <path>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|realtime-usage <on|off>|reset}"; exit 0 ;;
 esac
 exit 0

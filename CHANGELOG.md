@@ -2,6 +2,25 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.60.0] — 2026-07-13
+### Added
+- **No AI attribution on commits or PRs — guaranteed, on every machine CDT runs on.** Your commits get no
+  `Co-Authored-By: Claude` trailer, your PRs get no `🤖 Generated with [Claude Code]` footer, and neither
+  carries a `Claude-Session` link. The trailers come from Claude Code itself (it injects the instruction
+  when attribution is on), so a `CLAUDE.md` rule or a repo git hook can't guarantee it — CDT therefore
+  enforces the only real source of truth, **Claude Code's own `~/.claude/settings.json`**:
+  `"includeCoAuthoredBy": false` and `"attribution": {"commit": "", "pr": "", "sessionUrl": false}`.
+- **Enforced at SessionStart, safely.** The hook is idempotent (it writes **nothing** when the keys are
+  already correct), merges rather than replaces (every other key and unmanaged `attribution` sub-key
+  survives), writes atomically, **refuses to touch a `settings.json` that doesn't parse as JSON**, and is
+  fail-open — it never blocks session start. Because Claude Code reads settings at startup, enforcement
+  **applies from the next session**.
+- **Knob: `CDT_NO_AI_ATTRIBUTION`** (default `1` = on) — `cdt-config attribution on|off`. `off` only stops
+  CDT re-applying the keys; it **does not revert your `settings.json`** (CDT never re-enables attribution
+  behind your back). Enforcement is also skipped while core CDT is off (`cdt-config off`).
+- **Verify:** `cdt-attribution --check` (read-only — exit `0` = compliant, `1` = would change), also
+  surfaced as a **`cdt-doctor`** health check.
+
 ## [1.59.1] — 2026-07-12
 ### Fixed
 - **Plugin routing:** a task mentioning `preview` no longer triggers a spurious `superpowers` advisory
