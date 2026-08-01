@@ -5,15 +5,67 @@ CDT ships knowing the official Claude Code companion plugins **as data**. A veri
 rules** — so CDT can tell you which plugin fits a task, whether it's healthy, install/enable it through the
 real `claude plugin` CLI, and never let a plugin front-run its own agents.
 
-This is a discipline layer, not an installer: **detection is read-only and idempotent**, real
-install/enable/update work is shelled out to Claude Code's own CLI, and there is deliberately **no
-destructive `uninstall`** and **no auto-authentication**.
+It is also the **bundle manifest**: one `claude plugin install cdt` brings the whole toolchain (see
+[All-in-one install](#all-in-one-install)). **Detection stays read-only and idempotent**, every
+install/enable/update is shelled out to Claude Code's own CLI, and there is deliberately **no destructive
+`uninstall`** and **no auto-authentication**.
 
 - Registry: [`config/plugins.json`](../config/plugins.json)
 - CLI: `~/.claude/bin/cdt-plugins` (`/cdt:plugins`) — from `hooks/plugins.sh`
 - Advisory router: `~/.claude/bin/cdt-plugin-route` — from `hooks/plugin-route.sh`
 - Shared detection library (frozen, sourced): `hooks/plugins-lib.sh`
 - Verified against the `claude plugin` CLI on **Claude Code 2.x** (2.1.207 at time of writing).
+
+---
+
+## All-in-one install
+
+A single `claude plugin install cdt@claude-dev-team` lands **the whole toolchain**. Nothing here is opt-in.
+
+| What | How it arrives |
+|------|----------------|
+| 13 skills · 19 agents · 21 commands | bundled inside the plugin — always present |
+| `sequential-thinking` MCP | shipped `.mcp.json`, auto-registers |
+| **12 official plugins** — superpowers, code-review, frontend-design, context7, playwright, github, sentry, terraform, laravel-boost, typescript/php/swift LSP | `plugin.json` `dependencies` — Claude Code resolves, installs and enables them |
+| **2 community plugins** — ponytail, claude-mem | **SessionStart bootstrap** (`cdt-plugins bootstrap`) |
+
+### Why the community plugins need a bootstrap
+
+They cannot be manifest dependencies. Claude Code leaves *"dependencies from a marketplace you have not
+added unresolved"*, and **disables the dependent plugin** until the error is resolved — and it never
+auto-adds a marketplace. Declaring `ponytail` or `claude-mem` in `dependencies` would therefore **disable
+CDT itself** on every machine that lacks the `ponytail` / `thedotmack` marketplaces. The bootstrap does the
+`marketplace add` first, then the install, so the bundle is complete without that failure mode.
+
+The bootstrap is **idempotent** (a stamp at `~/.claude/.cdt/bootstrap-community.done`, plus a live
+installed-state check so an uninstall re-heals), **fail-open** (always exits 0 — a bootstrap problem can
+never break your session), **bounded** (`CDT_BOOTSTRAP_TIMEOUT`, default 180s per shell-out), **async** (it
+never delays startup), and **redacted**. New plugins load after a restart.
+
+```bash
+~/.claude/bin/cdt-plugins bootstrap          # run it by hand
+~/.claude/bin/cdt-config bootstrap-community off   # opt out entirely
+```
+
+### What still is not automatic
+
+CDT installs plugins; it cannot provision external toolchains or credentials. These stay
+warn-with-remediation:
+
+| Not auto-provisioned | Why | You run |
+|---|---|---|
+| `typescript-language-server`, `intelephense`, `sourcekit-lsp` | language servers are npm/system packages | the install shown in the health table |
+| Playwright browsers | ~400MB download | `npx playwright install` |
+| `bun`, `uv` (claude-mem) | claude-mem self-installs them on first worker start | nothing — it handles it |
+| `github` / `sentry` auth | OAuth is interactive; **CDT never authenticates for you** | `/mcp` |
+
+So a fresh machine legitimately shows a few `⨯ missing-dep` and `! needs-auth` rows until you run those.
+`cdt-plugins doctor` still exits **0** — only the four *required* plugins can fail it.
+
+> **Cost warning.** This bundle now installs `claude-mem` on every new machine. Its `PostToolUse` hook fires
+> on **every tool call** and each observation is a Claude Agent SDK completion billed to **your** usage
+> budget. See the cost note under [Community plugins](#community-plugins) to redirect it to a separate
+> backend, or run `cdt-config bootstrap-community off` before first launch.
 
 ---
 
@@ -29,16 +81,16 @@ for the official rows, `ponytail@ponytail` and `claude-mem@thedotmack` for the t
 | `code-review` | claude-code-plugin | `code-review@claude-plugins-official` | yes | user | — | official |
 | `frontend-design` | claude-code-plugin | `frontend-design@claude-plugins-official` | yes | user | — | official |
 | `context7` | mcp-plugin | `context7@claude-plugins-official` | yes | user | — | official |
-| `typescript-lsp` | lsp-plugin | `typescript-lsp@claude-plugins-official` | no | project | — | official |
-| `php-lsp` | lsp-plugin | `php-lsp@claude-plugins-official` | no | project | — | official |
-| `swift-lsp` | lsp-plugin | `swift-lsp@claude-plugins-official` | no | project | — | official |
-| `playwright` | mcp-plugin | `playwright@claude-plugins-official` | no | project | — | official |
-| `github` | mcp-plugin | `github@claude-plugins-official` | no | user | **yes** | verified-third-party |
-| `sentry` | mcp-plugin | `sentry@claude-plugins-official` | no | user | **yes** | verified-third-party |
-| `terraform` | claude-code-plugin | `terraform@claude-plugins-official` | no | project | — | verified-third-party |
-| `laravel-boost` | claude-code-plugin | `laravel-boost@claude-plugins-official` | no | project | — | verified-third-party |
-| `ponytail` | claude-code-plugin | `ponytail@ponytail` | no | user | — | community-third-party |
-| `claude-mem` | claude-code-plugin | `claude-mem@thedotmack` | no | user | — | community-third-party |
+| `typescript-lsp` | lsp-plugin | `typescript-lsp@claude-plugins-official` | yes | project | — | official |
+| `php-lsp` | lsp-plugin | `php-lsp@claude-plugins-official` | yes | project | — | official |
+| `swift-lsp` | lsp-plugin | `swift-lsp@claude-plugins-official` | yes | project | — | official |
+| `playwright` | mcp-plugin | `playwright@claude-plugins-official` | yes | project | — | official |
+| `github` | mcp-plugin | `github@claude-plugins-official` | yes | user | **yes** | verified-third-party |
+| `sentry` | mcp-plugin | `sentry@claude-plugins-official` | yes | user | **yes** | verified-third-party |
+| `terraform` | claude-code-plugin | `terraform@claude-plugins-official` | yes | project | — | verified-third-party |
+| `laravel-boost` | claude-code-plugin | `laravel-boost@claude-plugins-official` | yes | project | — | verified-third-party |
+| `ponytail` | claude-code-plugin | `ponytail@ponytail` | yes | user | — | community-third-party |
+| `claude-mem` | claude-code-plugin | `claude-mem@thedotmack` | yes | user | — | community-third-party |
 | `ui-ux-pro-max` | cdt-skill | *(local — none)* | yes | user | — | local-cdt-integration |
 
 **Required** plugins (`doctor` fails if they're broken): `superpowers`, `code-review`, `frontend-design`,
@@ -50,7 +102,7 @@ for the official rows, `ponytail@ponytail` and `claude-mem@thedotmack` for the t
 |-------|---------|
 | `official` | in `claude-plugins-official`, Anthropic-published — installs run immediately |
 | `verified-third-party` | in `claude-plugins-official`, third-party authored — strict-gated |
-| `community-third-party` | ships from an **independent marketplace**, not in the official catalog — strict-gated, `enabledByDefault: false` |
+| `community-third-party` | ships from an **independent marketplace**, not in the official catalog — strict-gated for manual installs, acquired by the [bootstrap](#all-in-one-install) |
 | `local-cdt-integration` | a CDT-local skill — nothing to install |
 
 Only `official` bypasses strict mode. Everything else prints its `claude plugin …` command instead of
@@ -58,8 +110,12 @@ running it (see [Install, enable & sync](#install-enable--sync)).
 
 ### Community plugins
 
-Two community rows are registered so CDT can **detect, health-check and route around** them — not because
-CDT endorses or installs them. Both are opt-in.
+Two community rows are registered so CDT can **detect, health-check and route around** them, and are
+acquired by the bootstrap on first launch.
+
+**These are installed for you.** Since 1.62.0 the SessionStart bootstrap adds their marketplaces and
+installs them on first launch, **without prompting** — see [All-in-one install](#all-in-one-install). The
+manual path below still applies if you turn the bootstrap off.
 
 **Marketplace prerequisite.** Unlike every official row, these live on their own marketplaces, which are
 **not** configured by default. Until you add one, `cdt-plugins install <id>` cannot resolve — the health
@@ -303,6 +359,8 @@ All settings persist in `~/.claude/claude-dev-team.env`; set them via `cdt-confi
 | `CDT_PLUGIN_SCOPE` | *(per-plugin)* | `plugin-scope user\|project` | overrides the scope passed to `claude plugin … -s <scope>`; **unset ⇒ each plugin's own registry scope** (not a uniform `project`) |
 | `CDT_SUPERPOWERS_MODE` | `selective` | `superpowers-mode off\|manual\|selective\|always` | Superpowers gate |
 | `CDT_PLUGIN_STRICT` | `1` | `plugin-strict on\|off` | gate auto-install of non-official plugins |
+| `CDT_BOOTSTRAP_COMMUNITY` | `1` | `bootstrap-community on\|off` | SessionStart auto-adds the community marketplaces and installs ponytail + claude-mem, **without prompting** |
+| `CDT_BOOTSTRAP_TIMEOUT` | `180` | *(env only)* | per-shell-out cap, in seconds, for the bootstrap |
 
 ```
 ~/.claude/bin/cdt-config plugins-enabled off        # turn the whole subsystem off

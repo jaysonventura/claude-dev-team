@@ -2,7 +2,7 @@
   "$schema": "https://claude-dev-team/plugins-registry.schema.json",
   "version": 1,
   "meta": {
-    "note": "Shipped read-only defaults — the single source of truth for CDT plugin detection, validation, health, and routing. Per-plugin user overrides live in ~/.claude/.cdt/plugins-state.json and survive plugin updates. Identifiers verified against the local marketplace catalogs and the `claude plugin` CLI (Claude Code 2.1.220). Rows whose marketplace is not claude-plugins-official are securityLevel community-third-party: they ship enabledByDefault:false (opt-in) and their install stays strict-gated.",
+    "note": "Shipped read-only defaults — the single source of truth for CDT plugin detection, validation, health, and routing. Per-plugin user overrides live in ~/.claude/.cdt/plugins-state.json and survive plugin updates. Identifiers verified against the local marketplace catalogs and the `claude plugin` CLI (Claude Code 2.1.220). Every installable row is auto-installed with CDT: official rows via plugin.json `dependencies`, community-third-party rows (their marketplaces are NOT auto-added by Claude Code) via the SessionStart bootstrap in hooks/plugins.sh. All rows are therefore enabledByDefault:true.",
     "marketplace": "claude-plugins-official"
   },
   "plugins": [
@@ -15,10 +15,27 @@
       "enabledByDefault": true,
       "required": true,
       "scope": "user",
-      "categories": ["utility", "workflow"],
-      "dependencies": { "cli": [], "binaries": [] },
-      "activationRules": { "repoSignals": [], "taskKeywords": ["skill", "utility", "brainstorm"] },
-      "conflicts": ["cdt-planning", "cdt-review", "cdt-tdd"],
+      "categories": [
+        "utility",
+        "workflow"
+      ],
+      "dependencies": {
+        "cli": [],
+        "binaries": []
+      },
+      "activationRules": {
+        "repoSignals": [],
+        "taskKeywords": [
+          "skill",
+          "utility",
+          "brainstorm"
+        ]
+      },
+      "conflicts": [
+        "cdt-planning",
+        "cdt-review",
+        "cdt-tdd"
+      ],
       "needsAuth": false,
       "securityLevel": "official",
       "fallbackBehavior": "advisory-skip"
@@ -32,10 +49,26 @@
       "enabledByDefault": true,
       "required": true,
       "scope": "user",
-      "categories": ["review", "quality"],
-      "dependencies": { "cli": [], "binaries": [] },
-      "activationRules": { "repoSignals": [], "taskKeywords": ["review", "pr", "diff", "audit"] },
-      "conflicts": ["cdt-code-reviewer"],
+      "categories": [
+        "review",
+        "quality"
+      ],
+      "dependencies": {
+        "cli": [],
+        "binaries": []
+      },
+      "activationRules": {
+        "repoSignals": [],
+        "taskKeywords": [
+          "review",
+          "pr",
+          "diff",
+          "audit"
+        ]
+      },
+      "conflicts": [
+        "cdt-code-reviewer"
+      ],
       "needsAuth": false,
       "securityLevel": "official",
       "fallbackBehavior": "advisory-skip"
@@ -49,9 +82,28 @@
       "enabledByDefault": true,
       "required": true,
       "scope": "user",
-      "categories": ["ui", "design", "frontend"],
-      "dependencies": { "cli": [], "binaries": [] },
-      "activationRules": { "repoSignals": ["package.json"], "taskKeywords": ["ui", "css", "component", "design", "layout", "tailwind"] },
+      "categories": [
+        "ui",
+        "design",
+        "frontend"
+      ],
+      "dependencies": {
+        "cli": [],
+        "binaries": []
+      },
+      "activationRules": {
+        "repoSignals": [
+          "package.json"
+        ],
+        "taskKeywords": [
+          "ui",
+          "css",
+          "component",
+          "design",
+          "layout",
+          "tailwind"
+        ]
+      },
       "conflicts": [],
       "needsAuth": false,
       "securityLevel": "official",
@@ -66,9 +118,26 @@
       "enabledByDefault": true,
       "required": true,
       "scope": "user",
-      "categories": ["docs", "grounding"],
-      "dependencies": { "cli": [], "binaries": [] },
-      "activationRules": { "repoSignals": [], "taskKeywords": ["docs", "api", "library", "version", "latest", "sdk", "migration"] },
+      "categories": [
+        "docs",
+        "grounding"
+      ],
+      "dependencies": {
+        "cli": [],
+        "binaries": []
+      },
+      "activationRules": {
+        "repoSignals": [],
+        "taskKeywords": [
+          "docs",
+          "api",
+          "library",
+          "version",
+          "latest",
+          "sdk",
+          "migration"
+        ]
+      },
       "conflicts": [],
       "needsAuth": false,
       "securityLevel": "official",
@@ -80,12 +149,33 @@
       "type": "lsp-plugin",
       "marketplace": "claude-plugins-official",
       "installIdentifier": "typescript-lsp@claude-plugins-official",
-      "enabledByDefault": false,
+      "enabledByDefault": true,
       "required": false,
       "scope": "project",
-      "categories": ["lsp", "typescript"],
-      "dependencies": { "cli": ["typescript-language-server", "tsc"], "binaries": [] },
-      "activationRules": { "repoSignals": ["tsconfig.json", "**/*.ts", "**/*.tsx", "package.json"], "taskKeywords": ["typescript", "type error", "ts"] },
+      "categories": [
+        "lsp",
+        "typescript"
+      ],
+      "dependencies": {
+        "cli": [
+          "typescript-language-server",
+          "tsc"
+        ],
+        "binaries": []
+      },
+      "activationRules": {
+        "repoSignals": [
+          "tsconfig.json",
+          "**/*.ts",
+          "**/*.tsx",
+          "package.json"
+        ],
+        "taskKeywords": [
+          "typescript",
+          "type error",
+          "ts"
+        ]
+      },
       "conflicts": [],
       "needsAuth": false,
       "securityLevel": "official",
@@ -97,12 +187,30 @@
       "type": "lsp-plugin",
       "marketplace": "claude-plugins-official",
       "installIdentifier": "php-lsp@claude-plugins-official",
-      "enabledByDefault": false,
+      "enabledByDefault": true,
       "required": false,
       "scope": "project",
-      "categories": ["lsp", "php"],
-      "dependencies": { "cli": ["intelephense"], "binaries": [] },
-      "activationRules": { "repoSignals": ["composer.json", "**/*.php"], "taskKeywords": ["php", "intelephense", "psr"] },
+      "categories": [
+        "lsp",
+        "php"
+      ],
+      "dependencies": {
+        "cli": [
+          "intelephense"
+        ],
+        "binaries": []
+      },
+      "activationRules": {
+        "repoSignals": [
+          "composer.json",
+          "**/*.php"
+        ],
+        "taskKeywords": [
+          "php",
+          "intelephense",
+          "psr"
+        ]
+      },
       "conflicts": [],
       "needsAuth": false,
       "securityLevel": "official",
@@ -114,12 +222,33 @@
       "type": "lsp-plugin",
       "marketplace": "claude-plugins-official",
       "installIdentifier": "swift-lsp@claude-plugins-official",
-      "enabledByDefault": false,
+      "enabledByDefault": true,
       "required": false,
       "scope": "project",
-      "categories": ["lsp", "swift", "apple"],
-      "dependencies": { "cli": ["sourcekit-lsp"], "binaries": [] },
-      "activationRules": { "repoSignals": ["Package.swift", "**/*.swift", "**/*.xcodeproj"], "taskKeywords": ["swift", "ios", "xcode", "swiftui"] },
+      "categories": [
+        "lsp",
+        "swift",
+        "apple"
+      ],
+      "dependencies": {
+        "cli": [
+          "sourcekit-lsp"
+        ],
+        "binaries": []
+      },
+      "activationRules": {
+        "repoSignals": [
+          "Package.swift",
+          "**/*.swift",
+          "**/*.xcodeproj"
+        ],
+        "taskKeywords": [
+          "swift",
+          "ios",
+          "xcode",
+          "swiftui"
+        ]
+      },
       "conflicts": [],
       "needsAuth": false,
       "securityLevel": "official",
@@ -131,12 +260,36 @@
       "type": "mcp-plugin",
       "marketplace": "claude-plugins-official",
       "installIdentifier": "playwright@claude-plugins-official",
-      "enabledByDefault": false,
+      "enabledByDefault": true,
       "required": false,
       "scope": "project",
-      "categories": ["testing", "e2e", "browser"],
-      "dependencies": { "cli": ["node"], "binaries": ["chromium (via: npx playwright install)"] },
-      "activationRules": { "repoSignals": ["playwright.config.*", "e2e/**", "tests/e2e/**"], "taskKeywords": ["e2e", "browser", "screenshot", "playwright", "end-to-end"] },
+      "categories": [
+        "testing",
+        "e2e",
+        "browser"
+      ],
+      "dependencies": {
+        "cli": [
+          "node"
+        ],
+        "binaries": [
+          "chromium (via: npx playwright install)"
+        ]
+      },
+      "activationRules": {
+        "repoSignals": [
+          "playwright.config.*",
+          "e2e/**",
+          "tests/e2e/**"
+        ],
+        "taskKeywords": [
+          "e2e",
+          "browser",
+          "screenshot",
+          "playwright",
+          "end-to-end"
+        ]
+      },
       "conflicts": [],
       "needsAuth": false,
       "securityLevel": "official",
@@ -148,12 +301,29 @@
       "type": "mcp-plugin",
       "marketplace": "claude-plugins-official",
       "installIdentifier": "github@claude-plugins-official",
-      "enabledByDefault": false,
+      "enabledByDefault": true,
       "required": false,
       "scope": "user",
-      "categories": ["vcs", "integration"],
-      "dependencies": { "cli": [], "binaries": [] },
-      "activationRules": { "repoSignals": [".github/**"], "taskKeywords": ["pull request", "pr", "issue", "github", "gh"] },
+      "categories": [
+        "vcs",
+        "integration"
+      ],
+      "dependencies": {
+        "cli": [],
+        "binaries": []
+      },
+      "activationRules": {
+        "repoSignals": [
+          ".github/**"
+        ],
+        "taskKeywords": [
+          "pull request",
+          "pr",
+          "issue",
+          "github",
+          "gh"
+        ]
+      },
       "conflicts": [],
       "needsAuth": true,
       "securityLevel": "verified-third-party",
@@ -165,12 +335,31 @@
       "type": "mcp-plugin",
       "marketplace": "claude-plugins-official",
       "installIdentifier": "sentry@claude-plugins-official",
-      "enabledByDefault": false,
+      "enabledByDefault": true,
       "required": false,
       "scope": "user",
-      "categories": ["observability", "errors", "integration"],
-      "dependencies": { "cli": [], "binaries": [] },
-      "activationRules": { "repoSignals": ["**/sentry.*", "**/.sentryclirc"], "taskKeywords": ["sentry", "crash", "stacktrace", "exception", "error tracking"] },
+      "categories": [
+        "observability",
+        "errors",
+        "integration"
+      ],
+      "dependencies": {
+        "cli": [],
+        "binaries": []
+      },
+      "activationRules": {
+        "repoSignals": [
+          "**/sentry.*",
+          "**/.sentryclirc"
+        ],
+        "taskKeywords": [
+          "sentry",
+          "crash",
+          "stacktrace",
+          "exception",
+          "error tracking"
+        ]
+      },
       "conflicts": [],
       "needsAuth": true,
       "securityLevel": "verified-third-party",
@@ -182,12 +371,31 @@
       "type": "claude-code-plugin",
       "marketplace": "claude-plugins-official",
       "installIdentifier": "terraform@claude-plugins-official",
-      "enabledByDefault": false,
+      "enabledByDefault": true,
       "required": false,
       "scope": "project",
-      "categories": ["infra", "iac"],
-      "dependencies": { "cli": ["terraform"], "binaries": [] },
-      "activationRules": { "repoSignals": ["**/*.tf", "**/*.tfvars"], "taskKeywords": ["terraform", "infra", "iac", "provision"] },
+      "categories": [
+        "infra",
+        "iac"
+      ],
+      "dependencies": {
+        "cli": [
+          "terraform"
+        ],
+        "binaries": []
+      },
+      "activationRules": {
+        "repoSignals": [
+          "**/*.tf",
+          "**/*.tfvars"
+        ],
+        "taskKeywords": [
+          "terraform",
+          "infra",
+          "iac",
+          "provision"
+        ]
+      },
       "conflicts": [],
       "needsAuth": false,
       "securityLevel": "verified-third-party",
@@ -199,12 +407,35 @@
       "type": "claude-code-plugin",
       "marketplace": "claude-plugins-official",
       "installIdentifier": "laravel-boost@claude-plugins-official",
-      "enabledByDefault": false,
+      "enabledByDefault": true,
       "required": false,
       "scope": "project",
-      "categories": ["php", "laravel", "backend"],
-      "dependencies": { "cli": ["php", "composer"], "binaries": ["artisan (project-local)"] },
-      "activationRules": { "repoSignals": ["artisan", "composer.json"], "taskKeywords": ["laravel", "artisan", "eloquent", "blade"] },
+      "categories": [
+        "php",
+        "laravel",
+        "backend"
+      ],
+      "dependencies": {
+        "cli": [
+          "php",
+          "composer"
+        ],
+        "binaries": [
+          "artisan (project-local)"
+        ]
+      },
+      "activationRules": {
+        "repoSignals": [
+          "artisan",
+          "composer.json"
+        ],
+        "taskKeywords": [
+          "laravel",
+          "artisan",
+          "eloquent",
+          "blade"
+        ]
+      },
       "conflicts": [],
       "needsAuth": false,
       "securityLevel": "verified-third-party",
@@ -217,13 +448,35 @@
       "marketplace": "ponytail",
       "marketplaceSource": "DietrichGebert/ponytail",
       "installIdentifier": "ponytail@ponytail",
-      "enabledByDefault": false,
+      "enabledByDefault": true,
       "required": false,
       "scope": "user",
-      "categories": ["style", "code-quality", "simplicity"],
-      "dependencies": { "cli": ["node"], "binaries": [] },
-      "activationRules": { "repoSignals": [], "taskKeywords": ["simplify", "refactor", "over-engineering", "yagni", "minimal", "boilerplate", "cleanup"] },
-      "conflicts": ["cdt-simplify"],
+      "categories": [
+        "style",
+        "code-quality",
+        "simplicity"
+      ],
+      "dependencies": {
+        "cli": [
+          "node"
+        ],
+        "binaries": []
+      },
+      "activationRules": {
+        "repoSignals": [],
+        "taskKeywords": [
+          "simplify",
+          "refactor",
+          "over-engineering",
+          "yagni",
+          "minimal",
+          "boilerplate",
+          "cleanup"
+        ]
+      },
+      "conflicts": [
+        "cdt-simplify"
+      ],
       "needsAuth": false,
       "securityLevel": "community-third-party",
       "fallbackBehavior": "advisory-skip"
@@ -235,13 +488,37 @@
       "marketplace": "thedotmack",
       "marketplaceSource": "thedotmack/claude-mem",
       "installIdentifier": "claude-mem@thedotmack",
-      "enabledByDefault": false,
+      "enabledByDefault": true,
       "required": false,
       "scope": "user",
-      "categories": ["memory", "context", "continuity"],
-      "dependencies": { "cli": ["node"], "binaries": ["bun (auto-installed)", "uv (auto-installed)"] },
-      "activationRules": { "repoSignals": [], "taskKeywords": ["memory", "recall", "previous session", "last time", "prior context", "session history"] },
-      "conflicts": ["cdt-vault"],
+      "categories": [
+        "memory",
+        "context",
+        "continuity"
+      ],
+      "dependencies": {
+        "cli": [
+          "node"
+        ],
+        "binaries": [
+          "bun (auto-installed)",
+          "uv (auto-installed)"
+        ]
+      },
+      "activationRules": {
+        "repoSignals": [],
+        "taskKeywords": [
+          "memory",
+          "recall",
+          "previous session",
+          "last time",
+          "prior context",
+          "session history"
+        ]
+      },
+      "conflicts": [
+        "cdt-vault"
+      ],
       "needsAuth": false,
       "securityLevel": "community-third-party",
       "fallbackBehavior": "warn-external-setup"
@@ -255,9 +532,26 @@
       "enabledByDefault": true,
       "required": false,
       "scope": "user",
-      "categories": ["ui", "ux", "design"],
-      "dependencies": { "cli": [], "binaries": [] },
-      "activationRules": { "repoSignals": [], "taskKeywords": ["ui", "ux", "design", "layout", "usability", "wireframe"] },
+      "categories": [
+        "ui",
+        "ux",
+        "design"
+      ],
+      "dependencies": {
+        "cli": [],
+        "binaries": []
+      },
+      "activationRules": {
+        "repoSignals": [],
+        "taskKeywords": [
+          "ui",
+          "ux",
+          "design",
+          "layout",
+          "usability",
+          "wireframe"
+        ]
+      },
       "conflicts": [],
       "needsAuth": false,
       "securityLevel": "local-cdt-integration",

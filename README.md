@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.61.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.62.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -278,12 +278,20 @@ plugins (`playwright`, `github`, `sentry`), `terraform`, `laravel-boost`, the co
 `ponytail` and `claude-mem`, and the local `ui-ux-pro-max` skill. Official install identifiers are real
 (`<name>@claude-plugins-official`); `ui-ux-pro-max` is a CDT-local skill with **nothing to install**.
 
-**Community tier.** `ponytail` (`ponytail@ponytail`) and `claude-mem` (`claude-mem@thedotmack`) ship from
-**independent marketplaces**, so they carry `securityLevel: community-third-party`: registered and
-detectable, but **`enabledByDefault: false`** (opt-in) and strict-gated on install like every non-official
-row. Turn one on for yourself with `cdt-plugins enable <id>` — the overlay is per-user and survives plugin
-updates. Both overlap a CDT-owned lane and therefore **defer** in the router: `ponytail` yields to CDT's
-simplify step, `claude-mem` to the CDT vault.
+**All in one install.** A single `claude plugin install cdt@claude-dev-team` lands the whole toolchain: the
+bundled skills/agents/commands, the `sequential-thinking` MCP, **12 official plugins** as manifest
+`dependencies`, and the **2 community plugins** (`ponytail`, `claude-mem`) via a SessionStart bootstrap that
+adds their marketplaces and installs them **without prompting**.
+
+The community pair can't be manifest dependencies: Claude Code leaves a dependency from an unconfigured
+marketplace unresolved and **disables the dependent plugin**, and it never auto-adds a marketplace — so
+declaring them would disable CDT itself. The bootstrap does `marketplace add` then `install`, is idempotent,
+async, bounded and fail-open, and is disabled with `cdt-config bootstrap-community off`. Both still **defer**
+in the router — `ponytail` to CDT's simplify step, `claude-mem` to the CDT vault.
+
+CDT installs plugins but never provisions toolchains or credentials: LSP binaries, Playwright browsers, and
+`github`/`sentry` OAuth stay warn-with-remediation. **`claude-mem` bills its background compression to your
+own usage budget** — see [docs/plugins.md](docs/plugins.md#all-in-one-install).
 
 **Inspect & manage — `cdt-plugins` (`/cdt:plugins`):**
 
@@ -537,7 +545,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.61.1**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.62.0**.
 
 ---
 

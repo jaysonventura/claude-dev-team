@@ -140,24 +140,16 @@ def kws(pid):
 # NB: plib_state_set writes PLAIN STRINGS ("enabled"|"disabled"|"manual"|"auto"), so the string form is the
 # common case — the dict/bool branches are for hand-edited or legacy overlay files.
 disabled = set()
-enabled_overlay = set()   # explicit opt-in — gates the community-third-party tier (see consider()).
 st = _load(os.environ.get("STATE", "")) if os.environ.get("STATE") else None
 def _mark(pid, val):
     if isinstance(val, dict):
         if val.get("enabled") is False or val.get("disabled") is True or str(val.get("state","")).lower() == "disabled":
             disabled.add(pid)
-        elif val.get("enabled") is True or str(val.get("state","")).lower() == "enabled":
-            enabled_overlay.add(pid)
     elif isinstance(val, str):
-        s = val.strip().lower()
-        if s == "disabled":
+        if val.strip().lower() == "disabled":
             disabled.add(pid)
-        elif s == "enabled":
-            enabled_overlay.add(pid)
     elif val is False:
         disabled.add(pid)
-    elif val is True:
-        enabled_overlay.add(pid)
 if isinstance(st, dict):
     node = st.get("plugins") if isinstance(st.get("plugins"), dict) else st
     if isinstance(node, dict):
@@ -192,18 +184,13 @@ cdt_owned       = has_word(CDT_OWNED)   # standalone-word match: "review the cod
 recs = []       # (id, reason, advisory)
 deferred = []   # (id, [conflicting cdt agents])
 
-def community(pid):
-    """True for the community-third-party tier (independent marketplace, enabledByDefault:false)."""
-    return (entries.get(pid, {}) or {}).get("securityLevel") == "community-third-party"
-
 def consider(pid, reason, advisory=False):
     """Recommend pid, unless disabled (skip) or it conflicts with a CDT agent (defer — CDT wins)."""
     if pid in disabled:
         return False
-    # Community rows are opt-in: stay silent entirely until the user explicitly enables them, so the
-    # shipped defaults never emit a line for a plugin that isn't installed.
-    if community(pid) and pid not in enabled_overlay:
-        return False
+    # NB: community rows carried an extra "explicitly enabled" gate while they were opt-in. They are now
+    # bundled (manifest deps + SessionStart bootstrap) and enabledByDefault:true, so they route like any
+    # other row — a `disabled` overlay is the only thing that silences them.
     cf = conflicts(pid)
     if cf:
         deferred.append((pid, cf))
