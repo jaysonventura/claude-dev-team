@@ -59,7 +59,26 @@ running it (see [Install, enable & sync](#install-enable--sync)).
 ### Community plugins
 
 Two community rows are registered so CDT can **detect, health-check and route around** them — not because
-CDT endorses or installs them. Both are opt-in:
+CDT endorses or installs them. Both are opt-in.
+
+**Marketplace prerequisite.** Unlike every official row, these live on their own marketplaces, which are
+**not** configured by default. Until you add one, `cdt-plugins install <id>` cannot resolve — the health
+table says so and prints the exact command:
+
+```
+⨯ ponytail   claude-code-plugin   marketplace not configured: ponytail (add: claude plugin marketplace add DietrichGebert/ponytail)
+```
+
+```bash
+claude plugin marketplace add DietrichGebert/ponytail   # then: cdt-plugins install ponytail
+claude plugin marketplace add thedotmack/claude-mem     # then: cdt-plugins install claude-mem
+```
+
+`cdt-plugins sync` emits the same `marketplace add` line as a prerequisite above the install. CDT **never
+runs it for you**, even with `CDT_PLUGIN_AUTO_INSTALL=1` — adding a marketplace is a trust decision that
+stays with you. The slug comes from each row's optional `marketplaceSource` field.
+
+The two plugins:
 
 - **`ponytail`** ([DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail)) — injects a
   "laziest solution that works" ruleset (YAGNI → stdlib → native → one line) on every prompt and into every
@@ -380,6 +399,7 @@ Connect them yourself from a Claude Code session with `/mcp`. Because both are `
 | Plugin shows `○ disabled` | installed but disabled in `settings.json` / overlay | `cdt-plugins enable <id>` |
 | `⨯ missing-dep — missing CLI: …` | an LSP/tool binary is off `PATH` | install the binary shown (e.g. `npm i -g typescript-language-server`) |
 | `⨯ missing-dep — marketplace not configured` | `claude-plugins-official` not registered | `claude plugin marketplace add anthropics/claude-plugins-official` |
+| `⨯ missing-dep — marketplace not configured: ponytail` / `: thedotmack` | a **community** row's own marketplace isn't added | run the `claude plugin marketplace add …` shown in the note, then `cdt-plugins install <id>` |
 | `! needs-auth` | `github` / `sentry` installed but not connected | connect with `/mcp` |
 | `! needs-setup` | Playwright/Laravel external setup pending | run the setup shown (e.g. `npx playwright install`) |
 | `install` prints but doesn't run | third-party + strict mode | `CDT_PLUGIN_STRICT=0 cdt-plugins install <id>`, or run the printed command yourself |
@@ -409,4 +429,4 @@ the Claude Code plugin UI / `claude plugin` CLI if you want them gone.
 - README: [Plugin bootstrap & routing](../README.md#plugin-bootstrap--routing)
 - [Architecture deep-dive](architecture.md)
 - Command: [`/cdt:plugins`](../commands/plugins.md)
-- [CHANGELOG](../CHANGELOG.md) — `[1.59.0]`
+- [CHANGELOG](../CHANGELOG.md) — `[1.59.0]`, `[1.61.0]`, `[1.61.1]`
