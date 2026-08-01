@@ -19,9 +19,9 @@ destructive `uninstall`** and **no auto-authentication**.
 
 ## The registry (single source of truth)
 
-`config/plugins.json` lists **13 plugins**. Every install identifier is real
-(`<name>@claude-plugins-official`); `ui-ux-pro-max` is a CDT-local skill with **nothing to install**
-(`installIdentifier: null`).
+`config/plugins.json` lists **15 plugins**. Every install identifier is real — `<name>@claude-plugins-official`
+for the official rows, `ponytail@ponytail` and `claude-mem@thedotmack` for the two community rows;
+`ui-ux-pro-max` is a CDT-local skill with **nothing to install** (`installIdentifier: null`).
 
 | id | Type | Install identifier | Default-on | Scope | Auth | Security |
 |----|------|--------------------|:----------:|-------|:----:|----------|
@@ -37,10 +37,48 @@ destructive `uninstall`** and **no auto-authentication**.
 | `sentry` | mcp-plugin | `sentry@claude-plugins-official` | no | user | **yes** | verified-third-party |
 | `terraform` | claude-code-plugin | `terraform@claude-plugins-official` | no | project | — | verified-third-party |
 | `laravel-boost` | claude-code-plugin | `laravel-boost@claude-plugins-official` | no | project | — | verified-third-party |
+| `ponytail` | claude-code-plugin | `ponytail@ponytail` | no | user | — | community-third-party |
+| `claude-mem` | claude-code-plugin | `claude-mem@thedotmack` | no | user | — | community-third-party |
 | `ui-ux-pro-max` | cdt-skill | *(local — none)* | yes | user | — | local-cdt-integration |
 
 **Required** plugins (`doctor` fails if they're broken): `superpowers`, `code-review`, `frontend-design`,
 `context7`. All others are optional — issues on them are warnings only.
+
+### Security levels
+
+| Level | Meaning |
+|-------|---------|
+| `official` | in `claude-plugins-official`, Anthropic-published — installs run immediately |
+| `verified-third-party` | in `claude-plugins-official`, third-party authored — strict-gated |
+| `community-third-party` | ships from an **independent marketplace**, not in the official catalog — strict-gated, `enabledByDefault: false` |
+| `local-cdt-integration` | a CDT-local skill — nothing to install |
+
+Only `official` bypasses strict mode. Everything else prints its `claude plugin …` command instead of
+running it (see [Install, enable & sync](#install-enable--sync)).
+
+### Community plugins
+
+Two community rows are registered so CDT can **detect, health-check and route around** them — not because
+CDT endorses or installs them. Both are opt-in:
+
+- **`ponytail`** ([DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail)) — injects a
+  "laziest solution that works" ruleset (YAGNI → stdlib → native → one line) on every prompt and into every
+  subagent, via its own `SessionStart` / `SubagentStart` / `UserPromptSubmit` hooks. Needs `node` on the
+  **non-interactive** shell PATH. Level is set per session with `/ponytail lite|full|ultra|off`, or globally
+  with `PONYTAIL_DEFAULT_MODE`; `PONYTAIL_SUBAGENT_MATCHER` (a case-insensitive regex on `agent_type`)
+  scopes which subagents it reaches.
+- **`claude-mem`** ([thedotmack/claude-mem](https://github.com/thedotmack/claude-mem)) — captures tool-use
+  observations, compresses them with the Claude Agent SDK, and injects prior-session context back in. Runs a
+  local Bun **worker service** (HTTP API + web viewer) over SQLite + Chroma, and auto-installs `bun` and
+  `uv` on first start — hence `fallbackBehavior: warn-external-setup`. Settings live in
+  `~/.claude-mem/settings.json` (`CLAUDE_MEM_MODEL`, mode/language), credentials in `~/.claude-mem/.env`
+  (mode `0600`). Its observer agent runs tool-less by construction (`tools: []` + deny-list +
+  `permissionMode: dontAsk` + `canUseTool` backstop + cwd jail), so it cannot edit your tree.
+
+**Cost note (`claude-mem`).** Its `PostToolUse` hook fires on **every** tool call and each observation is
+an SDK completion. On a subscription plan that spend lands on your own usage budget — set
+`CLAUDE_MEM_MODEL` to a cheap model, or point `ANTHROPIC_API_KEY` / `ANTHROPIC_BASE_URL` in
+`~/.claude-mem/.env` at a separate backend to keep it off your session quota. Watch it with `/cdt:budget`.
 
 Detection joins this registry with Claude Code's own state files, all read-only and fail-open:
 
@@ -187,6 +225,8 @@ keywords, then matches the registry's `activationRules`. Each recommendation car
 | `context7` | — | docs, api, library, version, latest, sdk, migration | |
 | `playwright` | `playwright.config.*`, `e2e/**`, `tests/e2e/**` | e2e, browser, screenshot, playwright, end-to-end | browsers not auto-installed |
 | `code-review` | — | review, pr, diff, audit | **always defers** to CDT's code-reviewer |
+| `ponytail` | — | simplify, refactor, over-engineering, yagni, minimal, boilerplate, cleanup | **always defers** to CDT's simplify step |
+| `claude-mem` | — | memory, recall, previous session, last time, prior context, session history | **always defers** to the CDT vault |
 | `superpowers` | — | (mode-gated) | see [Superpowers modes](#superpowers-modes) |
 
 `ui-ux-pro-max` is registry-tracked and always available as a local skill, but the router does not emit a
@@ -199,6 +239,12 @@ A registry `conflicts` entry means the plugin overlaps a CDT-owned lane, so CDT 
 
 - `code-review` conflicts with `cdt-code-reviewer`.
 - `superpowers` conflicts with `cdt-planning`, `cdt-review`, `cdt-tdd`.
+- `ponytail` conflicts with `cdt-simplify` — the completion mandate owns the simplify step, so the router
+  never recommends ponytail on a refactor. (Its own hooks still inject the ruleset when you install it;
+  the conflict only stops CDT from *routing* work to it.)
+- `claude-mem` conflicts with `cdt-vault` — `cdt-recall` / `cdt-learn` stay the authoritative memory for
+  orchestration decisions. Running both is fine; they are separate stores and CDT does not read
+  claude-mem's.
 
 ### Superpowers modes
 
