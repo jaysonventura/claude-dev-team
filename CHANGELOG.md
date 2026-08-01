@@ -2,6 +2,30 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.61.1] — 2026-08-01
+### Fixed
+- **`cdt-plugins` handed out an install command that could never succeed.** The community rows added in
+  1.61.0 live on their own marketplaces (`ponytail`, `thedotmack`), which are not configured by default —
+  but the health table's `installed = false` branch was evaluated **before** the `marketplace not
+  configured` branch, making the marketplace guard unreachable in exactly the case it exists for. A user
+  saw `○ available — install: cdt-plugins install ponytail`, ran it, and hit an unresolvable identifier
+  with no hint that a marketplace was missing. The marketplace check now runs first and names the exact
+  command. Latent since 1.59.0 — harmless only because every row until now lived on
+  `claude-plugins-official`, which is effectively always configured.
+- **`cdt-plugins sync` reported *configured* marketplaces as missing.** `has_mkt` reads `MKT_CACHE`, which
+  only `cmd_list` primed; `cmd_sync` called `_cache_installed` alone, so every lookup there failed. Sync
+  now primes both caches.
+- Registry rows gain an optional **`marketplaceSource`** (`owner/repo`) so the tooling can print the exact
+  `claude plugin marketplace add …`. CDT never runs it — adding a marketplace stays a user trust decision,
+  even under `CDT_PLUGIN_AUTO_INSTALL=1`.
+
+### Changed
+- Plugin test suite **30 → 33**: marketplace-precedence, the sync prerequisite, and a regression guard for
+  the `MKT_CACHE` bug. Each was verified to **fail with its fix reverted** — case 33 initially passed
+  vacuously against an almost-right substring (`not configured` vs the emitted `is not configured`) and was
+  corrected until it genuinely caught the regression.
+- `docs/plugins.md` documents the marketplace prerequisite, with a troubleshooting row.
+
 ## [1.61.0] — 2026-08-01
 ### Added
 - **Community plugin tier in the registry — `ponytail` and `claude-mem` are now first-class rows.** The

@@ -348,7 +348,40 @@ if need_file "$PRT" 30 "opted-in community row defers to CDT"; then
   case "$out" in *deferred*) : ;; *) fail 30 "ponytail must be DEFERRED, not recommended" "got: $(printf '%s' "$out" | tr '\n' ' ' | cut -c1-160)";; esac
 fi
 
+echo "== Marketplace prerequisite (plugins.sh — community rows live on their own marketplaces) =="
+# A machine that has claude-plugins-official but NOT the ponytail marketplace, with ponytail desired-active.
+MKT_HOME="$SBX/mkt-home"; mkdir -p "$MKT_HOME/.cdt" "$MKT_HOME/plugins" 2>/dev/null
+printf '{"claude-plugins-official":{"source":{"source":"github","repo":"anthropics/claude-plugins-official"}}}\n' \
+  > "$MKT_HOME/plugins/known_marketplaces.json"
+printf '{"version":2,"plugins":{}}\n' > "$MKT_HOME/plugins/installed_plugins.json"
+printf '{"enabledPlugins":{}}\n'      > "$MKT_HOME/settings.json"
+printf '{"ponytail":"enabled","superpowers":"enabled"}\n' > "$MKT_HOME/.cdt/plugins-state.json"
+mkt_run() { CDT_HOME="$MKT_HOME" CDT_SETTINGS="$MKT_HOME/settings.json" bash "$PSH" "$@" 2>/dev/null; }
+
+# (31) An unconfigured marketplace is WHY the install is missing, so it must win over the not-installed
+#      branch and name the exact `marketplace add`. Ordered the other way, the branch was unreachable in
+#      the only case it matters and cdt-plugins handed out an install command that cannot resolve.
+if need_file "$PSH" 31 "missing marketplace outranks not-installed and prints the add command"; then
+  out="$(mkt_run list | grep ponytail)"
+  want 31 "ponytail -> marketplace not configured + add command" "$out" "marketplace add DietrichGebert/ponytail"
+fi
+
+# (32) sync must emit that prerequisite BEFORE the install line, not a command guaranteed to fail.
+if need_file "$PSH" 32 "sync emits the marketplace prerequisite for a community row"; then
+  want 32 "sync -> 'marketplace add DietrichGebert/ponytail' precedes the install" \
+    "$(mkt_run sync)" "marketplace add DietrichGebert/ponytail"
+fi
+
+# (33) REGRESSION: has_mkt reads MKT_CACHE, which only cmd_list primed — so in sync every lookup failed and
+#      a CONFIGURED marketplace (claude-plugins-official) was reported missing too. Guard that it is quiet.
+if need_file "$PSH" 33 "sync does not warn about a configured marketplace"; then
+  # NB: match the EXACT emitted wording ("is not configured"). An almost-right substring makes `lack`
+  # pass vacuously — it stayed green with the _cache_mkts fix reverted until this string was corrected.
+  lack 33 "sync -> no prerequisite line for claude-plugins-official" \
+    "$(mkt_run sync)" "'claude-plugins-official' is not configured"
+fi
+
 echo
-echo "PASSED $PASS/30"
+echo "PASSED $PASS/33"
 [ "$BLOCKED" -gt 0 ] && echo "($BLOCKED scenario(s) BLOCKED on sibling hooks not yet built — see BLOCKED lines above)"
-if [ "$PASS" -eq 30 ]; then echo "ALL PLUGIN TESTS PASSED"; exit 0; else echo "PLUGIN TESTS INCOMPLETE OR FAILING"; exit 1; fi
+if [ "$PASS" -eq 33 ]; then echo "ALL PLUGIN TESTS PASSED"; exit 0; else echo "PLUGIN TESTS INCOMPLETE OR FAILING"; exit 1; fi

@@ -103,6 +103,30 @@ PY
 # meta_row <id> — echo the one metadata row for <id> (US-delimited); rc1 if the id is not in the registry.
 meta_row() { _meta | awk -F"$US" -v id="$1" '$1==id{print; f=1} END{exit(f?0:1)}'; }
 
+# mkt_source <id> — echo the registry's optional `marketplaceSource` (an "owner/repo" slug) for <id>, so we
+# can print the exact `claude plugin marketplace add …` a user needs before the install can work. Empty when
+# absent — official rows omit it because claude-plugins-official ships configured. Read via its own lookup
+# on purpose: appending a 16th column to the US-delimited _meta row would silently land in `disp` for any
+# `read -r` consumer that wasn't updated.
+mkt_source() {
+  local _id="${1:-}" _reg; [ -n "$_id" ] || return 0
+  _reg="$(plib_load_registry 2>/dev/null)"; [ -n "$_reg" ] || return 0
+  CDT_REG_JSON="$_reg" CDT_MS_ID="$_id" python3 - <<'PY'
+import json, os, sys
+try:
+    reg = json.loads(os.environ.get("CDT_REG_JSON", ""))
+except Exception:
+    sys.exit(0)
+rid = os.environ.get("CDT_MS_ID", "")
+for p in (reg.get("plugins", []) if isinstance(reg, dict) else []):
+    if isinstance(p, dict) and p.get("id") == rid:
+        src = p.get("marketplaceSource") or ""
+        if src:
+            print(str(src))
+        break
+PY
+}
+
 # --- gather: registry ⨝ installed ⨝ enabled ⨝ cli-probe ⨝ marketplace, one computed record per plugin -
 # Output TAB columns: 1 id  2 type  3 glyph  4 status  5 installed  6 enabled  7 note  8 required
 gather() {
@@ -130,12 +154,21 @@ gather() {
     local glyph status note
     if [ "$type" = "cdt-skill" ]; then
       glyph="✓"; status="local"; note="local CDT skill — always available"
+    elif [ "$mkt_ok" = false ]; then
+      # BEFORE the not-installed branch: an unconfigured marketplace is WHY the install is missing, and
+      # `cdt-plugins install <id>` cannot succeed until it is added. Ordering this after `installed=false`
+      # made the branch unreachable in the only case it matters and handed out a dead-end command.
+      local _src; _src="$(mkt_source "$id")"
+      glyph="⨯"; status="missing-dep"
+      if [ -n "$_src" ]; then
+        note="marketplace not configured: $mkt (add: claude plugin marketplace add $_src)"
+      else
+        note="marketplace not configured: $mkt"
+      fi
     elif [ "$installed" = false ]; then
       glyph="○"; status="available"; note="available — not installed (install: cdt-plugins install $id)"
     elif [ -n "$miss" ]; then
       glyph="⨯"; status="missing-dep"; note="missing CLI: $miss"
-    elif [ "$mkt_ok" = false ]; then
-      glyph="⨯"; status="missing-dep"; note="marketplace not configured: $mkt"
     elif [ "$enabled" = false ]; then
       glyph="○"; status="disabled"; note="installed but disabled (enable: cdt-plugins enable $id)"
     elif [ "$needsauth" = true ]; then
@@ -244,7 +277,7 @@ cmd_explain() {
 }
 
 cmd_sync() {
-  _cache_installed
+  _cache_installed; _cache_mkts   # MKT_CACHE is required by has_mkt below — without it every lookup fails
   local run=0; auto_install_on && ! strict_on && run=1
   local do_update=0; auto_update_on && ! strict_on && do_update=1
   echo "cdt-plugins sync — remediation for missing enabled plugins:"
@@ -273,6 +306,17 @@ cmd_sync() {
     [ "$installed" = yes ] && [ "$enabled" = no ] && verb="enable"
     [ -n "$verb" ] || continue
     any=1
+    # An install cannot resolve until its marketplace is configured, so emit that prerequisite first rather
+    # than a command that is guaranteed to fail. Never auto-run it — adding a marketplace is a trust
+    # decision that stays with the user, even when auto-install is on.
+    if [ "$verb" = "install" ] && [ -n "$mkt" ] && ! has_mkt "$mkt"; then
+      local _src; _src="$(mkt_source "$id")"
+      if [ -n "$_src" ]; then
+        echo "  claude plugin marketplace add $_src   # prerequisite: marketplace '$mkt' not configured"
+      else
+        echo "  # prerequisite: marketplace '$mkt' is not configured — add it before the install below"
+      fi
+    fi
     local cmd="claude plugin $verb $ident -s $scope"
     if [ "$run" = 1 ]; then
       echo "  → $cmd"
