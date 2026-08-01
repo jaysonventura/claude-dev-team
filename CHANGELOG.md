@@ -2,6 +2,41 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.62.0] — 2026-08-01
+### Added
+- **All-in-one install — `claude plugin install cdt` now lands the entire toolchain.** Previously only four
+  official companions came along and everything else was opt-in. Now a fresh install brings the bundled
+  13 skills / 19 agents / 21 commands, the `sequential-thinking` MCP, **12 official plugins** as manifest
+  `dependencies` (adds `playwright`, `github`, `sentry`, `terraform`, `laravel-boost`, and the
+  typescript/php/swift LSPs), and the **2 community plugins** via a new bootstrap.
+- **`cdt-plugins bootstrap` — acquires `ponytail` + `claude-mem` automatically at SessionStart, without
+  prompting.** They *cannot* be manifest dependencies: Claude Code leaves "dependencies from a marketplace
+  you have not added" unresolved and **disables the dependent plugin**, and it never auto-adds a
+  marketplace — so declaring them would have **disabled CDT itself** on every machine lacking the
+  `ponytail` / `thedotmack` marketplaces. The bootstrap runs `marketplace add` first, then `install`.
+  It is **idempotent** (stamp + live installed-state check, so an uninstall re-heals), **fail-open**
+  (always rc0 — it can never break a session), **bounded** (`CDT_BOOTSTRAP_TIMEOUT`, default 180s per
+  shell-out), **async** (never delays startup), and **redacted**.
+- `cdt-config bootstrap-community on|off` (default **on**) and `CDT_BOOTSTRAP_TIMEOUT`.
+
+### Changed
+- **Every installable registry row is now `enabledByDefault: true`** — the registry describes a bundle, not
+  an opt-in menu. The community rows lost their extra "explicitly enabled" routing gate and now behave like
+  any other row: a `disabled` overlay is the only thing that silences one.
+- Plugin test suite **33 → 36**: bootstrap ordering (`marketplace add` before `install`), the kill switch
+  blocking every shell-out, and idempotency. Ordering and kill-switch cases were each verified to **fail
+  with their fix reverted**; the idempotency case is guarded by two independent mechanisms, so it is
+  defense-in-depth rather than a single-point regression test.
+
+### Notes
+- **This installs `claude-mem` on every new machine.** Its `PostToolUse` hook fires on every tool call and
+  each observation is a Claude Agent SDK completion **billed to your own usage budget**. Redirect it via
+  `~/.claude-mem/.env`, or run `cdt-config bootstrap-community off` before first launch.
+- CDT installs plugins but still **provisions no toolchains or credentials**: LSP binaries, Playwright
+  browsers, claude-mem's bun/uv, and `github`/`sentry` OAuth remain warn-with-remediation, so a fresh
+  machine legitimately shows some `⨯ missing-dep` / `! needs-auth` rows. `doctor` still exits 0 — only the
+  four *required* plugins can fail it.
+
 ## [1.61.1] — 2026-08-01
 ### Fixed
 - **`cdt-plugins` handed out an install command that could never succeed.** The community rows added in

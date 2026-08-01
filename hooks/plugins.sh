@@ -391,6 +391,72 @@ _acquire() {
   return 0
 }
 
+# cmd_bootstrap [--quiet] — acquire the community-third-party rows so a fresh `claude plugin install cdt`
+# lands the whole bundle. Official rows come from plugin.json `dependencies`; these CANNOT, because Claude
+# Code leaves "dependencies from a marketplace you have not added" unresolved and DISABLES the dependent
+# plugin — declaring them would brick CDT itself on any machine lacking their marketplaces. So we add the
+# marketplace and install them here instead.
+#
+# Safety rails: idempotent (a stamp short-circuits the fast path), fail-open (never blocks a session, always
+# rc0), bounded (each shell-out is timeout-capped), redacted output, and a kill switch.
+CDT_BOOTSTRAP_STAMP="${CDT_BOOTSTRAP_STAMP:-$CDT_STATE_DIR/bootstrap-community.done}"
+cmd_bootstrap() {
+  local quiet=0; [ "${1:-}" = "--quiet" ] && quiet=1
+  _say() { [ "$quiet" = 1 ] || printf '%s\n' "$1"; }
+
+  case "$(printf '%s' "$(plib_cfg CDT_BOOTSTRAP_COMMUNITY 1)" | tr '[:upper:]' '[:lower:]')" in
+    0|off|false|no) _say "cdt-plugins bootstrap: disabled (CDT_BOOTSTRAP_COMMUNITY=off)"; return 0 ;;
+  esac
+  command -v claude >/dev/null 2>&1 || { _say "cdt-plugins bootstrap: 'claude' CLI not on PATH — skipped"; return 0; }
+
+  _cache_installed; _cache_mkts
+  local pending=0 id ident mkt src
+  # Re-read state each run rather than trusting the stamp alone, so an uninstall is re-healed.
+  for id in $(_meta | awk -F"$US" '$7=="community-third-party"{print $1}'); do
+    is_inst "$id" || pending=1
+  done
+  [ "$pending" = 1 ] || { : > "$CDT_BOOTSTRAP_STAMP" 2>/dev/null; _say "cdt-plugins bootstrap: nothing to do."; return 0; }
+
+  _say "cdt-plugins bootstrap: acquiring community plugins (marketplaces are not auto-added by Claude Code)…"
+  local rc_any=0
+  while IFS="$US" read -r id _t mkt _s _r _a sec _f ident _rest; do
+    [ -n "$id" ] || continue
+    [ "$sec" = "community-third-party" ] || continue
+    is_inst "$id" && continue
+    valid_ident "$ident" || { _say "  ⨯ $id: refusing malformed identifier"; rc_any=1; continue; }
+    src="$(mkt_source "$id")"
+    if [ -n "$mkt" ] && ! has_mkt "$mkt"; then
+      if [ -z "$src" ]; then
+        _say "  ⨯ $id: marketplace '$mkt' missing and no marketplaceSource in the registry"; rc_any=1; continue
+      fi
+      _say "  → claude plugin marketplace add $src"
+      _run_bounded claude plugin marketplace add "$src" || { _say "  ⨯ $id: marketplace add failed"; rc_any=1; continue; }
+    fi
+    _say "  → claude plugin install $ident -s user"
+    _run_bounded claude plugin install "$ident" -s user || { _say "  ⨯ $id: install failed"; rc_any=1; continue; }
+    plib_state_set "$id" enabled >/dev/null 2>&1 || true
+  done <<EOF
+$(_meta)
+EOF
+  [ "$rc_any" = 0 ] && : > "$CDT_BOOTSTRAP_STAMP" 2>/dev/null
+  _say "cdt-plugins bootstrap: done (restart Claude Code to load new plugins)."
+  return 0     # fail-open: a bootstrap problem must never break the session
+}
+
+# _run_bounded <cmd>... — run a shell-out with a hard time cap and redacted output. `timeout`/`gtimeout`
+# when available, else plain execution (macOS ships neither by default).
+_run_bounded() {
+  local t; t="$(plib_cfg CDT_BOOTSTRAP_TIMEOUT 180)"
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$t" "$@" 2>&1 | plib_redact
+  elif command -v gtimeout >/dev/null 2>&1; then
+    gtimeout "$t" "$@" 2>&1 | plib_redact
+  else
+    "$@" 2>&1 | plib_redact
+  fi
+  return "${PIPESTATUS[0]}"
+}
+
 usage() {
   cat <<'USAGE'
 cdt-plugins — inspect & manage the CDT companion plugins (registry-driven; detection is read-only).
@@ -399,6 +465,8 @@ cdt-plugins — inspect & manage the CDT companion plugins (registry-driven; det
   doctor [--json]          same table; exits non-zero only if a REQUIRED plugin / core dep is broken
   explain <id>             type, routing rules, deps, auth, security & fallback for one plugin
   sync                     print `claude plugin install/enable …` for missing enabled plugins
+  bootstrap [--quiet]      acquire the community plugins (marketplace add + install); auto-runs at
+                           SessionStart, idempotent, off with `cdt-config bootstrap-community off`
                            (only runs them with CDT_PLUGIN_AUTO_INSTALL=1 and CDT_PLUGIN_STRICT=0)
   enable  <id>             overlay=enabled  + claude plugin enable
   disable <id>             overlay=disabled + claude plugin disable
@@ -414,6 +482,7 @@ case "${1:-list}" in
   doctor)          cmd_doctor "${2:-}" ;;
   explain)         cmd_explain "${2:-}" ;;
   sync)            cmd_sync ;;
+  bootstrap)       cmd_bootstrap "${2:-}" ;;
   enable)          _toggle enable "${2:-}" ;;
   disable)         _toggle disable "${2:-}" ;;
   install)         _acquire install "${2:-}" ;;

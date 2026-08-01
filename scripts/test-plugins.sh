@@ -332,11 +332,12 @@ if need_file "$PRT" 28 "string overlay 'disabled' suppresses a recommendation"; 
   lack 28 "overlay terraform=disabled -> terraform NOT recommended" "$(route_ovl "$SBX/proj-tf" work on this project)" "terraform"
 fi
 
-# (29) A community-third-party row stays completely silent until explicitly enabled, so the shipped
-#      defaults never mention a plugin the user has not opted into.
-if need_file "$PRT" 29 "community row silent without an explicit opt-in"; then
-  set_overlay '{}'
-  lack 29 "no overlay -> ponytail absent entirely" "$(route_ovl "$SBX/proj-react" simplify this over-engineered module)" "ponytail"
+# (29) Community rows are bundled + enabledByDefault:true, so they route like any other row — a `disabled`
+#      overlay is the ONLY thing that silences one. (Pre-1.62.0 they were opt-in and this asserted the
+#      opposite; the bundle reversed that intent deliberately.)
+if need_file "$PRT" 29 "a disabled overlay silences a community row"; then
+  set_overlay '{ "ponytail": "disabled" }'
+  lack 29 "overlay ponytail=disabled -> ponytail absent" "$(route_ovl "$SBX/proj-react" simplify this over-engineered module)" "ponytail"
 fi
 
 # (30) Once opted in, the community row is matched only to DEFER — CDT owns the lane, so it must appear as
@@ -381,7 +382,51 @@ if need_file "$PSH" 33 "sync does not warn about a configured marketplace"; then
     "$(mkt_run sync)" "'claude-plugins-official' is not configured"
 fi
 
+echo "== Community bootstrap (plugins.sh bootstrap — the all-in-one acquisition path) =="
+# Official rows arrive as plugin.json dependencies; community rows CANNOT (Claude Code leaves a dependency
+# from an unconfigured marketplace unresolved and DISABLES the dependent plugin), so bootstrap acquires them.
+# All shell-outs land on the argv shim — the real claude CLI is never invoked.
+boot_run() { CDT_HOME="$MKT_HOME" CDT_SETTINGS="$MKT_HOME/settings.json" bash "$PSH" bootstrap 2>/dev/null; }
+
+# (34) The marketplace add must PRECEDE the install — the install cannot resolve otherwise.
+if need_file "$PSH" 34 "bootstrap adds the marketplace before installing"; then
+  : > "$SHIM_LOG"; rm -f "$MKT_HOME/.cdt/bootstrap-community.done" 2>/dev/null
+  boot_run >/dev/null 2>&1
+  add_ln="$(grep -n 'marketplace add DietrichGebert/ponytail' "$SHIM_LOG" | head -1 | cut -d: -f1)"
+  ins_ln="$(grep -n 'install ponytail@ponytail -s user'        "$SHIM_LOG" | head -1 | cut -d: -f1)"
+  if [ -n "$add_ln" ] && [ -n "$ins_ln" ] && [ "$add_ln" -lt "$ins_ln" ]; then
+    pass 34 "bootstrap: 'marketplace add' precedes 'install' for ponytail"
+  else
+    fail 34 "bootstrap ordering (add before install)" "add=$add_ln install=$ins_ln log: $(tr '\n' '|' <"$SHIM_LOG" | cut -c1-200)"
+  fi
+fi
+
+# (35) Kill switch must prevent every shell-out, not merely silence the output.
+if need_file "$PSH" 35 "bootstrap kill switch blocks all shell-outs"; then
+  : > "$SHIM_LOG"; rm -f "$MKT_HOME/.cdt/bootstrap-community.done" 2>/dev/null
+  CDT_BOOTSTRAP_COMMUNITY=off boot_run >/dev/null 2>&1
+  if [ ! -s "$SHIM_LOG" ]; then pass 35 "CDT_BOOTSTRAP_COMMUNITY=off -> shim never invoked"
+  else fail 35 "kill switch blocks shell-outs" "shim-log: $(tr '\n' '|' <"$SHIM_LOG" | cut -c1-160)"; fi
+fi
+
+# (36) Idempotent: with both community rows already installed there is nothing to acquire, so a SessionStart
+#      bootstrap on every launch must not re-shell-out.
+if need_file "$PSH" 36 "bootstrap is idempotent when already installed"; then
+  cp "$MKT_HOME/plugins/installed_plugins.json" "$MKT_HOME/plugins/installed_plugins.json.bak"
+  cat > "$MKT_HOME/plugins/installed_plugins.json" <<'JSON'
+{ "version": 2, "plugins": {
+  "ponytail@ponytail":       [ { "scope": "user", "installPath": "/x/ponytail/4.8.4",  "version": "4.8.4"  } ],
+  "claude-mem@thedotmack":   [ { "scope": "user", "installPath": "/x/claude-mem/13.0", "version": "13.0.0" } ]
+} }
+JSON
+  : > "$SHIM_LOG"
+  boot_run >/dev/null 2>&1
+  if [ ! -s "$SHIM_LOG" ]; then pass 36 "already installed -> no shell-out"
+  else fail 36 "bootstrap idempotent" "shim-log: $(tr '\n' '|' <"$SHIM_LOG" | cut -c1-160)"; fi
+  mv "$MKT_HOME/plugins/installed_plugins.json.bak" "$MKT_HOME/plugins/installed_plugins.json"
+fi
+
 echo
-echo "PASSED $PASS/33"
+echo "PASSED $PASS/36"
 [ "$BLOCKED" -gt 0 ] && echo "($BLOCKED scenario(s) BLOCKED on sibling hooks not yet built — see BLOCKED lines above)"
-if [ "$PASS" -eq 33 ]; then echo "ALL PLUGIN TESTS PASSED"; exit 0; else echo "PLUGIN TESTS INCOMPLETE OR FAILING"; exit 1; fi
+if [ "$PASS" -eq 36 ]; then echo "ALL PLUGIN TESTS PASSED"; exit 0; else echo "PLUGIN TESTS INCOMPLETE OR FAILING"; exit 1; fi

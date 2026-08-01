@@ -20,6 +20,12 @@
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/session-start-vault.sh\"",
             "async": false
+          },
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/plugins.sh\" bootstrap --quiet",
+            "async": true,
+            "timeout": 300
           }
         ]
       }
