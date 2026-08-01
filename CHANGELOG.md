@@ -2,6 +2,46 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.61.0] — 2026-08-01
+### Added
+- **Community plugin tier in the registry — `ponytail` and `claude-mem` are now first-class rows.** The
+  registry grows from 13 to **15 plugins**, and gains a fourth `securityLevel`: **`community-third-party`**,
+  for plugins that ship from an **independent marketplace** rather than `claude-plugins-official`
+  (`ponytail@ponytail`, `claude-mem@thedotmack`). CDT now detects them, health-checks them, and routes
+  around them like any other row — `cdt-plugins list` · `explain <id>` · `doctor` all work unchanged.
+- **Opt-in by construction.** Both ship `enabledByDefault: false`, so the shipped defaults change nothing
+  for anyone who doesn't want them: they render `○ available` and the advisory router stays silent. Turn one
+  on per-machine with `cdt-plugins enable <id>` — the overlay lands in `~/.claude/.cdt/plugins-state.json`
+  and survives plugin updates. Their install stays **strict-gated** (only `official` bypasses
+  `CDT_PLUGIN_STRICT`), so nothing third-party ever auto-executes.
+- **Both defer to CDT — the lane rule holds.** `ponytail` conflicts with `cdt-simplify` (the completion
+  mandate owns the simplify step) and `claude-mem` conflicts with `cdt-vault` (`cdt-recall` / `cdt-learn`
+  stay authoritative). The router prints them as deferred instead of recommending them, so a community
+  plugin can never front-run a CDT agent.
+- **Docs:** [`docs/plugins.md`](docs/plugins.md) gains a **Security levels** table, a **Community plugins**
+  section covering each plugin's hooks, runtime footprint and knobs, and a **cost note** — `claude-mem`
+  fires on every `PostToolUse` and each observation is a Claude Agent SDK completion, which lands on your
+  own usage budget unless you point `~/.claude-mem/.env` at a separate backend.
+
+### Fixed
+- **`cdt-plugins disable <id>` did not actually suppress a recommendation.** `plib_state_set` persists the
+  overlay as a **plain string** (`"disabled"`), but the router's `_mark()` only understood dict and
+  boolean-`false` shapes — so a disabled plugin kept being recommended, contradicting the documented
+  "the advisory router never recommends a plugin whose overlay is disabled". The string form (the common
+  case) is now handled, along with `true`/`"enabled"` for the opt-in set. Regression-tested (case 28).
+- **`cdt-plugin-route` ignored `$CDT_PLUGIN_REGISTRY`.** `cdt-plugins` honored the override but the router
+  did not, so the two tools could silently disagree about which registry was authoritative. The router now
+  mirrors `plib_registry_path()`: explicit override → user copy → shipped default.
+- **`cdt-plugin-route` hardcoded `CDT_HOME`,** ignoring an exported override (`plugins-lib.sh` has always
+  honored it). Now `${CDT_HOME:-$HOME/.claude}`, which also lets the overlay tests run hermetically instead
+  of against the real `~/.claude/.cdt/`.
+
+### Changed
+- `config/plugins.json` `meta.note` records that non-official rows are `community-third-party`, opt-in, and
+  strict-gated; identifiers re-verified against the `claude plugin` CLI on **Claude Code 2.1.220**.
+- Plugin test suite grows **27 → 30** cases, covering overlay-string gating, community-tier silence before
+  opt-in, and the defer-to-CDT path after opt-in.
+
 ## [1.60.0] — 2026-07-13
 ### Added
 - **No AI attribution on commits or PRs — guaranteed, on every machine CDT runs on.** Your commits get no

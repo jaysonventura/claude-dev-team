@@ -2,7 +2,7 @@
   "$schema": "https://claude-dev-team/plugins-registry.schema.json",
   "version": 1,
   "meta": {
-    "note": "Shipped read-only defaults — the single source of truth for CDT plugin detection, validation, health, and routing. Per-plugin user overrides live in ~/.claude/.cdt/plugins-state.json and survive plugin updates. Identifiers verified against the local claude-plugins-official marketplace catalog and the `claude plugin` CLI (Claude Code 2.1.207).",
+    "note": "Shipped read-only defaults — the single source of truth for CDT plugin detection, validation, health, and routing. Per-plugin user overrides live in ~/.claude/.cdt/plugins-state.json and survive plugin updates. Identifiers verified against the local marketplace catalogs and the `claude plugin` CLI (Claude Code 2.1.220). Rows whose marketplace is not claude-plugins-official are securityLevel community-third-party: they ship enabledByDefault:false (opt-in) and their install stays strict-gated.",
     "marketplace": "claude-plugins-official"
   },
   "plugins": [
@@ -208,6 +208,40 @@
       "conflicts": [],
       "needsAuth": false,
       "securityLevel": "verified-third-party",
+      "fallbackBehavior": "warn-external-setup"
+    },
+    {
+      "id": "ponytail",
+      "displayName": "Ponytail",
+      "type": "claude-code-plugin",
+      "marketplace": "ponytail",
+      "installIdentifier": "ponytail@ponytail",
+      "enabledByDefault": false,
+      "required": false,
+      "scope": "user",
+      "categories": ["style", "code-quality", "simplicity"],
+      "dependencies": { "cli": ["node"], "binaries": [] },
+      "activationRules": { "repoSignals": [], "taskKeywords": ["simplify", "refactor", "over-engineering", "yagni", "minimal", "boilerplate", "cleanup"] },
+      "conflicts": ["cdt-simplify"],
+      "needsAuth": false,
+      "securityLevel": "community-third-party",
+      "fallbackBehavior": "advisory-skip"
+    },
+    {
+      "id": "claude-mem",
+      "displayName": "Claude-Mem",
+      "type": "claude-code-plugin",
+      "marketplace": "thedotmack",
+      "installIdentifier": "claude-mem@thedotmack",
+      "enabledByDefault": false,
+      "required": false,
+      "scope": "user",
+      "categories": ["memory", "context", "continuity"],
+      "dependencies": { "cli": ["node"], "binaries": ["bun (auto-installed)", "uv (auto-installed)"] },
+      "activationRules": { "repoSignals": [], "taskKeywords": ["memory", "recall", "previous session", "last time", "prior context", "session history"] },
+      "conflicts": ["cdt-vault"],
+      "needsAuth": false,
+      "securityLevel": "community-third-party",
       "fallbackBehavior": "warn-external-setup"
     },
     {

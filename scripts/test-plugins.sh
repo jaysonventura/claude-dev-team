@@ -314,7 +314,41 @@ if need_file "$PRT" 27 "env-file CDT_PLUGINS_ENABLED=0 silences the router"; the
   else fail 27 "env-file CDT_PLUGINS_ENABLED=0 -> router silent" "got: $(printf '%s' "$out" | tr '\n' ' ' | cut -c1-160)"; fi
 fi
 
+echo "== Overlay gating + community tier (plugin-route.sh) =="
+# Hermetic: point CDT_HOME at a sandbox so these never read or write the real ~/.claude/.cdt overlay.
+OVL_HOME="$SBX/ovl-home"; mkdir -p "$OVL_HOME/.cdt" 2>/dev/null
+set_overlay() { printf '%s\n' "$1" > "$OVL_HOME/.cdt/plugins-state.json"; }
+route_ovl() {  # route_ovl <projdir> <task words...> — same as route(), with the sandboxed overlay in effect
+  local d="$1"; shift
+  ( cd "$d" 2>/dev/null && CDT_HOME="$OVL_HOME" bash "$PRT" "$*" 2>/dev/null )
+}
+
+# (28) REGRESSION: plib_state_set writes PLAIN STRINGS, so a `"terraform":"disabled"` overlay must suppress
+#      the recommendation. Before the string branch existed, _mark() only understood dicts/bool-false and a
+#      disabled plugin was still recommended — contradicting the documented "never recommends a plugin
+#      whose overlay is disabled".
+if need_file "$PRT" 28 "string overlay 'disabled' suppresses a recommendation"; then
+  set_overlay '{ "terraform": "disabled" }'
+  lack 28 "overlay terraform=disabled -> terraform NOT recommended" "$(route_ovl "$SBX/proj-tf" work on this project)" "terraform"
+fi
+
+# (29) A community-third-party row stays completely silent until explicitly enabled, so the shipped
+#      defaults never mention a plugin the user has not opted into.
+if need_file "$PRT" 29 "community row silent without an explicit opt-in"; then
+  set_overlay '{}'
+  lack 29 "no overlay -> ponytail absent entirely" "$(route_ovl "$SBX/proj-react" simplify this over-engineered module)" "ponytail"
+fi
+
+# (30) Once opted in, the community row is matched only to DEFER — CDT owns the lane, so it must appear as
+#      deferred and never as a recommendation.
+if need_file "$PRT" 30 "opted-in community row defers to CDT"; then
+  set_overlay '{ "ponytail": "enabled" }'
+  out="$(route_ovl "$SBX/proj-react" simplify this over-engineered module)"
+  want 30 "overlay ponytail=enabled -> ponytail deferred (CDT owns simplify)" "$out" "ponytail"
+  case "$out" in *deferred*) : ;; *) fail 30 "ponytail must be DEFERRED, not recommended" "got: $(printf '%s' "$out" | tr '\n' ' ' | cut -c1-160)";; esac
+fi
+
 echo
-echo "PASSED $PASS/27"
+echo "PASSED $PASS/30"
 [ "$BLOCKED" -gt 0 ] && echo "($BLOCKED scenario(s) BLOCKED on sibling hooks not yet built — see BLOCKED lines above)"
-if [ "$PASS" -eq 27 ]; then echo "ALL PLUGIN TESTS PASSED"; exit 0; else echo "PLUGIN TESTS INCOMPLETE OR FAILING"; exit 1; fi
+if [ "$PASS" -eq 30 ]; then echo "ALL PLUGIN TESTS PASSED"; exit 0; else echo "PLUGIN TESTS INCOMPLETE OR FAILING"; exit 1; fi

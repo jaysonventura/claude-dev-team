@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.60.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.61.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -267,16 +267,23 @@ session; the bare `/command` form won't match).
 
 ## Plugin bootstrap & routing
 
-CDT ships knowing the official companion plugins **as data**. A verified registry
-(`config/plugins.json`, **13 plugins**) is the single source of truth for **detection, health, routing,
+CDT ships knowing the companion plugins **as data**. A verified registry
+(`config/plugins.json`, **15 plugins**) is the single source of truth for **detection, health, routing,
 and conflict rules** — so CDT can tell you which plugin fits a task, whether it's healthy, and never
 front-run its own agents with one. Verified against the `claude plugin` CLI on **Claude Code 2.x**.
 
 The registry knows the four official companions that auto-install (`superpowers`, `code-review`,
 `frontend-design`, `context7`), the language LSPs (`typescript-lsp`, `php-lsp`, `swift-lsp`), MCP/tooling
-plugins (`playwright`, `github`, `sentry`), `terraform`, `laravel-boost`, and the local `ui-ux-pro-max`
-skill. Install identifiers are real (`<name>@claude-plugins-official`); `ui-ux-pro-max` is a CDT-local
-skill with **nothing to install**.
+plugins (`playwright`, `github`, `sentry`), `terraform`, `laravel-boost`, the community plugins
+`ponytail` and `claude-mem`, and the local `ui-ux-pro-max` skill. Official install identifiers are real
+(`<name>@claude-plugins-official`); `ui-ux-pro-max` is a CDT-local skill with **nothing to install**.
+
+**Community tier.** `ponytail` (`ponytail@ponytail`) and `claude-mem` (`claude-mem@thedotmack`) ship from
+**independent marketplaces**, so they carry `securityLevel: community-third-party`: registered and
+detectable, but **`enabledByDefault: false`** (opt-in) and strict-gated on install like every non-official
+row. Turn one on for yourself with `cdt-plugins enable <id>` — the overlay is per-user and survives plugin
+updates. Both overlap a CDT-owned lane and therefore **defer** in the router: `ponytail` yields to CDT's
+simplify step, `claude-mem` to the CDT vault.
 
 **Inspect & manage — `cdt-plugins` (`/cdt:plugins`):**
 
@@ -530,7 +537,7 @@ Then **restart your Claude Code session** (or `/reload-plugins`). Check your ver
 - **Re-run `/cdt:menubar`** — rebuilds & relaunches `CDT Usage.app` from the updated source (needs the Swift toolchain), **or**
 - **Download the notarized DMG** from the **[latest release](https://github.com/jaysonventura/claude-dev-team/releases/latest)**, drag `CDT Usage` to Applications, and open it (notarized — no Gatekeeper warnings).
 
-Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.60.0**.
+Releases follow semver; the **[CHANGELOG](CHANGELOG.md)** lists every version. Latest: **v1.61.0**.
 
 ---
 

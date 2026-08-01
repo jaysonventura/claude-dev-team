@@ -22,7 +22,7 @@ done
 lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//'; }
 
 SELF_DIR="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
-CDT_HOME="$HOME/.claude"
+CDT_HOME="${CDT_HOME:-$HOME/.claude}"   # honor an override like plugins-lib.sh does (keeps tests hermetic)
 
 # --- source the plugins library up front for its config resolver (plib_cfg) + plib_detect_signals -----
 # The master switches below MUST see cdt-config toggles persisted to the env file, not just process env.
@@ -58,8 +58,11 @@ case "$SP_MODE" in off|manual|selective|always) ;; *) SP_MODE="selective" ;; esa
 [ "$#" -eq 0 ] && { echo "usage: cdt-plugin-route \"<task description>\" [--json]"; exit 0; }
 
 # --- locate the registry (installed copy first, then the repo default) and the per-plugin overlay state ---
+# Resolution order mirrors plib_registry_path(): explicit override → user copy → shipped default, so
+# cdt-plugins and cdt-plugin-route can never disagree about which registry is authoritative.
 REGISTRY=""
-for c in "$CDT_HOME/.cdt/plugins-registry.json" "$SELF_DIR/../config/plugins.json" "$SELF_DIR/plugins.json"; do
+for c in "${CDT_PLUGIN_REGISTRY:-}" "$CDT_HOME/.cdt/plugins-registry.json" "$SELF_DIR/../config/plugins.json" "$SELF_DIR/plugins.json"; do
+  [ -n "$c" ] || continue
   [ -f "$c" ] && { REGISTRY="$c"; break; }
 done
 STATE="$CDT_HOME/.cdt/plugins-state.json"
@@ -134,14 +137,27 @@ def kws(pid):
     return [str(k).lower() for k in (ar.get("taskKeywords") or [])]
 
 # per-plugin overlay state: disabled plugins are never recommended. Tolerant of several shapes.
+# NB: plib_state_set writes PLAIN STRINGS ("enabled"|"disabled"|"manual"|"auto"), so the string form is the
+# common case — the dict/bool branches are for hand-edited or legacy overlay files.
 disabled = set()
+enabled_overlay = set()   # explicit opt-in — gates the community-third-party tier (see consider()).
 st = _load(os.environ.get("STATE", "")) if os.environ.get("STATE") else None
 def _mark(pid, val):
     if isinstance(val, dict):
         if val.get("enabled") is False or val.get("disabled") is True or str(val.get("state","")).lower() == "disabled":
             disabled.add(pid)
+        elif val.get("enabled") is True or str(val.get("state","")).lower() == "enabled":
+            enabled_overlay.add(pid)
+    elif isinstance(val, str):
+        s = val.strip().lower()
+        if s == "disabled":
+            disabled.add(pid)
+        elif s == "enabled":
+            enabled_overlay.add(pid)
     elif val is False:
         disabled.add(pid)
+    elif val is True:
+        enabled_overlay.add(pid)
 if isinstance(st, dict):
     node = st.get("plugins") if isinstance(st.get("plugins"), dict) else st
     if isinstance(node, dict):
@@ -176,9 +192,17 @@ cdt_owned       = has_word(CDT_OWNED)   # standalone-word match: "review the cod
 recs = []       # (id, reason, advisory)
 deferred = []   # (id, [conflicting cdt agents])
 
+def community(pid):
+    """True for the community-third-party tier (independent marketplace, enabledByDefault:false)."""
+    return (entries.get(pid, {}) or {}).get("securityLevel") == "community-third-party"
+
 def consider(pid, reason, advisory=False):
     """Recommend pid, unless disabled (skip) or it conflicts with a CDT agent (defer — CDT wins)."""
     if pid in disabled:
+        return False
+    # Community rows are opt-in: stay silent entirely until the user explicitly enables them, so the
+    # shipped defaults never emit a line for a plugin that isn't installed.
+    if community(pid) and pid not in enabled_overlay:
         return False
     cf = conflicts(pid)
     if cf:
@@ -249,6 +273,12 @@ if pw: consider("playwright", pw)
 # code-review: matched here only so the conflict is transparent (it defers to CDT's code-reviewer agent)
 k = first_kw("code-review")
 if k: consider("code-review", "task mentions '%s'" % k)
+
+# community tier (opt-in; consider() stays silent until the overlay says enabled) — matched here only so
+# the CDT-lane conflict is transparent: ponytail defers to cdt-simplify, claude-mem to cdt-vault.
+for _cid in ("ponytail", "claude-mem"):
+    k = first_kw(_cid)
+    if k: consider(_cid, "task mentions '%s'" % k)
 
 # superpowers gate (CDT owns its planning/review/TDD — conflicts field => CDT wins, always)
 if "superpowers" not in disabled and not cdt_owned:
