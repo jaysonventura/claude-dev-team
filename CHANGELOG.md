@@ -2,6 +2,23 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.62.1] — 2026-08-01
+### Fixed
+- **Upgrading to 1.62.0 parked CDT in `dependency-unsatisfied`.** Claude Code resolves manifest
+  dependencies eagerly on a *fresh* install, but on an *upgrade* it resolves them lazily — so the eight
+  dependencies added in 1.62.0 did not arrive, and `claude plugin list` reported
+  `Dependency "github@claude-plugins-official" is not installed` against CDT. That state makes a plugin
+  disable-eligible, so the bundle release could have disabled CDT for existing users. Reproduced on a real
+  upgrade, not inferred.
+- **`cdt-plugins bootstrap` now heals every missing row, not just the community pair.** It installs any
+  registry row that is absent and not explicitly `disabled` in the overlay, so the bundle converges on the
+  upgrade path as well as the fresh-install path. A deliberate `cdt-plugins disable <id>` is still
+  respected and never re-installed.
+
+### Changed
+- Plugin tests **36 → 37**: the bootstrap case now also asserts a missing *official* dependency is healed,
+  and the idempotency fixture is generated from the registry so it covers every installable row.
+
 ## [1.62.0] — 2026-08-01
 ### Added
 - **All-in-one install — `claude plugin install cdt` now lands the entire toolchain.** Previously only four

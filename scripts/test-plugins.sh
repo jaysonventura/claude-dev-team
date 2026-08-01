@@ -399,6 +399,10 @@ if need_file "$PSH" 34 "bootstrap adds the marketplace before installing"; then
   else
     fail 34 "bootstrap ordering (add before install)" "add=$add_ln install=$ins_ln log: $(tr '\n' '|' <"$SHIM_LOG" | cut -c1-200)"
   fi
+  # An UPGRADE leaves manifest deps lazily unresolved, which parks CDT in dependency-unsatisfied. The
+  # bootstrap must heal official rows too, not just the community pair.
+  want 34 "bootstrap also heals a missing OFFICIAL dependency (github)" \
+    "$(cat "$SHIM_LOG")" "install github@claude-plugins-official -s user"
 fi
 
 # (35) Kill switch must prevent every shell-out, not merely silence the output.
@@ -413,12 +417,17 @@ fi
 #      bootstrap on every launch must not re-shell-out.
 if need_file "$PSH" 36 "bootstrap is idempotent when already installed"; then
   cp "$MKT_HOME/plugins/installed_plugins.json" "$MKT_HOME/plugins/installed_plugins.json.bak"
-  cat > "$MKT_HOME/plugins/installed_plugins.json" <<'JSON'
-{ "version": 2, "plugins": {
-  "ponytail@ponytail":       [ { "scope": "user", "installPath": "/x/ponytail/4.8.4",  "version": "4.8.4"  } ],
-  "claude-mem@thedotmack":   [ { "scope": "user", "installPath": "/x/claude-mem/13.0", "version": "13.0.0" } ]
-} }
-JSON
+  # Every installable row must be present — bootstrap heals official deps too, so a partial fixture would
+  # legitimately trigger shell-outs and prove nothing about idempotency.
+  CDT_RP="$CDT_PLUGIN_REGISTRY" python3 - > "$MKT_HOME/plugins/installed_plugins.json" <<'PY'
+import json, os
+reg = json.load(open(os.environ["CDT_RP"]))
+plugins = {
+    p["installIdentifier"]: [{"scope": "user", "installPath": "/x/%s" % p["id"], "version": "1.0.0"}]
+    for p in reg["plugins"] if p.get("installIdentifier")
+}
+print(json.dumps({"version": 2, "plugins": plugins}, indent=2))
+PY
   : > "$SHIM_LOG"
   boot_run >/dev/null 2>&1
   if [ ! -s "$SHIM_LOG" ]; then pass 36 "already installed -> no shell-out"
@@ -427,6 +436,6 @@ JSON
 fi
 
 echo
-echo "PASSED $PASS/36"
+echo "PASSED $PASS/37"
 [ "$BLOCKED" -gt 0 ] && echo "($BLOCKED scenario(s) BLOCKED on sibling hooks not yet built — see BLOCKED lines above)"
-if [ "$PASS" -eq 36 ]; then echo "ALL PLUGIN TESTS PASSED"; exit 0; else echo "PLUGIN TESTS INCOMPLETE OR FAILING"; exit 1; fi
+if [ "$PASS" -eq 37 ]; then echo "ALL PLUGIN TESTS PASSED"; exit 0; else echo "PLUGIN TESTS INCOMPLETE OR FAILING"; exit 1; fi
