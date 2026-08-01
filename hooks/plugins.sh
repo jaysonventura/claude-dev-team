@@ -411,18 +411,25 @@ cmd_bootstrap() {
 
   _cache_installed; _cache_mkts
   local pending=0 id ident mkt src
-  # Re-read state each run rather than trusting the stamp alone, so an uninstall is re-healed.
-  for id in $(_meta | awk -F"$US" '$7=="community-third-party"{print $1}'); do
-    is_inst "$id" || pending=1
+  # Re-read live state each run rather than trusting the stamp, so an uninstall re-heals. This covers the
+  # OFFICIAL rows too: Claude Code resolves manifest dependencies eagerly on a FRESH install, but on an
+  # UPGRADE it resolves them lazily — leaving CDT `dependency-unsatisfied` (and therefore disable-eligible)
+  # until it catches up. Healing them here makes the bundle converge on both paths.
+  for id in $(_meta | awk -F"$US" '$2!="cdt-skill" && $9!=""{print $1}'); do
+    is_inst "$id" && continue
+    [ "$(plib_state_get "$id" 2>/dev/null)" = "disabled" ] && continue   # respect a deliberate opt-out
+    pending=1
   done
   [ "$pending" = 1 ] || { : > "$CDT_BOOTSTRAP_STAMP" 2>/dev/null; _say "cdt-plugins bootstrap: nothing to do."; return 0; }
 
-  _say "cdt-plugins bootstrap: acquiring community plugins (marketplaces are not auto-added by Claude Code)…"
+  _say "cdt-plugins bootstrap: completing the bundle…"
   local rc_any=0
   while IFS="$US" read -r id _t mkt _s _r _a sec _f ident _rest; do
     [ -n "$id" ] || continue
-    [ "$sec" = "community-third-party" ] || continue
+    [ "$_t" = "cdt-skill" ] && continue
+    [ -n "$ident" ] || continue
     is_inst "$id" && continue
+    [ "$(plib_state_get "$id" 2>/dev/null)" = "disabled" ] && continue
     valid_ident "$ident" || { _say "  ⨯ $id: refusing malformed identifier"; rc_any=1; continue; }
     src="$(mkt_source "$id")"
     if [ -n "$mkt" ] && ! has_mkt "$mkt"; then
@@ -434,7 +441,7 @@ cmd_bootstrap() {
     fi
     _say "  → claude plugin install $ident -s user"
     _run_bounded claude plugin install "$ident" -s user || { _say "  ⨯ $id: install failed"; rc_any=1; continue; }
-    plib_state_set "$id" enabled >/dev/null 2>&1 || true
+    [ "$sec" = "community-third-party" ] && { plib_state_set "$id" enabled >/dev/null 2>&1 || true; }
   done <<EOF
 $(_meta)
 EOF
