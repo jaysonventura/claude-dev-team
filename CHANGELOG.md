@@ -2,6 +2,16 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.64.1] — 2026-08-02
+### Fixed
+- **`TASK_RESULT.json` could say `{"status":"done","verification":"failed"}`** — the artifact this whole
+  layer exists to prevent, and `status` is the field humans and scripts read first. `finalizeTaskResult`
+  overrode a stale result's `verification` but kept its authored `status`, so a `done` written earlier in
+  the session survived a verdict that had since gone red. Status is now reconciled against the evidence:
+  a FAILED verdict forces `failed` (an already-honest `blocked` is kept), and `not_run` demotes `done` to
+  `partial` unless the edits were docs-only. Found by running the shipped 1.64.0 build against a real
+  failing command rather than trusting the suite.
+
 ## [1.64.0] — 2026-08-02
 ### Fixed
 - **CDT could end a session on "done" with failing tests. The anti-hallucination layer was never running.**
