@@ -150,15 +150,26 @@ convening a team the change doesn't need — never from skipping the gates or th
 
 ## STEP 3b · TASK LOOP (bounded autonomy)
 
-After build, enforce quality by looping:
+After build, enforce quality by looping. **This loop is enforced in code, not by your discipline** — the
+Stop hook re-blocks while the recorded verdict is red, so skipping it is not an option available to you:
 1. Run gates: tests → types → lint → security → **coverage** (+ **e2e** for user-facing flows).
-2. On failure, dispatch a **focused fix agent** (tight contract) and re-run the failing gate.
-3. **Anti-abandonment:** an agent must emit a structured `BLOCKER` (what failed, what it tried, what it
+2. **Run every gate through `cdt-verify -- <cmd>`.** It is a transparent wrapper (same output, same exit
+   code) that records the real exit code — the ONLY evidence the Stop gate accepts. A bare `npm test` is
+   denied by the PreToolUse hook with the wrapped command to re-issue. Evidence recorded *before* your last
+   edit is stale and does not count.
+3. On failure, dispatch a **focused fix agent** (tight contract), then **re-run the same command through
+   `cdt-verify`** so the fix is proven, not asserted.
+4. **Anti-abandonment:** an agent must emit a structured `BLOCKER` (what failed, what it tried, what it
    needs) — never silently quit or fake success.
-4. **Stuck-loop detection:** the *same* gate failing with the *same* signature **twice** → escalate to
-   the **Bug Council** (Step 3c).
-5. **Hard cap:** stop after `CDT_MAX_ITERATIONS` (default 5). Then mark the task `DEFERRED`/`BLOCKER`,
-   report it to the user and summarize what's left. Caps protect Max 5x limits.
+5. **Stuck-loop detection:** the *same* command failing with the *same* signature **twice** → the Stop hook
+   itself tells you to escalate to the **Bug Council** (Step 3c). Heed it: a third identical patch attempt
+   is wasted budget.
+6. **Hard cap:** the loop stops blocking after `CDT_MAX_ITERATIONS` (default 5). That is **not permission
+   to claim success** — the claim gate still blocks a "done/fixed/passing" reply while the evidence is red.
+   Mark the task `DEFERRED`/`BLOCKER`, report what is still failing, and summarize what's left.
+
+**Never** soften a gate to get past it (`cdt-config verify off`, `claim off`, `verify-wrap off`) unless the
+user explicitly asks. Turning off the instrument does not make the tests pass.
 
 ## STEP 3c · BUG COUNCIL — DEPTH mode (gated — stuck/complex bugs only)
 
@@ -364,9 +375,14 @@ When you dispatch a specialist, **name the skills it must apply** in its contrac
    Never answer library specifics from memory. The engineering builders (backend / frontend / mobile /
    data / devops / qa) **natively carry the context7 doc tools** — their contracts can require a lookup,
    and `lint-agents.sh` fails CI if a builder loses them (grounding can't silently regress).
-3. Before any "done / fixed / passing" claim, **run the verifying command and paste the output**
-   (use `superpowers:verification-before-completion` if available).
+3. Before any "done / fixed / passing" claim, **run the verifying command through `cdt-verify -- <cmd>`
+   and paste the output** (use `superpowers:verification-before-completion` if available). This is
+   code-enforced: the claim gate blocks a reply asserting success while the recorded verdict is red or
+   absent, and it names the sentence that tripped it. A "done" you cannot evidence is a hallucination —
+   the most expensive kind, because the user acts on it.
 4. If you are unsure, say so and stop — do not fill gaps with plausible fiction.
+5. When the evidence is red, **report it plainly**: what is failing, what you tried, what you need.
+   `PARTIAL` or `BLOCKER` with real output beats `done` without it, every time.
 
 ## GRACEFUL DEGRADATION
 

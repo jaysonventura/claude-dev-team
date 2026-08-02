@@ -501,8 +501,8 @@
           "node"
         ],
         "binaries": [
-          "bun (auto-installed)",
-          "uv (auto-installed)"
+          "bun (required; installed by CDT bootstrap — claude-mem does NOT self-install it)",
+          "uv"
         ]
       },
       "activationRules": {

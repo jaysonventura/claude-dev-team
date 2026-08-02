@@ -57,31 +57,163 @@ EOF_DOCS
 fi
 [ "$_DOCS_ONLY" = 1 ] && db_event verify_gate "docs-exempt" "${SESSION_ID:-}" 2>/dev/null
 
+# --- Trusted verdict (toolkit) --------------------------------------------------------------------
+# The engine derives verification STRICTLY from .claude/runtime/verify-events.jsonl, where only
+# `cdt-verify -- <cmd>` writes a real exit code. CDT_EDIT_SINCE floors it at the last edit, so a green run
+# from before the change cannot vouch for the code that replaced it.
+_TK_ON="$(grep -E '^CDT_TOOLKIT_ENABLED=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+_TKDIST="$(cd "$(dirname "$0")/../toolkit/dist" 2>/dev/null && pwd)"
+case "$_TK_ON" in 0|false|off) _TKDIST="" ;; esac
+_FIN=""; _VERIF=""; _FAILING=""
+if [ -n "$_TKDIST" ] && [ -f "$_TKDIST/cli/hook.js" ] && command -v node >/dev/null 2>&1; then
+  _SINCE=""
+  if [ -f "$MARK" ] && command -v python3 >/dev/null 2>&1; then
+    _SINCE="$(CDT_M="$MARK" python3 -c 'import os,datetime
+print(datetime.datetime.utcfromtimestamp(os.path.getmtime(os.environ["CDT_M"])).strftime("%Y-%m-%dT%H:%M:%SZ"))' 2>/dev/null)"
+  fi
+  _FIN="$(printf '%s' "$INPUT" | CDT_EDIT_SINCE="$_SINCE" node "$_TKDIST/cli/hook.js" finalize 2>/dev/null)"
+  if [ -n "$_FIN" ] && command -v python3 >/dev/null 2>&1; then
+    _VERIF="$(CDT_FIN="$_FIN" python3 -c 'import os,json
+try: print(json.loads(os.environ["CDT_FIN"]).get("verification") or "")
+except Exception: pass' 2>/dev/null)"
+    _FAILING="$(CDT_FIN="$_FIN" python3 -c 'import os,json
+try: d=json.loads(os.environ["CDT_FIN"])
+except Exception: raise SystemExit
+for f in (d.get("failing") or []): print("%s (exit %s)" % (f.get("command",""), f.get("exitCode")))' 2>/dev/null)"
+  fi
+fi
+
+# --- Verification gate + TASK LOOP -----------------------------------------------------------------
+# Two failures this replaces. (1) The old gate accepted "a verifying command RAN": it matched the command
+# string, so a red `npm test` satisfied it exactly as well as a green one — the mechanism behind sessions
+# that end on "done" with failing tests. (2) It fired at most ONCE per session, so a genuine failure got a
+# single nudge and then the session was free to end. Now the verdict comes from real exit codes, and a RED
+# verdict blocks repeatedly until it goes green or the iteration cap is hit.
 if [ "$GATE" != "off" ] && [ "$_DOCS_ONLY" != 1 ]; then
   GHOOKS="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"
   # shellcheck source=/dev/null
   . "$GHOOKS/verify-lib.sh" 2>/dev/null
-  VMARK="$(cdt_verify_marker "${SESSION_ID:-default}" 2>/dev/null)"
+  LOOPSTATE="${TMPDIR:-/tmp}/cdt-loop-${SESSION_ID:-default}.state"
   VBLOCK="${TMPDIR:-/tmp}/cdt-verify-blocked-${SESSION_ID:-default}.marker"
 
-  unverified=1
-  # Verified iff a verify-marker exists and the edit-marker is NOT newer than it (tie -> verified).
-  [ -n "$VMARK" ] && [ -f "$VMARK" ] && [ ! "$MARK" -nt "$VMARK" ] && unverified=0
-  # Rescue: a verifying command in the MAIN transcript that didn't trip the marker (keep false-positives low).
-  if [ "$unverified" = 1 ] && [ -n "$TRANSCRIPT" ] && cdt_verify_scan_transcript "$TRANSCRIPT" 2>/dev/null; then
-    unverified=0
-  fi
+  _MAXIT="$(grep -E '^CDT_MAX_ITERATIONS=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+  case "$_MAXIT" in ''|*[!0-9]*) _MAXIT=5 ;; esac
 
-  if [ "$unverified" = 0 ]; then
-    db_event verify_gate "pass" "${SESSION_ID:-}" 2>/dev/null
-  elif [ ! -f "$VBLOCK" ]; then
-    : > "$VBLOCK" 2>/dev/null   # fire at most once per session — never trap the user in a loop
-    if [ "$GATE" = "warn" ]; then
-      db_event verify_gate "warn" "${SESSION_ID:-}" 2>/dev/null
-      echo "claude-dev-team: ⚠ edits were made but no test/build/lint/typecheck command ran afterward — verify before trusting this as done (cdt-config verify off to silence)." >&2
+  # Iteration + signature state: "<count>\n<signature>". The signature is the set of currently-red commands;
+  # seeing the SAME one twice means the last fix attempt changed nothing, which is the Bug Council trigger.
+  _IT=0; _PREVSIG=""
+  if [ -f "$LOOPSTATE" ]; then
+    _IT="$(sed -n 1p "$LOOPSTATE" 2>/dev/null)"; case "$_IT" in ''|*[!0-9]*) _IT=0 ;; esac
+    _PREVSIG="$(sed -n 2p "$LOOPSTATE" 2>/dev/null)"
+  fi
+  _SIG="$(printf '%s' "$_FAILING" | sort | cksum 2>/dev/null | tr -d ' \n')"
+
+  if [ "$_VERIF" = "failed" ]; then
+    # ---- RED: loop until green, bounded. -----------------------------------------------------------
+    _IT=$((_IT + 1))
+    printf '%s\n%s\n' "$_IT" "$_SIG" > "$LOOPSTATE" 2>/dev/null
+    _ESC=""
+    [ -n "$_PREVSIG" ] && [ "$_PREVSIG" = "$_SIG" ] && \
+      _ESC=" The SAME command(s) failed identically last iteration — the last fix changed nothing. Stop patching and diagnose: run /cdt:bug-council for a root-cause verdict before editing again."
+    if [ "$_IT" -gt "$_MAXIT" ]; then
+      # Cap reached. Stop blocking (never trap a session forever) but forbid a success claim: the P3 gate
+      # below reads this marker and blocks any "done/fixed/passing" wording while the evidence is red.
+      : > "${TMPDIR:-/tmp}/cdt-loop-exhausted-${SESSION_ID:-default}.marker" 2>/dev/null
+      db_event verify_gate "loop-cap ($_IT)" "${SESSION_ID:-}" 2>/dev/null
+      echo "claude-dev-team: ⚠ verification still FAILING after $_MAXIT iterations — reporting as BLOCKER, not done. Red: $(printf '%s' "$_FAILING" | tr '\n' ';')" >&2
+    elif [ "$GATE" = "warn" ]; then
+      db_event verify_gate "warn-failed" "${SESSION_ID:-}" 2>/dev/null
+      echo "claude-dev-team: ⚠ verification FAILED — $(printf '%s' "$_FAILING" | tr '\n' ';') (cdt-config verify block to enforce)" >&2
     else
-      db_event verify_gate "block" "${SESSION_ID:-}" 2>/dev/null
-      printf '{"decision":"block","reason":"%s"}\n' "claude-dev-team: edits were made but no verifying command (test / build / lint / typecheck) ran afterward. Run the project's verifying command and paste its output before finishing. If a subagent already ran it, paste that output and stop again. (Soften: cdt-config verify warn|off.)"
+      db_event verify_gate "block-failed ($_IT)" "${SESSION_ID:-}" 2>/dev/null
+      _REASON="claude-dev-team: VERIFICATION FAILED — this is not done. Currently red: $(printf '%s' "$_FAILING" | tr '\n' ';' | sed 's/"/\\"/g'). Task Loop iteration $_IT/$_MAXIT: diagnose the failure, fix the root cause (not the symptom), then re-run the SAME command via 'cdt-verify -- <cmd>' so the exit code is recorded.$_ESC Do not claim success while this is red."
+      printf '{"decision":"block","reason":"%s"}\n' "$_REASON"
+      exit 0
+    fi
+  elif [ "$_VERIF" = "passed" ]; then
+    rm -f "$LOOPSTATE" 2>/dev/null
+    db_event verify_gate "pass-trusted" "${SESSION_ID:-}" 2>/dev/null
+  else
+    # ---- No trusted evidence. Degrade to the legacy "a command ran" heuristic when the toolkit is
+    # unavailable, so a machine without node still gets the old (weaker) protection rather than none.
+    unverified=1
+    if [ -z "$_VERIF" ]; then
+      VMARK="$(cdt_verify_marker "${SESSION_ID:-default}" 2>/dev/null)"
+      [ -n "$VMARK" ] && [ -f "$VMARK" ] && [ ! "$MARK" -nt "$VMARK" ] && unverified=0
+      if [ "$unverified" = 1 ] && [ -n "$TRANSCRIPT" ] && cdt_verify_scan_transcript "$TRANSCRIPT" 2>/dev/null; then
+        unverified=0
+      fi
+    fi
+    if [ "$unverified" = 0 ]; then
+      db_event verify_gate "pass-degraded" "${SESSION_ID:-}" 2>/dev/null
+    elif [ ! -f "$VBLOCK" ]; then
+      : > "$VBLOCK" 2>/dev/null   # not_run fires once — repeated blocking belongs to a RED verdict, not a missing one
+      if [ "$GATE" = "warn" ]; then
+        db_event verify_gate "warn" "${SESSION_ID:-}" 2>/dev/null
+        echo "claude-dev-team: ⚠ edits were made but no verified test/build/lint/typecheck run followed — verify before trusting this as done (cdt-config verify off to silence)." >&2
+      else
+        db_event verify_gate "block" "${SESSION_ID:-}" 2>/dev/null
+        _R="claude-dev-team: edits were made but no verifying command (test / build / lint / typecheck) ran afterward with a recorded result. Run the project's verifying command as 'cdt-verify -- <cmd>' so its real exit code is captured, then stop. If a subagent already ran it, re-run it through cdt-verify. (Soften: cdt-config verify warn|off.)"
+        [ -z "$_TKDIST" ] && _R="$_R NOTE: the toolkit is not built, so only degraded evidence is available."
+        printf '{"decision":"block","reason":"%s"}\n' "$_R"
+        exit 0
+      fi
+    fi
+  fi
+fi
+
+# --- Claim gate: the final message must not assert success the evidence does not support. ------------
+# This is the last line of defense and the one that catches the reported failure mode directly: a reply
+# saying "done / fixed / all tests pass" while the recorded verdict is red or absent. Fires at most once.
+CLAIMGATE="$(grep -E '^CDT_CLAIM_GATE=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
+case "$CLAIMGATE" in block|warn|off) : ;; *) CLAIMGATE=block ;; esac
+CBLOCK="${TMPDIR:-/tmp}/cdt-claim-blocked-${SESSION_ID:-default}.marker"
+if [ "$CLAIMGATE" != "off" ] && [ "$_VERIF" != "passed" ] && [ "$_DOCS_ONLY" != 1 ] && \
+   [ ! -f "$CBLOCK" ] && [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ] && command -v python3 >/dev/null 2>&1; then
+  # Scan the LAST assistant message only — an earlier "this should fix it" is narration, not a final claim.
+  _CLAIM="$(CDT_T="$TRANSCRIPT" python3 - <<'PYC' 2>/dev/null
+import json, os, re
+last = ""
+try:
+    with open(os.environ["CDT_T"], encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            try: o = json.loads(line)
+            except Exception: continue
+            if o.get("type") != "assistant": continue
+            c = (o.get("message") or {}).get("content")
+            if isinstance(c, list):
+                t = " ".join(b.get("text", "") for b in c if isinstance(b, dict) and b.get("type") == "text")
+            else:
+                t = c if isinstance(c, str) else ""
+            if t.strip(): last = t
+except Exception:
+    raise SystemExit
+# Success assertions about the WORK. Deliberately narrow: "should fix", "let's verify", questions and
+# negations are not claims, and a false positive here blocks an honest session.
+PAT = re.compile(r"\b("
+    r"all (?:the )?(?:tests?|checks?|gates?|suites?) (?:now )?pass(?:ing|ed)?"
+    r"|tests? (?:are |now )?(?:pass(?:ing|ed)|green)"
+    r"|(?:everything|it|that|this) (?:is |now )?(?:works?|working|fixed|done|green)"
+    r"|(?:the )?(?:bug|issue|problem|failure)s? (?:is|are|has been|have been) (?:now )?(?:fixed|resolved)"
+    r"|verified (?:and )?(?:working|passing|green)"
+    r"|implementation is complete"
+    r")\b", re.I)
+NEG = re.compile(r"\b(not|isn'?t|aren'?t|no longer|fail|failing|failed|red|blocked|cannot|can'?t|should|would|once|after|todo)\b", re.I)
+for sent in re.split(r"(?<=[.!?\n])\s+", last):
+    if PAT.search(sent) and not NEG.search(sent):
+        print(sent.strip()[:160]); break
+PYC
+)"
+  if [ -n "$_CLAIM" ]; then
+    : > "$CBLOCK" 2>/dev/null
+    _EV="${_VERIF:-not_run}"
+    [ -n "$_FAILING" ] && _EV="$_EV — red: $(printf '%s' "$_FAILING" | tr '\n' ';')"
+    if [ "$CLAIMGATE" = "warn" ]; then
+      db_event claim_gate "warn" "${SESSION_ID:-}" 2>/dev/null
+      echo "claude-dev-team: ⚠ the reply claims success but recorded verification is $_EV." >&2
+    else
+      db_event claim_gate "block" "${SESSION_ID:-}" 2>/dev/null
+      printf '{"decision":"block","reason":"%s"}\n' "claude-dev-team: your reply claims success — \"$(printf '%s' "$_CLAIM" | sed 's/"/\\"/g')\" — but the recorded verification is $_EV. Either produce the evidence (re-run the verifying command via 'cdt-verify -- <cmd>' and let it pass), or correct the claim: say what is actually red/unverified and report it as PARTIAL or BLOCKER. Do not restate success without evidence. (Soften: cdt-config claim warn|off.)"
       exit 0
     fi
   fi
@@ -159,14 +291,10 @@ except Exception: print(0)' 2>/dev/null)"
 fi
 
 # --- TASK_RESULT finalize (claude-dev-team-toolkit) — local only, NO notification. -------------------
-# Writes .claude/TASK_RESULT.json with verification derived strictly from verify-events.jsonl, then surfaces
-# (on stderr, non-blocking) the staging guard + a cdt-verify nudge. Never blocks (block-once is preserved).
-_TK_ON="$(grep -E '^CDT_TOOLKIT_ENABLED=' "$CDT_HOME/claude-dev-team.env" 2>/dev/null | head -1 | cut -d= -f2-)"
-_TKDIST="$(cd "$(dirname "$0")/../toolkit/dist" 2>/dev/null && pwd)"
-case "$_TK_ON" in 0|false|off) _TKDIST="" ;; esac   # toolkit disabled (separate from core CDT) → skip finalize
-if [ -n "$_TKDIST" ] && [ -f "$_TKDIST/cli/hook.js" ] && command -v node >/dev/null 2>&1; then
-  _FIN="$(printf '%s' "$INPUT" | node "$_TKDIST/cli/hook.js" finalize 2>/dev/null)"
-  if [ -n "$_FIN" ] && command -v python3 >/dev/null 2>&1; then
+# TASK_RESULT.json was already written by the finalize run above (the gate needs the verdict first); this
+# reuses that payload to surface the staging guard + the cdt-verify nudge. Never blocks.
+if [ -n "$_FIN" ]; then
+  if command -v python3 >/dev/null 2>&1; then
     # Fire the 6-field final-response reminder at most ONCE per session (stderr, never blocks → no loop).
     FRMARK="${TMPDIR:-/tmp}/cdt-finalresp-${SESSION_ID:-default}.marker"
     _FR=0; [ ! -f "$FRMARK" ] && { : > "$FRMARK" 2>/dev/null; _FR=1; }

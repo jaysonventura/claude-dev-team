@@ -56,8 +56,15 @@ warn-with-remediation:
 |---|---|---|
 | `typescript-language-server`, `intelephense`, `sourcekit-lsp` | language servers are npm/system packages | the install shown in the health table |
 | Playwright browsers | ~400MB download | `npx playwright install` |
-| `bun`, `uv` (claude-mem) | claude-mem self-installs them on first worker start | nothing — it handles it |
+| `uv` (claude-mem) | optional python side of claude-mem | `brew install uv` (or [astral.sh/uv](https://docs.astral.sh/uv/)) |
 | `github` / `sentry` auth | OAuth is interactive; **CDT never authenticates for you** | `/mcp` |
+
+**`bun` is the exception — CDT installs it.** claude-mem's six hooks all run `scripts/bun-runner.js`, which
+does *not* self-install: with no bun on the box it prints `Error: Bun not found` and exits 1, so every
+session opens on a wall of hook errors. Because CDT is what bootstraps claude-mem, the bootstrap also
+installs its runtime — `brew install oven-sh/bun/bun`, else `npm install -g bun`, never `curl | sh`. It is
+attempted once (stamped), skipped when bun already resolves at any path `bun-runner.js` searches, and turned
+off with `cdt-config bootstrap-binaries off`.
 
 So a fresh machine legitimately shows a few `⨯ missing-dep` and `! needs-auth` rows until you run those.
 `cdt-plugins doctor` still exits **0** — only the four *required* plugins can fail it.

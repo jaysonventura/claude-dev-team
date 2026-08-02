@@ -92,13 +92,19 @@ function finalizeMode(): void {
     emit({ skipped: true });
     return;
   }
-  const fin = finalizeTaskResult(cfg, root);
+  // CDT_EDIT_SINCE is the mtime of the session's edit marker: evidence older than the last edit describes
+  // code that no longer exists. The Bash hook owns the marker, so it passes the floor in.
+  const since = process.env.CDT_EDIT_SINCE || undefined;
+  const fin = finalizeTaskResult(cfg, root, since ? { since } : {});
   emit({
     verification: fin.verification,
     status: fin.taskResult.status,
     docsOnly: fin.docsOnly,
     hookOnly: fin.hookOnly,
     degraded: fin.degraded,
+    // The failing commands drive the fix loop's block message — the model must see WHAT is red, not just
+    // that something is. Truncated: this is a hook payload, not a log.
+    failing: fin.failing.slice(0, 5).map((e) => ({ command: e.command.slice(0, 200), exitCode: e.exitCode, type: e.type })),
     stagingWarnings: stagingWarnings(root),
     finalResponse: finalResponseFormat(fin.taskResult),
   });

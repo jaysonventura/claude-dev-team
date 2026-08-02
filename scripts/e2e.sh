@@ -68,36 +68,119 @@ stop() { SP "$1" "${2:-}" | bash "$REPO/hooks/completion-guard.sh" 2>&1; }
 
 "$BIN/cdt-config" verify block >/dev/null 2>&1
 has "$("$BIN/cdt-config" show 2>&1)" "verify    : block" "config show reports the verify gate"
-# (a) edits, no verify -> block
-clrm vga; edit vga
+# Trusted evidence: only `cdt-verify` writes a real exit code, into .claude/runtime/verify-events.jsonl.
+# Seeded directly here so the gate can be driven through PASS / FAIL / stale without running real suites.
+VEVENTS="$SBX/.claude/runtime/verify-events.jsonl"
+vclear() { rm -f "$VEVENTS" 2>/dev/null; }
+vevent() {  # vevent <command> <exitCode> [iso_ts]
+  mkdir -p "$(dirname "$VEVENTS")" 2>/dev/null
+  CDT_C="$1" CDT_E="$2" CDT_TS="${3:-}" CDT_W="$SBX" python3 -c 'import os,json,datetime
+print(json.dumps({"ts": os.environ["CDT_TS"] or datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+ "command": os.environ["CDT_C"], "type": "test", "exitCode": int(os.environ["CDT_E"]),
+ "cwd": os.environ["CDT_W"], "source": "cdt-verify"}))' >> "$VEVENTS" 2>/dev/null
+}
+lclr() { rm -f "${TMPDIR:-/tmp}/cdt-loop-$1.state" "${TMPDIR:-/tmp}/cdt-loop-exhausted-$1.marker" "${TMPDIR:-/tmp}/cdt-claim-blocked-$1.marker" 2>/dev/null; }
+
+# (a) edits, no verify evidence -> block
+clrm vga; lclr vga; vclear; edit vga
 has "$(stop vga)" '"decision":"block"' "blocks a Stop with edits but no verify"
-# (b) a real verifying command clears it
-clrm vgb; edit vgb; runbash vgb "pytest -q" "2 passed in 0.1s"
-[ -f "$(vmark vgb)" ] && ok "verify-track marks a real test run" || no "verify-track marks a real test run"
-lacks "$(stop vgb)" '"decision":"block"' "passes after a verifying command ran"
-# (c) edits AFTER the last verify -> block again
-clrm vgc; runbash vgc "npm run test" "ok"; touch -t 202601010000 "$(vmark vgc)" 2>/dev/null; edit vgc
-has "$(stop vgc)" '"decision":"block"' "re-blocks when edits come after the last verify"
-# (d) once-per-session: a second Stop after a block does not block again
-lacks "$(stop vgc)" '"decision":"block"' "fires at most once per session"
-# (e) warn never blocks; (f) off disables
-clrm vgw; "$BIN/cdt-config" verify warn >/dev/null 2>&1; edit vgw
+# (b) a TRUSTED green event clears it
+clrm vgb; lclr vgb; vclear; edit vgb; vevent "pytest -q" 0
+lacks "$(stop vgb)" '"decision":"block"' "passes on a trusted PASSING verify event"
+# (c) a merely-typed test command is NOT evidence — the whole point of the tightening: the old gate
+#     accepted it, so a RED suite could end the session as "done".
+clrm vgc; lclr vgc; vclear; edit vgc; runbash vgc "pytest -q" "2 passed in 0.1s"
+has "$(stop vgc)" '"decision":"block"' "a typed test command alone is NOT accepted as verification"
+# (d) a trusted FAILING event blocks, names the red command, and keeps blocking (the Task Loop)
+clrm vgf; lclr vgf; vclear; edit vgf; vevent "npm test" 1
+OUT1="$(stop vgf)"
+has "$OUT1" '"decision":"block"' "blocks on a trusted FAILING verify event"
+has "$OUT1" 'npm test' "the block names the failing command"
+has "$OUT1" 'iteration 1/5' "the block reports the Task Loop iteration"
+OUT2="$(stop vgf)"
+has "$OUT2" 'iteration 2/5' "a red verdict blocks AGAIN (loop), not once-per-session"
+has "$OUT2" 'bug-council' "an unchanged failure signature escalates to the Bug Council"
+# (e) fixing it turns the verdict green and releases the loop
+vevent "npm test" 0
+lacks "$(stop vgf)" '"decision":"block"' "a passing re-run releases the loop"
+# (f) the loop is capped — it must never trap a session forever
+clrm vgx; lclr vgx; vclear; edit vgx; vevent "npm test" 1
+i=0; while [ "$i" -lt 5 ]; do stop vgx >/dev/null 2>&1; i=$((i+1)); done
+lacks "$(stop vgx)" '"decision":"block"' "stops blocking after CDT_MAX_ITERATIONS"
+has "$(stop vgx 2>&1)" "BLOCKER" "reports the capped session as BLOCKER, not done"
+# (g) stale evidence: a green run from BEFORE the edit proves nothing about the code that replaced it
+clrm vgt; lclr vgt; vclear; vevent "npm test" 0 "2020-01-01T00:00:00Z"; edit vgt
+has "$(stop vgt)" '"decision":"block"' "a green run older than the last edit does not count"
+# (h) warn never blocks; off disables
+clrm vgw; lclr vgw; vclear; "$BIN/cdt-config" verify warn >/dev/null 2>&1; edit vgw; vevent "npm test" 1
 lacks "$(stop vgw)" '"decision":"block"' "warn mode never blocks"
-clrm vgo; "$BIN/cdt-config" verify off >/dev/null 2>&1; edit vgo
+clrm vgo; lclr vgo; vclear; "$BIN/cdt-config" verify off >/dev/null 2>&1; edit vgo; vevent "npm test" 1
 lacks "$(stop vgo)" '"decision":"block"' "off mode disables the gate"
 "$BIN/cdt-config" verify block >/dev/null 2>&1
-# (g) matcher precision: echo is not a verify; a real lint is
+# (i) matcher precision (still used by the degraded path + verify-wrap): echo is not a verify, lint is
 clrm vgm; runbash vgm "echo running tests" "running tests"
 [ -f "$(vmark vgm)" ] && no "echo is not treated as a verify" || ok "echo is not treated as a verify"
 runbash vgm "eslint ." "0 problems"
 [ -f "$(vmark vgm)" ] && ok "a real lint is treated as a verify" || no "a real lint is treated as a verify"
-# (h) a SUBAGENT that ran the tests clears the gate (the qa-engineer flow)
-clrm vgs; edit vgs
-SUBTR="$SBX/sub-vgs.jsonl"
-printf '%s\n' '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"pytest -q"}}]}}' > "$SUBTR"
-printf '{"agent_type":"cdt:qa-engineer","session_id":"vgs","transcript_path":"%s"}' "$SUBTR" | bash "$REPO/hooks/agent-track.sh" >/dev/null 2>&1
-[ -f "$(vmark vgs)" ] && ok "a subagent test run marks the session verified" || no "a subagent test run marks the session verified"
-lacks "$(stop vgs)" '"decision":"block"' "passes when a subagent ran the tests"
+# (j) degraded mode: with the toolkit disabled the OLD marker heuristic still protects the session
+clrm vgd; lclr vgd; vclear; "$BIN/cdt-config" toolkit off >/dev/null 2>&1
+edit vgd; has "$(stop vgd)" '"decision":"block"' "degraded (no toolkit): still blocks edits with no verify"
+clrm vgd; lclr vgd; edit vgd; runbash vgd "pytest -q" "2 passed"
+lacks "$(stop vgd)" '"decision":"block"' "degraded (no toolkit): falls back to the marker heuristic"
+"$BIN/cdt-config" toolkit on >/dev/null 2>&1
+for s in vgb vgc vgf vgx vgt vgw vgo vgd; do clrm $s; lclr $s; done; vclear
+
+echo "== 4c-2. claim gate (a reply may not assert success the evidence does not support) =="
+# The verify gate blocks FIRST on a red verdict, so asserting only "something blocked" would pass without
+# the claim gate existing at all. These drive the states where the verify gate deliberately does NOT
+# block — warn mode and an exhausted loop — which is exactly where a false "done" would otherwise escape.
+claimtr() { printf '%s\n' "{\"type\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"$1\"}]}}" > "$SBX/claim.jsonl"; echo "$SBX/claim.jsonl"; }
+"$BIN/cdt-config" verify warn >/dev/null 2>&1
+clrm cg1; lclr cg1; vclear; edit cg1; vevent "npm test" 1
+CT="$(claimtr 'Done — all tests pass and the bug is fixed.')"
+OUTC1="$(stop cg1 "$CT")"
+has "$OUTC1" 'claims success' "verify=warn: a false success claim is still blocked"
+has "$OUTC1" 'recorded verification is failed' "the block states what the evidence actually says"
+has "$OUTC1" 'npm test' "the block names the red command"
+# Honest reporting must pass — a gate that blocks truthful text is worse than no gate.
+clrm cg3; lclr cg3; vclear; edit cg3; vevent "npm test" 1
+CT3="$(claimtr 'Two tests are still failing; reporting this as BLOCKER, not done.')"
+lacks "$(stop cg3 "$CT3")" 'claims success' "an honest failure report is not treated as a claim"
+# Hedges and future tense are not assertions of completed success.
+clrm cg5; lclr cg5; vclear; edit cg5; vevent "npm test" 1
+CT5="$(claimtr 'This should fix it once the suite passes.')"
+lacks "$(stop cg5 "$CT5")" 'claims success' "a hedge (should/once) is not a success claim"
+clrm cg4; lclr cg4; vclear; edit cg4; vevent "npm test" 0
+CT4="$(claimtr 'Done — all tests pass.')"
+lacks "$(stop cg4 "$CT4")" '"decision":"block"' "the same claim passes when the verdict is GREEN"
+"$BIN/cdt-config" verify block >/dev/null 2>&1
+# The critical path: the loop hit its cap and stopped blocking. The session must not end on "done".
+clrm cg7; lclr cg7; vclear; edit cg7; vevent "npm test" 1
+i=0; while [ "$i" -lt 6 ]; do stop cg7 >/dev/null 2>&1; i=$((i+1)); done
+CT7="$(claimtr 'Done — everything works now.')"
+has "$(stop cg7 "$CT7")" 'claims success' "after the loop cap, a success claim is still blocked"
+"$BIN/cdt-config" claim off >/dev/null 2>&1
+clrm cg6; lclr cg6; vclear; "$BIN/cdt-config" verify warn >/dev/null 2>&1; edit cg6; vevent "npm test" 1
+CT6="$(claimtr 'Done — all tests pass.')"
+lacks "$(stop cg6 "$CT6")" 'claims success' "claim gate honors off"
+"$BIN/cdt-config" claim block >/dev/null 2>&1; "$BIN/cdt-config" verify block >/dev/null 2>&1
+for s in cg1 cg3 cg4 cg5 cg6 cg7; do clrm $s; lclr $s; done; vclear
+
+echo "== 4c-3. verify-wrap (exit codes get recorded, and it never bricks a test command) =="
+wrap() { printf '{"session_id":"w1","tool_name":"Bash","tool_input":{"command":"%s"}}' "$1" | bash "$REPO/hooks/verify-wrap.sh" 2>&1; }
+# With no runnable cdt-verify it MUST stay silent: denying in favour of a binary that cannot run would
+# make the project's own test command un-runnable.
+rm -f "$BIN/cdt-verify" 2>/dev/null
+lacks "$(wrap 'npm test')" 'deny' "no runnable cdt-verify -> never denies (fail-open)"
+ln -sf "$REPO/toolkit/dist/cli/cdt-verify.js" "$BIN/cdt-verify" 2>/dev/null
+has "$(wrap 'npm test')" '"permissionDecision":"deny"' "denies a bare verify command"
+has "$(wrap 'npm test')" 'cdt-verify -- npm test' "tells the model the exact wrapped command"
+lacks "$(wrap 'cdt-verify -- npm test')" 'deny' "never denies an already-wrapped command (no recursion)"
+lacks "$(wrap 'echo hello')" 'deny' "leaves non-verify commands alone"
+lacks "$(wrap 'npm test | tail -5')" 'deny' "a pipeline has no single exit code -> nudge, never deny"
+"$BIN/cdt-config" verify-wrap off >/dev/null 2>&1
+lacks "$(wrap 'npm test')" 'deny' "verify-wrap honors off"
+"$BIN/cdt-config" verify-wrap block >/dev/null 2>&1
 # gate outcomes are recorded to the events table
 EVN="$(CDT_DB="$HOME/.claude/claude-dev-team.db" python3 -c 'import os,sqlite3
 try:

@@ -2,6 +2,79 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.64.0] — 2026-08-02
+### Fixed
+- **CDT could end a session on "done" with failing tests. The anti-hallucination layer was never running.**
+  Four defects, each verified on a real install, that compounded into the reported behavior:
+  1. `toolkit/dist/` is **gitignored**, so `git ls-files toolkit/dist` is empty and **no install has ever
+     received a built toolkit** — the installed `cdt/1.62.1/toolkit/` had no `dist/` at all. Every guard
+     that lives there (`hook.js finalize`, `TASK_RESULT.json`, the final-response format) was silently
+     skipped, because the Stop hook guards on `[ -f "$_TKDIST/cli/hook.js" ]`. Remediation was a *warning*
+     telling the user to run npm by hand.
+  2. `~/.claude/bin/cdt-verify` pointed into a **pruned** version directory (`…/cdt/1.42.0/…`) — a dangling
+     symlink. Since `cdt-verify` is the only producer of a real exit code, **nothing could earn
+     `verification: passed`**.
+  3. The surviving gate matched the verifying command's **string** and recorded `exitCode: null`, so a
+     failing `npm test` satisfied it exactly as well as a passing one.
+  4. It fired **once per session**, so even a detected problem got one nudge and the session ended anyway.
+
+### Added
+- **The bootstrap builds the toolkit** (`npm install --omit=optional`, then `npm run build` as fallback),
+  once per installed version, and re-links the CLIs at that version — which is also the dangling-symlink
+  heal. Runs before the community gate, so `bootstrap-community off` cannot disable verification.
+  Off with `cdt-config bootstrap-toolkit off`. Stale links are dropped at SessionStart rather than left to
+  read as "installed" and fail at exec.
+- **Verification now means the command PASSED.** The verdict comes from real exit codes in
+  `verify-events.jsonl`, floored at the last edit — evidence older than the change describes a build that
+  no longer exists. A red verdict **blocks and keeps blocking**.
+- **The Task Loop is enforced in code, not prose** (`STEP 3b` was advice the model could skip). Each red
+  Stop reports `iteration N/CDT_MAX_ITERATIONS` and the failing commands; an **unchanged failure signature
+  twice** escalates to the Bug Council; at the cap it stops blocking but records the session as `BLOCKER`.
+  Tune with `cdt-config max-iterations <n>` (default 5).
+- **`verify-wrap` (PreToolUse/Bash)** — a bare `npm test` is denied with the exact wrapped command to
+  re-issue, so exit codes are actually captured. Never denies when `cdt-verify` is not runnable (denying in
+  favour of a broken binary would make the project's test command un-runnable), and never rewrites a
+  pipeline, whose exit code is not the one that matters. `cdt-config verify-wrap block|warn|off`.
+- **Claim gate** — a final reply asserting "done / fixed / all tests pass" while the recorded verdict is
+  red or absent is blocked, quoting the offending sentence and the real verdict. Hedges ("should fix",
+  "once the suite passes") and honest failure reports are deliberately not claims.
+  `cdt-config claim block|warn|off`.
+
+### Changed
+- `computeVerification` takes a `since` floor and decides on the **newest run per command**. The old
+  "any failure ever ⇒ failed" was sticky: the run proving a fix was outvoted by the failure that prompted
+  it, so the loop could never converge. Per-command also stops a passing `lint` masking a failing `test`.
+- Degraded mode preserved: with no toolkit/node, the old marker heuristic still guards the session.
+- Tests **+35** (e2e 19 verify-gate/claim/wrap scenarios, toolkit 58 vitest). Mutation-checked: accepting a
+  red verdict, ignoring the staleness floor, removing the loop cap, disconnecting the claim gate from the
+  evidence, or denying without a runnable `cdt-verify` each turns green scenarios red.
+
+## [1.63.0] — 2026-08-02
+### Added
+- **The bootstrap now provisions `bun`, so a fresh install stops opening on hook errors.** Every new machine
+  showed `SessionStart:startup hook error … Error: Bun not found` twice plus one on `UserPromptSubmit`.
+  Cause: CDT bootstraps `claude-mem`, and all six of its hooks shell out to `scripts/bun-runner.js`, which
+  **does not self-install** — with no bun on PATH (nor at `~/.bun/bin`, `/usr/local/bin`, `/opt/homebrew/bin`,
+  `/home/linuxbrew/.linuxbrew/bin`) it prints the error and exits 1. The registry claimed
+  `bun (auto-installed)`; that was never true. Now `cdt-plugins bootstrap` installs it via
+  `brew install oven-sh/bun/bun`, else `npm install -g bun` — **never `curl | sh`**. Skipped when bun already
+  resolves at any path `bun-runner.js` searches, skipped when `claude-mem` is absent or disabled, attempted
+  **once** per machine (stamped before the shell-out, so a hang cannot loop), and off with
+  `cdt-config bootstrap-binaries off`.
+- **`permissions.defaultMode` is set to `auto` on first bootstrap.** CDT's dispatch loop stalls when every
+  specialist hand-off waits for a permission prompt, and the mode was previously left to each user to find.
+  It is written **only when `settings.json` has no explicit value** — any existing choice is never
+  overridden — and it is **one-shot**: revert it and it stays reverted. Disable with `cdt-config auto-mode off`.
+  Both steps run *before* the community-bundle gate and the nothing-to-do early return, so a machine whose
+  plugins are all present still converges.
+
+### Changed
+- Registry: `claude-mem`'s `bun (auto-installed)` / `uv (auto-installed)` corrected — bun is a hard
+  requirement provisioned by CDT; `uv` stays user-installed. `docs/plugins.md` updated to match.
+- Plugin tests **37 → 41**. The four new scenarios were mutation-checked: breaking the never-override guard,
+  the invalid-JSON bail-out, the `bun` knob, the one-shot stamp, the `claude-mem` guard, or swapping the npm
+  fallback for `curl | sh` each turns a green scenario red.
+
 ## [1.62.1] — 2026-08-01
 ### Fixed
 - **Upgrading to 1.62.0 parked CDT in `dependency-unsatisfied`.** Claude Code resolves manifest

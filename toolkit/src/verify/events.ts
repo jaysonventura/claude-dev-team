@@ -34,11 +34,41 @@ export function classifyVerifyType(command: string): VerifyType {
   return 'other';
 }
 
-export function computeVerification(events: VerifyEvent[]): VerificationState {
-  const trusted = events.filter((e) => e.source === 'cdt-verify' && typeof e.exitCode === 'number');
-  if (trusted.some((e) => (e.exitCode as number) > 0)) return 'failed';
-  if (trusted.some((e) => e.exitCode === 0)) return 'passed';
+/**
+ * Verdict over the trusted events, with two rules that matter more than they look:
+ *
+ * 1. `since` scopes to evidence NEWER THAN THE LAST EDIT. Without it a green run from last week keeps
+ *    reporting `passed` after code changed underneath it — verification that describes a build nobody has.
+ * 2. The newest event PER COMMAND wins. A sticky "any failure ever => failed" can never go green again,
+ *    so the fix→re-run loop could not converge: the run that proves the fix would be outvoted by the
+ *    failure that prompted it. Per-command-latest also keeps a passing `lint` from masking a failing
+ *    `test`, which a single global "latest event" would do.
+ */
+/** Newest trusted event per command, optionally floored at `since`. The basis for every verdict below. */
+function currentVerdicts(events: VerifyEvent[], since?: string | number): VerifyEvent[] {
+  const floor = since === undefined ? null : new Date(since).getTime();
+  const latest = new Map<string, VerifyEvent>();
+  for (const e of events) {
+    if (e.source !== 'cdt-verify' || typeof e.exitCode !== 'number') continue;
+    const t = new Date(e.ts).getTime();
+    if (floor !== null && (Number.isNaN(t) || t < floor)) continue;
+    const prev = latest.get(e.command);
+    // Ties and unparseable timestamps fall back to file order, which is append order — the later line wins.
+    if (!prev || Number.isNaN(t) || new Date(prev.ts).getTime() <= t) latest.set(e.command, e);
+  }
+  return [...latest.values()];
+}
+
+export function computeVerification(events: VerifyEvent[], since?: string | number): VerificationState {
+  const verdicts = currentVerdicts(events, since);
+  if (verdicts.some((e) => (e.exitCode as number) > 0)) return 'failed';
+  if (verdicts.some((e) => e.exitCode === 0)) return 'passed';
   return 'not_run';
+}
+
+/** The trusted events that are currently RED — what the fix loop has to act on. */
+export function failingEvents(events: VerifyEvent[], since?: string | number): VerifyEvent[] {
+  return currentVerdicts(events, since).filter((e) => (e.exitCode as number) > 0);
 }
 
 /** True when the session ran verify-like commands only via the best-effort hook (no cdt-verify evidence). */
