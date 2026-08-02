@@ -50,6 +50,10 @@ function reconcileStatus(authored: TaskStatus | undefined, v: VerificationState,
   const derived = deriveStatus(v, docsOnly);
   if (!authored) return derived;
   if (v === 'failed') return authored === 'blocked' ? 'blocked' : 'failed';
+  // Symmetric: a green verdict contradicts a stale `failed` just as surely as a red one contradicts
+  // `done`. Without this the loop converges but the artifact still reads failed after the fix landed.
+  // `blocked` / `needs_review` survive — those can be true for reasons the test suite cannot see.
+  if (v === 'passed' && authored === 'failed') return derived;
   // not_run cannot support a completion claim — except for docs-only edits, which have nothing to run.
   if (v === 'not_run' && authored === 'done' && !docsOnly) return 'partial';
   return authored;

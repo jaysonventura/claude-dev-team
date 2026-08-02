@@ -2,6 +2,14 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.64.2] — 2026-08-02
+### Fixed
+- **The mirror of 1.64.1: a stale `failed` status survived a PASSED verdict.** After the fix landed and
+  the loop released, `TASK_RESULT.json` still read `{"status":"failed","verification":"passed"}` — the
+  reconciliation only ran in the red direction. A green verdict now clears a stale `failed`;
+  `blocked` and `needs_review` still survive, since those can be true for reasons a test suite cannot see.
+  Found by driving the *installed* build through the full red → fix → green cycle.
+
 ## [1.64.1] — 2026-08-02
 ### Fixed
 - **`TASK_RESULT.json` could say `{"status":"done","verification":"failed"}`** — the artifact this whole
