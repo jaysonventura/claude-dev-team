@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.62.1-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.64.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -289,7 +289,14 @@ declaring them would disable CDT itself. The bootstrap does `marketplace add` th
 async, bounded and fail-open, and is disabled with `cdt-config bootstrap-community off`. Both still **defer**
 in the router — `ponytail` to CDT's simplify step, `claude-mem` to the CDT vault.
 
-CDT installs plugins but never provisions toolchains or credentials: LSP binaries, Playwright browsers, and
+The same bootstrap also settles two things a fresh machine otherwise gets wrong. It installs **`bun`** —
+`claude-mem`'s six hooks all run `bun-runner.js`, which does *not* self-install, so without it every session
+opens on `Error: Bun not found` (`brew`, else `npm`, never `curl | sh`; once per machine;
+`cdt-config bootstrap-binaries off`). And it sets **`permissions.defaultMode: auto`**, because CDT's dispatch
+loop stalls when every hand-off waits on a prompt — written *only* when `settings.json` has no explicit mode,
+never overriding your choice, and one-shot, so reverting it sticks (`cdt-config auto-mode off`).
+
+Beyond that CDT provisions no toolchains or credentials: LSP binaries, Playwright browsers, `uv`, and
 `github`/`sentry` OAuth stay warn-with-remediation. **`claude-mem` bills its background compression to your
 own usage budget** — see [docs/plugins.md](docs/plugins.md#all-in-one-install).
 
@@ -371,8 +378,11 @@ You type:  "improve the checkout flow and use requirements.pdf"
    triage → write per-agent contracts → dispatch specialist agents in parallel
           → quality gates → independent + security review → ship
               │
-              ▼   HONESTY BACKSTOP — hooks
-   "done" is blocked without a real passing command · cdt-verify records the proof
+              ▼   HONESTY BACKSTOP — hooks (code-enforced, v1.64.0)
+   verify commands are routed through cdt-verify so the REAL exit code is recorded
+          → a RED verdict blocks the Stop and loops (iteration N/5) until it goes green
+          → the same failure twice escalates to the Bug Council; the cap reports BLOCKER
+          → a reply claiming "done / fixed / passing" without evidence is blocked
 ```
 
 > **The toolkit preps & guards (automatic, advisory). The Orchestrator decides & ships (it does the real
@@ -385,7 +395,7 @@ You type:  "improve the checkout flow and use requirements.pdf"
 |------|----------------------|
 | **`cdt-prompt`** | Fires on **every non-trivial prompt** (UserPromptSubmit hook): intake → routing → *conditional* Haiku enhancement → `.claude/{TASK_BRIEF, ROUTING, NEXT_PROMPT}`. `/cdt:prompt` is just the manual button. |
 | **`cdt-spec`** | Turns a **PDF/DOCX/MD** into a clean requirement list — **one cited source per requirement, never hallucinated.** With `CDT_SPEC_AUTO=true` it **auto-detects** a spec doc named in your prompt (and ignores source files & folders). |
-| **`cdt-verify -- <cmd>`** | The **only** way `verification: passed` is earned — runs your real test/build and captures the actual exit code. No more "it works" without proof. |
+| **`cdt-verify -- <cmd>`** | The **only** way `verification: passed` is earned — runs your real test/build and captures the actual exit code. A transparent wrapper: same output, same exit code, one trusted event. Since v1.64.0 a bare `npm test` is **redirected here automatically**, and the toolkit is **built on install** so this actually runs (before that it was a dangling symlink on every machine). |
 | **`cdt enable｜disable`** · **`cdt status`** · **`cdt init`** | Toggle the toolkit (separately from core CDT), check state, scaffold a project. |
 
 ### Why it's safe — by construction, not by promise

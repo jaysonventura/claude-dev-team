@@ -113,6 +113,9 @@ show() {
   local eff mdl; eff="$(get_setting effortLevel)"; mdl="$(get_setting model)"
   local au tm sc; au="$(get_env CDT_AUTONOMY)"; [ -z "$au" ] && au="auto"; tm="$(get_env CDT_TEAMS)"; [ -z "$tm" ] && tm="on"; sc="$(get_env CDT_SCALE)"; [ -z "$sc" ] && sc="on"
   local vg; vg="$(get_env CDT_VERIFY_GATE)"; [ -z "$vg" ] && vg="block"
+  local vw; vw="$(get_env CDT_VERIFY_WRAP)"; [ -z "$vw" ] && vw="block"
+  local cg; cg="$(get_env CDT_CLAIM_GATE)"; [ -z "$cg" ] && cg="block"
+  local mi; mi="$(get_env CDT_MAX_ITERATIONS)"; [ -z "$mi" ] && mi="5"
   local sg; sg="$(get_env CDT_SCOPE_GATE)"; [ -z "$sg" ] && sg="warn"
   local mg; mg="$(get_env CDT_MEMORY_GATE)"; [ -z "$mg" ] && mg="warn"
   local tk pe pm pef; tk="$(get_env CDT_TOOLKIT_ENABLED)"; [ -z "$tk" ] && tk="1"; pe="$(get_env CDT_PROMPT_ENHANCE)"; [ -z "$pe" ] && pe="true"; pm="$(get_env CDT_PROMPT_ENHANCE_MODE)"; [ -z "$pm" ] && pm="auto"; pef="$(get_env CDT_PROMPT_EFFORT)"; [ -z "$pef" ] && pef="medium"
@@ -150,7 +153,9 @@ show() {
   echo "  effort    : ${eff:-(unset)}   (default $DEFAULT_EFFORT)"
   echo "  model     : ${mdl:-(unset → Claude Code default)}   (recommended $DEFAULT_MODEL = Opus 4.8)"
   echo "  eco       : $eco   (default off; auto = conserve when weekly usage is high; on | off | auto)"
-  echo "  verify    : $vg   (block | warn | off — block a Stop with edits but no test/build/lint after them)"
+  echo "  verify    : $vg   (block | warn | off — a Stop whose recorded verification is FAILED or missing cannot finish; loops up to $mi iterations)"
+  echo "  verify-wrap: $vw  (block | warn | off — bare test/build/lint commands are redirected through 'cdt-verify -- <cmd>' so a real exit code is recorded)"
+  echo "  claim     : $cg   (block | warn | off — a final reply asserting done/fixed/passing while the evidence is red or absent is blocked)"
   echo "  scope     : $sg   (warn | block | off — flag a subagent that wrote outside its exclusive contract)"
   echo "  memory    : $mg   (warn | block | off — nudge a team-tier session to persist a vault lesson)"
   echo "  autonomy  : $au   (off | assist | auto — autonomous escalation; details: cdt-auto status)"
@@ -341,10 +346,45 @@ case "${1:-show}" in
               echo "claude-dev-team: community bootstrap = $2 (default ON — SessionStart adds the ponytail/thedotmack marketplaces and installs ponytail + claude-mem without prompting)." ;;
       *) echo "cdt-config: usage: cdt-config bootstrap-community on|off  (default on)" ;;
     esac ;;
+  auto-mode)
+    case "$2" in
+      on|off) set_env CDT_AUTO_MODE "$([ "$2" = on ] && echo 1 || echo 0)"
+              echo "claude-dev-team: auto permission mode = $2 (default ON — the bootstrap sets permissions.defaultMode=auto ONCE, and only when settings.json has no explicit value; off leaves your setting untouched). Already set? Edit permissions.defaultMode in settings.json." ;;
+      *) echo "cdt-config: usage: cdt-config auto-mode on|off  (default on)" ;;
+    esac ;;
+  bootstrap-binaries)
+    case "$2" in
+      on|off) set_env CDT_BOOTSTRAP_BINARIES "$([ "$2" = on ] && echo 1 || echo 0)"
+              echo "claude-dev-team: binary bootstrap = $2 (default ON — installs bun via brew/npm when claude-mem is present, because its hooks require bun and do NOT self-install it)." ;;
+      *) echo "cdt-config: usage: cdt-config bootstrap-binaries on|off  (default on)" ;;
+    esac ;;
+  bootstrap-toolkit)
+    case "$2" in
+      on|off) set_env CDT_BOOTSTRAP_TOOLKIT "$([ "$2" = on ] && echo 1 || echo 0)"
+              echo "claude-dev-team: toolkit build on bootstrap = $2 (default ON — toolkit/dist is gitignored, so without this build no install has cdt-verify or TASK_RESULT and verification silently degrades)." ;;
+      *) echo "cdt-config: usage: cdt-config bootstrap-toolkit on|off  (default on)" ;;
+    esac ;;
   verify)
     case "$2" in
-      block|warn|off) set_env CDT_VERIFY_GATE "$2"; echo "claude-dev-team: verify gate = $2  (block = stop a session that edited files but ran no test/build/lint afterward · warn = notice only · off = disabled)." ;;
+      block|warn|off) set_env CDT_VERIFY_GATE "$2"; echo "claude-dev-team: verify gate = $2  (block = a session whose recorded verification is FAILED or missing cannot finish; it loops up to CDT_MAX_ITERATIONS · warn = notice only · off = disabled)." ;;
       *) echo "cdt-config: verify must be one of: block | warn | off" ;;
+    esac ;;
+  verify-wrap)
+    case "$2" in
+      block|warn|off) set_env CDT_VERIFY_WRAP "$2"
+              echo "claude-dev-team: verify-wrap = $2 (default block — a bare test/build/lint command is denied with an instruction to re-run it as 'cdt-verify -- <cmd>', because only that records a real exit code. Never denies when cdt-verify is not runnable)." ;;
+      *) echo "cdt-config: verify-wrap must be one of: block | warn | off" ;;
+    esac ;;
+  claim)
+    case "$2" in
+      block|warn|off) set_env CDT_CLAIM_GATE "$2"
+              echo "claude-dev-team: claim gate = $2 (default block — a final reply asserting done/fixed/passing while recorded verification is red or absent is blocked and must produce evidence or correct the claim)." ;;
+      *) echo "cdt-config: claim must be one of: block | warn | off" ;;
+    esac ;;
+  max-iterations)
+    case "$2" in
+      ''|*[!0-9]*) echo "cdt-config: usage: cdt-config max-iterations <n>  (default 5 — Task Loop cap before a red session is reported as BLOCKER instead of retried)" ;;
+      *) set_env CDT_MAX_ITERATIONS "$2"; echo "claude-dev-team: Task Loop cap = $2 iterations." ;;
     esac ;;
   scope)
     case "$2" in
@@ -411,6 +451,6 @@ PY
     set_setting effortLevel "$DEFAULT_EFFORT"
     set_setting model "$DEFAULT_MODEL"
     echo "claude-dev-team: reset to defaults (enabled, $DEFAULT_EFFORT, Opus 4.8, eco=off, autonomy=auto, engines on)." ;;
-  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|attribution <on|off>|agent-activity <on|compact|off>|phase-board <on|off>|plugins-enabled <on|off>|plugin-auto-install <on|off>|plugin-auto-update <on|off>|plugin-auto-route <on|off>|plugin-scope <user|project>|superpowers-mode <off|manual|selective|always>|plugin-strict <on|off>|bootstrap-community <on|off>|obsidian <on|off>|obsidian-vault <path>|obsidian-recall-root <path>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|realtime-usage <on|off>|reset}"; exit 0 ;;
+  *) echo "usage: cdt-config {show|on|off|toolkit <on|off>|prompt-mode <auto|always|off>|prompt-effort <medium|high>|prompt-enhance <on|off>|spec-auto <on|off>|external-ai <on|off>|ocr <on|off>|redact <on|off>|attribution <on|off>|agent-activity <on|compact|off>|phase-board <on|off>|plugins-enabled <on|off>|plugin-auto-install <on|off>|plugin-auto-update <on|off>|plugin-auto-route <on|off>|plugin-scope <user|project>|superpowers-mode <off|manual|selective|always>|plugin-strict <on|off>|bootstrap-community <on|off>|bootstrap-binaries <on|off>|bootstrap-toolkit <on|off>|auto-mode <on|off>|obsidian <on|off>|obsidian-vault <path>|obsidian-recall-root <path>|effort <lvl>|model <m>|eco <on|off|auto>|verify <block|warn|off>|verify-wrap <block|warn|off>|claim <block|warn|off>|max-iterations <n>|scope <warn|block|off>|memory <warn|block|off>|autonomy <off|assist|auto>|teams <on|off>|scale <on|off>|statusline <on|off>|realtime-usage <on|off>|reset}"; exit 0 ;;
 esac
 exit 0

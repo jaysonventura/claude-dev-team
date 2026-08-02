@@ -77,7 +77,13 @@ if [ -n "$TOOLKIT_DIST" ] && [ -f "$TOOLKIT_DIST/cli/cdt.js" ]; then
   ln -sf "$TOOLKIT_DIST/cli/cdt-spec.js"   "$BIN/cdt-spec"   2>/dev/null
   ln -sf "$TOOLKIT_DIST/cli/cdt-verify.js" "$BIN/cdt-verify" 2>/dev/null
 elif [ -d "$HOOKS_DIR/../toolkit" ]; then
-  echo "⚠ claude-dev-team-toolkit not built — run: cd \"$HOOKS_DIR/../toolkit\" && npm install && npm run build"
+  # A link into a PRUNED version dir dangles silently, and `[ -x ]` on a dangling symlink is false — so a
+  # stale cdt-verify reads as "installed" to anything testing for the file, and fails at exec. Drop them:
+  # the async bootstrap builds the toolkit and re-links, so a missing link is honest and self-correcting.
+  for _b in cdt cdt-prompt cdt-spec cdt-verify; do
+    [ -L "$BIN/$_b" ] && [ ! -e "$BIN/$_b" ] && rm -f "$BIN/$_b" 2>/dev/null
+  done
+  echo "⚠ claude-dev-team-toolkit not built — building it in the background (or: cd \"$HOOKS_DIR/../toolkit\" && npm install && npm run build)"
 fi
 
 # Housekeeping: drop stale per-session scope-contracts and context packs (>12h old) so they don't pile up.

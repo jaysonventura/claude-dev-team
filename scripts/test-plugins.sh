@@ -435,7 +435,94 @@ PY
   mv "$MKT_HOME/plugins/installed_plugins.json.bak" "$MKT_HOME/plugins/installed_plugins.json"
 fi
 
+# --- v1.63.0: the bootstrap also provisions the environment claude-mem needs, and CDT's permission mode ---
+# Both run BEFORE the community gate and before the nothing-to-do early return, because a machine with every
+# plugin already installed still needs them. These scenarios pin that placement, not just the behavior.
+mode_of() { python3 -c 'import json,sys
+try: d=json.load(open(sys.argv[1]))
+except Exception: print("<invalid>"); raise SystemExit
+print((d.get("permissions") or {}).get("defaultMode") or "<unset>")' "$1" 2>/dev/null; }
+
+# (38) A fresh settings.json with no explicit permission mode gets defaultMode=auto — CDT's dispatch loop
+#      is unusable when every specialist hand-off stops for a prompt.
+if need_file "$PSH" 38 "bootstrap sets permissions.defaultMode=auto when unset"; then
+  rm -f "$MKT_HOME/.cdt/bootstrap-automode.done"
+  echo '{"model":"opus"}' > "$MKT_HOME/settings.json"
+  boot_run >/dev/null 2>&1
+  got="$(mode_of "$MKT_HOME/settings.json")"
+  if [ "$got" = auto ]; then pass 38 "defaultMode unset -> set to auto"
+  else fail 38 "defaultMode=auto on a fresh install" "got: $got"; fi
+fi
+
+# (39) An EXPLICIT mode is a deliberate choice and must survive — this is the scenario that makes the
+#      feature safe to ship on by default, so it must fail loudly if the guard ever regresses.
+if need_file "$PSH" 39 "bootstrap never overrides an explicit permission mode"; then
+  rm -f "$MKT_HOME/.cdt/bootstrap-automode.done"
+  echo '{"permissions":{"defaultMode":"plan"}}' > "$MKT_HOME/settings.json"
+  boot_run >/dev/null 2>&1
+  got="$(mode_of "$MKT_HOME/settings.json")"
+  if [ "$got" = plan ]; then pass 39 "explicit defaultMode=plan left untouched"
+  else fail 39 "explicit mode preserved" "got: $got"; fi
+  # …and once stamped, a later revert to no-mode must NOT be re-flipped: one shot, not a policy daemon.
+  echo '{}' > "$MKT_HOME/settings.json"
+  boot_run >/dev/null 2>&1
+  got="$(mode_of "$MKT_HOME/settings.json")"
+  [ "$got" = "<unset>" ] || fail 39 "stamp makes it one-shot" "re-applied after revert: $got"
+fi
+
+# (40) Invalid settings.json is not ours to repair — a bootstrap that rewrites it would destroy user config.
+if need_file "$PSH" 40 "bootstrap leaves invalid settings.json untouched"; then
+  rm -f "$MKT_HOME/.cdt/bootstrap-automode.done"
+  printf 'not json{' > "$MKT_HOME/settings.json"
+  boot_run >/dev/null 2>&1
+  if [ "$(cat "$MKT_HOME/settings.json")" = 'not json{' ]; then pass 40 "corrupt settings.json not rewritten"
+  else fail 40 "corrupt settings.json preserved" "now: $(cut -c1-80 <"$MKT_HOME/settings.json")"; fi
+  echo '{"permissions":{"defaultMode":"auto"}}' > "$MKT_HOME/settings.json"   # restore for later scenarios
+fi
+
+# (41) claude-mem's hooks all shell out to bun-runner.js, which does NOT self-install bun.
+#      Driven as a UNIT, with _bun_present stubbed absent: on a box that HAS bun (any dev machine, since the
+#      bootstrap installs it) the probe short-circuits _ensure_bun before any guard runs, so a whole-command
+#      assertion here is green no matter what the guards do. Stubbing the probe is what makes it falsifiable.
+if need_file "$PSH" 41 "bun provisioning: guards, branch selection, one-shot stamp"; then
+  BUNSH="$SBX/bun_unit.sh"; BUNSTAMP="$SBX/bun.done"
+  { awk '/^_ensure_bun\(\) \{/,/^\}/' "$PSH"; awk '/^_bun_present\(\) \{/,/^\}/' "$PSH"; } > "$BUNSH"
+  cat > "$SBX/bun_harness.sh" <<HARNESS
+plib_cfg() { eval "v=\\\${\$1:-}"; [ -n "\$v" ] && printf '%s\n' "\$v" || printf '%s\n' "\$2"; }
+plib_state_get() { printf '%s\n' "\${FAKE_STATE:-}"; }
+is_inst() { [ "\${FAKE_INSTALLED:-1}" = 1 ]; }
+_say() { printf '%s\n' "\$1"; }
+_run_bounded() { printf 'EXEC: %s\n' "\$*" >> "$SBX/bun_exec.log"; }
+source "$BUNSH"
+_bun_present() { return 1; }          # the box under test has no bun
+HARNESS
+  bun_run() { : > "$SBX/bun_exec.log"
+              env CDT_STATE_DIR="$SBX" CDT_BUN_STAMP="$BUNSTAMP" "$@" \
+                bash -c "source '$SBX/bun_harness.sh'; $BUN_PRE _ensure_bun" 2>&1; }
+  bun_ok=1
+  # a. bun absent + brew present -> the brew formula, and exactly one attempt (stamped)
+  rm -f "$BUNSTAMP"; out="$(BUN_PRE='' bun_run env)"
+  grep -q 'oven-sh/bun/bun' "$SBX/bun_exec.log" || { bun_ok=0; fail 41 "brew branch" "log: $(cat "$SBX/bun_exec.log")"; }
+  [ -e "$BUNSTAMP" ] || { bun_ok=0; fail 41 "attempt is stamped" "no stamp after install"; }
+  # b. stamp holds — a failed install must not retry on every single session start
+  out="$(BUN_PRE='' bun_run env)"
+  [ -s "$SBX/bun_exec.log" ] && { bun_ok=0; fail 41 "one-shot" "re-ran with the stamp present"; }
+  # c. no brew -> npm fallback (never curl|sh)
+  rm -f "$BUNSTAMP"; BUN_PRE='command() { [ "$2" = brew ] && return 1; builtin command "$@"; };' bun_run env >/dev/null
+  grep -q 'npm install -g bun' "$SBX/bun_exec.log" || { bun_ok=0; fail 41 "npm fallback" "log: $(cat "$SBX/bun_exec.log")"; }
+  # d. neither -> remediation text, and NOTHING executed
+  rm -f "$BUNSTAMP"
+  out="$(BUN_PRE='command() { case "$2" in brew|npm) return 1;; esac; builtin command "$@"; };' bun_run env)"
+  { [ -s "$SBX/bun_exec.log" ] || ! printf '%s' "$out" | grep -q 'bun.sh'; } && { bun_ok=0; fail 41 "no-package-manager remediation" "out: $out log: $(cat "$SBX/bun_exec.log")"; }
+  # e. each guard alone must suppress the attempt AND the stamp
+  for g in FAKE_INSTALLED=0 FAKE_STATE=disabled CDT_BOOTSTRAP_BINARIES=off; do
+    rm -f "$BUNSTAMP"; BUN_PRE='' bun_run env "$g" >/dev/null
+    { [ -s "$SBX/bun_exec.log" ] || [ -e "$BUNSTAMP" ]; } && { bun_ok=0; fail 41 "guard $g" "attempted anyway"; }
+  done
+  [ "$bun_ok" = 1 ] && pass 41 "bun: brew->npm->remediation, one-shot stamp, 3 guards each block it"
+fi
+
 echo
-echo "PASSED $PASS/37"
+echo "PASSED $PASS/41"
 [ "$BLOCKED" -gt 0 ] && echo "($BLOCKED scenario(s) BLOCKED on sibling hooks not yet built — see BLOCKED lines above)"
-if [ "$PASS" -eq 37 ]; then echo "ALL PLUGIN TESTS PASSED"; exit 0; else echo "PLUGIN TESTS INCOMPLETE OR FAILING"; exit 1; fi
+if [ "$PASS" -eq 41 ]; then echo "ALL PLUGIN TESTS PASSED"; exit 0; else echo "PLUGIN TESTS INCOMPLETE OR FAILING"; exit 1; fi

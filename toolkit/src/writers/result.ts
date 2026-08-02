@@ -9,7 +9,7 @@ import { claudeDir, projectRoot } from '../utils/paths.js';
 import type { CdtConfig, RoutingResult, TaskResult, TaskStatus, VerificationState, VerifyEvent } from '../utils/types.js';
 import { redact } from '../validators/redact.js';
 import { validateTaskResult } from '../validators/validate.js';
-import { computeVerification, hasHookOnlyEvidence, readVerifyEvents } from '../verify/events.js';
+import { computeVerification, failingEvents, hasHookOnlyEvidence, readVerifyEvents } from '../verify/events.js';
 
 export function taskResultPath(root: string = projectRoot()): string {
   return join(claudeDir(root), 'TASK_RESULT.json');
@@ -62,6 +62,7 @@ export interface FinalizeOutcome {
   taskResult: TaskResult;
   verification: VerificationState;
   events: VerifyEvent[];
+  failing: VerifyEvent[];
   hookOnly: boolean;
   docsOnly: boolean;
   degraded: boolean;
@@ -74,10 +75,13 @@ export interface FinalizeOutcome {
 export function finalizeTaskResult(
   cfg: CdtConfig,
   root: string = projectRoot(),
-  opts: { editedPaths?: string[] } = {},
+  opts: { editedPaths?: string[]; since?: string | number } = {},
 ): FinalizeOutcome {
   const events = readVerifyEvents(root);
-  const verification = computeVerification(events);
+  // `since` = when the code last changed. Evidence older than that describes a build that no longer
+  // exists, so it must not count as verification of the current one.
+  const verification = computeVerification(events, opts.since);
+  const failing = failingEvents(events, opts.since);
   const paths = opts.editedPaths ?? editedPaths(root);
   const docsOnly = isDocsOnly(paths);
 
@@ -94,7 +98,7 @@ export function finalizeTaskResult(
 
   const taskResult = buildTaskResult(input, verification, cfg, docsOnly);
   writeArtifact(taskResultPath(root), JSON.stringify(taskResult, null, 2) + '\n', root);
-  return { taskResult, verification, events, hookOnly: hasHookOnlyEvidence(events), docsOnly, degraded };
+  return { taskResult, verification, events, failing, hookOnly: hasHookOnlyEvidence(events), docsOnly, degraded };
 }
 
 export function finalResponseFormat(tr: TaskResult, filesChanged: string[] = []): string {

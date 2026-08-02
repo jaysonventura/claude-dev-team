@@ -399,10 +399,154 @@ _acquire() {
 #
 # Safety rails: idempotent (a stamp short-circuits the fast path), fail-open (never blocks a session, always
 # rc0), bounded (each shell-out is timeout-capped), redacted output, and a kill switch.
+# _ensure_bun — claude-mem's hooks (SessionStart ×2, UserPromptSubmit, Pre/PostToolUse, Stop) all run
+# scripts/bun-runner.js, which does NOT self-install: with no bun on the box it prints "Error: Bun not
+# found" and exits 1, so a fresh machine gets a wall of hook errors every session. Since CDT is what
+# bootstraps claude-mem, CDT owns its runtime too. Package manager only — never curl|sh.
+CDT_BUN_STAMP="${CDT_BUN_STAMP:-$CDT_STATE_DIR/bootstrap-bun.done}"
+
+# _bun_present — rc0 iff bun-runner.js's findBun() would resolve: PATH first, then its four hard-coded
+# fallbacks. Probing exactly where it probes is what makes "present" mean "the hook will resolve it".
+_bun_present() {
+  command -v bun >/dev/null 2>&1 && return 0
+  local p
+  for p in "$HOME/.bun/bin/bun" /usr/local/bin/bun /opt/homebrew/bin/bun /home/linuxbrew/.linuxbrew/bin/bun; do
+    [ -x "$p" ] && return 0
+  done
+  return 1
+}
+
+_ensure_bun() {
+  case "$(printf '%s' "$(plib_cfg CDT_BOOTSTRAP_BINARIES 1)" | tr '[:upper:]' '[:lower:]')" in
+    0|off|false|no) return 0 ;;
+  esac
+  is_inst claude-mem || return 0                                   # only its consumer needs it
+  [ "$(plib_state_get claude-mem 2>/dev/null)" = "disabled" ] && return 0
+  _bun_present && return 0
+  [ -e "$CDT_BUN_STAMP" ] && return 0                              # one attempt; don't retry every session
+
+  mkdir -p "$CDT_STATE_DIR" 2>/dev/null || true
+  : > "$CDT_BUN_STAMP" 2>/dev/null                                 # stamp BEFORE, so a hang can't loop
+  if command -v brew >/dev/null 2>&1; then
+    _say "  → brew install oven-sh/bun/bun   (claude-mem runtime)"
+    _run_bounded brew install oven-sh/bun/bun >/dev/null 2>&1
+  elif command -v npm >/dev/null 2>&1; then
+    _say "  → npm install -g bun   (claude-mem runtime)"
+    _run_bounded npm install -g bun >/dev/null 2>&1
+  else
+    _say "  ⨯ bun missing and no brew/npm to install it — claude-mem's hooks will error. See https://bun.sh"
+    return 0
+  fi
+  hash -r 2>/dev/null || true                                      # a fresh install must not miss the PATH hash
+  if _bun_present; then                                            # same probe bun-runner.js uses — no other check counts
+    _say "  ✓ bun installed — claude-mem's hooks will resolve next session"
+  else
+    _say "  ⨯ bun install did not land — install it manually: https://bun.sh"
+  fi
+  return 0
+}
+
+# _ensure_toolkit — `toolkit/dist` is gitignored, so NO install has ever received a built toolkit, and the
+# toolkit is where every anti-hallucination guard lives: `hook.js finalize` (TASK_RESULT.json + the trusted
+# verification verdict) and `cdt-verify` (the only producer of a real exit code). Unbuilt, the Stop hook
+# silently skips all of it and the session can end on an unverified "done" — the exact failure users report.
+# A SessionStart *warning* telling the user to run npm by hand is not a fix; this builds it.
+# Runs in the async bootstrap hook (300s cap), once per installed version.
+_ensure_toolkit() {
+  case "$(printf '%s' "$(plib_cfg CDT_BOOTSTRAP_TOOLKIT 1)" | tr '[:upper:]' '[:lower:]')" in
+    0|off|false|no) return 0 ;;
+  esac
+  local tk; tk="$(cd "$_HERE/../toolkit" 2>/dev/null && pwd)" || return 0
+  [ -n "$tk" ] && [ -f "$tk/package.json" ] || return 0
+
+  # Built AND installed? Just make sure the CLIs are linked and leave.
+  if [ -f "$tk/dist/cli/hook.js" ] && [ -d "$tk/node_modules" ]; then _link_toolkit "$tk"; return 0; fi
+  # Stamp lives INSIDE the version's toolkit dir, so a plugin upgrade (a new dir) rebuilds automatically
+  # and a pruned version takes its stamp with it. One attempt per version — a broken build must not retry
+  # on every single session start.
+  [ -e "$tk/.cdt-build-attempted" ] && return 0
+  if ! command -v npm >/dev/null 2>&1 || ! command -v node >/dev/null 2>&1; then
+    _say "  ⨯ toolkit needs node+npm to build — verification evidence stays degraded. Install Node 18+."
+    return 0
+  fi
+  : > "$tk/.cdt-build-attempted" 2>/dev/null
+
+  _say "  → building claude-dev-team-toolkit (one-time, enables trusted verification)…"
+  # --omit=optional skips pdf-parse/tesseract/mammoth (large, only for spec OCR). devDependencies are
+  # REQUIRED: the build is `tsc`. npm's `prepare` script builds on install; the explicit build is the
+  # fallback for an npm that skipped it.
+  ( cd "$tk" && _run_bounded npm install --omit=optional --no-audit --no-fund --silent ) >/dev/null 2>&1
+  [ -f "$tk/dist/cli/hook.js" ] || ( cd "$tk" && _run_bounded npm run build ) >/dev/null 2>&1
+
+  if [ -f "$tk/dist/cli/hook.js" ]; then
+    _link_toolkit "$tk"
+    _say "  ✓ toolkit built — cdt-verify + TASK_RESULT verification are live"
+  else
+    _say "  ⨯ toolkit build failed — run: cd \"$tk\" && npm install && npm run build"
+  fi
+  return 0
+}
+
+# _link_toolkit <toolkit_dir> — (re)point the ~/.claude/bin CLIs at THIS version's dist. Symlinks into a
+# pruned version dir dangle silently; `ln -sf` overwrites them, so this is also the heal.
+_link_toolkit() {
+  local d="${1:-}/dist" b="$CDT_HOME/bin" n
+  [ -f "$d/cli/cdt.js" ] || return 0
+  mkdir -p "$b" 2>/dev/null || return 0
+  for n in cdt cdt-prompt cdt-spec cdt-verify; do
+    [ -f "$d/cli/$n.js" ] && ln -sf "$d/cli/$n.js" "$b/$n" 2>/dev/null
+  done
+  return 0
+}
+
+# _ensure_auto_mode — CDT's workflow assumes permission mode `auto`; a fresh install otherwise sits in
+# `default` and prompts through every dispatch. Sets it ONCE and only when the key is absent, so an
+# explicit choice (yours or another tool's) is never overwritten and a later revert stays reverted.
+CDT_AUTOMODE_STAMP="${CDT_AUTOMODE_STAMP:-$CDT_STATE_DIR/bootstrap-automode.done}"
+_ensure_auto_mode() {
+  case "$(printf '%s' "$(plib_cfg CDT_AUTO_MODE 1)" | tr '[:upper:]' '[:lower:]')" in
+    0|off|false|no) return 0 ;;
+  esac
+  [ -e "$CDT_AUTOMODE_STAMP" ] && return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  mkdir -p "$CDT_STATE_DIR" 2>/dev/null || true
+  : > "$CDT_AUTOMODE_STAMP" 2>/dev/null
+  SETTINGS="${CDT_SETTINGS:-$CDT_HOME/settings.json}" python3 - <<'PY' | while IFS= read -r _l; do _say "  $_l"; done
+import json, os, tempfile
+p = os.environ["SETTINGS"]
+try:
+    d = json.load(open(p)) if os.path.exists(p) else {}
+except Exception:
+    raise SystemExit(0)                       # invalid JSON: leave it alone, this is not our file to fix
+if not isinstance(d, dict): raise SystemExit(0)
+perms = d.get("permissions")
+if not isinstance(perms, dict): perms = {}
+if perms.get("defaultMode"):                  # an explicit choice already exists — never override it
+    raise SystemExit(0)
+perms["defaultMode"] = "auto"; d["permissions"] = perms
+try:
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(p) or ".")
+    with os.fdopen(fd, "w") as f:
+        json.dump(d, f, indent=2); f.write("\n")
+    os.replace(tmp, p)
+    print("✓ permissions.defaultMode = auto  (applies next session · revert in settings.json, or cdt-config auto-mode off)")
+except Exception:
+    try: os.unlink(tmp)
+    except Exception: pass
+PY
+  return 0
+}
+
 CDT_BOOTSTRAP_STAMP="${CDT_BOOTSTRAP_STAMP:-$CDT_STATE_DIR/bootstrap-community.done}"
 cmd_bootstrap() {
   local quiet=0; [ "${1:-}" = "--quiet" ] && quiet=1
   _say() { [ "$quiet" = 1 ] || printf '%s\n' "$1"; }
+
+  # These run BEFORE the community gate and the pending-rows early-return: none of them depends on the
+  # bundle, and all must still converge on a machine where every plugin is already installed. In particular
+  # `bootstrap-community off` must never silently disable verification.
+  _ensure_auto_mode
+  _ensure_toolkit
 
   case "$(printf '%s' "$(plib_cfg CDT_BOOTSTRAP_COMMUNITY 1)" | tr '[:upper:]' '[:lower:]')" in
     0|off|false|no) _say "cdt-plugins bootstrap: disabled (CDT_BOOTSTRAP_COMMUNITY=off)"; return 0 ;;
@@ -410,6 +554,7 @@ cmd_bootstrap() {
   command -v claude >/dev/null 2>&1 || { _say "cdt-plugins bootstrap: 'claude' CLI not on PATH — skipped"; return 0; }
 
   _cache_installed; _cache_mkts
+  _ensure_bun
   local pending=0 id ident mkt src
   # Re-read live state each run rather than trusting the stamp, so an uninstall re-heals. This covers the
   # OFFICIAL rows too: Claude Code resolves manifest dependencies eagerly on a FRESH install, but on an
