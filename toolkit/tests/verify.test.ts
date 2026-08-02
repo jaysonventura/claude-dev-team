@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { VerifyEvent } from '../src/utils/types.js';
+import type { TaskStatus, VerificationState, VerifyEvent } from '../src/utils/types.js';
 import { classifyVerifyType, computeVerification, failingEvents, hasHookOnlyEvidence } from '../src/verify/events.js';
-import { finalizeTaskResult, isDocsOnly } from '../src/writers/result.js';
+import { buildTaskResult, finalizeTaskResult, isDocsOnly } from '../src/writers/result.js';
 import { cfg, tmpRoot } from './helpers.js';
 
 const ev = (over: Partial<VerifyEvent>): VerifyEvent => ({
@@ -114,5 +114,28 @@ describe('docs-only exemption', () => {
     expect(isDocsOnly(['.claude/plans/p.md', 'README.md'])).toBe(true);
     expect(isDocsOnly(['src/x.ts'])).toBe(false);
     expect(isDocsOnly([])).toBe(false);
+  });
+});
+
+describe('status can never contradict the evidence', () => {
+  const mk = (status: TaskStatus, v: VerificationState, docsOnly = false) =>
+    buildTaskResult({ status, task: 't', result: 'r' }, v, cfg(), docsOnly).status;
+
+  it('a stale authored "done" cannot survive a FAILED verdict', () => {
+    // The exact artifact this layer exists to prevent: {"status":"done","verification":"failed"}.
+    expect(mk('done', 'failed')).toBe('failed');
+  });
+  it('an authored "blocked" is kept on a FAILED verdict (it is already honest)', () => {
+    expect(mk('blocked', 'failed')).toBe('blocked');
+  });
+  it('"done" is demoted to partial when nothing was verified', () => {
+    expect(mk('done', 'not_run')).toBe('partial');
+  });
+  it('docs-only work may be done with nothing to run', () => {
+    expect(mk('done', 'not_run', true)).toBe('done');
+  });
+  it('a passing verdict keeps the authored status', () => {
+    expect(mk('done', 'passed')).toBe('done');
+    expect(mk('needs_review', 'passed')).toBe('needs_review');
   });
 });

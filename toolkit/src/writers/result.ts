@@ -40,10 +40,25 @@ export interface TaskResultInput {
   nextStep?: string;
 }
 
+/**
+ * An authored status is honored only where the evidence permits it. Overriding `verification` while
+ * leaving an agent-authored `status: done` produced the exact artifact this whole layer exists to
+ * prevent — `{"status":"done","verification":"failed"}` — and status is the field humans and scripts
+ * read first. Evidence wins; the authored prose is kept.
+ */
+function reconcileStatus(authored: TaskStatus | undefined, v: VerificationState, docsOnly: boolean): TaskStatus {
+  const derived = deriveStatus(v, docsOnly);
+  if (!authored) return derived;
+  if (v === 'failed') return authored === 'blocked' ? 'blocked' : 'failed';
+  // not_run cannot support a completion claim — except for docs-only edits, which have nothing to run.
+  if (v === 'not_run' && authored === 'done' && !docsOnly) return 'partial';
+  return authored;
+}
+
 export function buildTaskResult(input: TaskResultInput, verification: VerificationState, cfg: CdtConfig, docsOnly = false): TaskResult {
   const red = (s: string): string => (cfg.redact ? redact(s) : s);
   return {
-    status: input.status ?? deriveStatus(verification, docsOnly),
+    status: reconcileStatus(input.status, verification, docsOnly),
     task: red((input.task ?? 'unspecified task').slice(0, 200)) || 'unspecified task',
     result: red((input.result ?? '').slice(0, 400)) || (verification === 'passed' ? 'Verified.' : 'See artifacts.'),
     verification,
