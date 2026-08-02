@@ -134,8 +134,14 @@ describe('status can never contradict the evidence', () => {
   it('docs-only work may be done with nothing to run', () => {
     expect(mk('done', 'not_run', true)).toBe('done');
   });
-  it('a passing verdict keeps the authored status', () => {
+  it('a passing verdict keeps a non-contradictory authored status', () => {
     expect(mk('done', 'passed')).toBe('done');
     expect(mk('needs_review', 'passed')).toBe('needs_review');
+  });
+  it('a stale "failed" does not survive a PASSED verdict (the fix landed)', () => {
+    expect(mk('failed', 'passed')).toBe('done');
+  });
+  it('"blocked" survives a PASSED verdict — a blocker can be invisible to the suite', () => {
+    expect(mk('blocked', 'passed')).toBe('blocked');
   });
 });
