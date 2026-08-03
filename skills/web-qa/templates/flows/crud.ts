@@ -7,20 +7,17 @@ export interface Item {
   readonly name: string
 }
 
-const escapeForRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
 /**
  * The row for an item, found by the text a user would read rather than by index
  * — a positional row breaks the moment the list sorts differently.
  *
- * EXACT, not substring. `hasText: 'Widget'` is a case-insensitive *substring* match, so after a
- * rename to `Widget (renamed)` the old row still "matches" and an absence assertion
- * (`toHaveCount(0)`) can never pass. Anchoring the regex makes identity mean identity.
+ * Substring, deliberately. A row is a CONTAINER: the flows below scope `editButton` / `deleteButton`
+ * inside it, so its text content is `My itemEditDelete`. An anchored regex would therefore match
+ * nothing at all. The corollary is on the caller: an absence assertion only means something when the
+ * new name is not a superstring of the old one — see `renameItem`.
  */
 const row = (page: Page, app: AppConfig, item: Item): Locator =>
-  locate(page, app, 'itemRow').filter({
-    hasText: new RegExp(`^\\s*${escapeForRegExp(item.name)}\\s*$`),
-  })
+  locate(page, app, 'itemRow').filter({ hasText: item.name })
 
 export async function openItemList(page: Page, app: AppConfig): Promise<void> {
   await page.goto(app.routes.items)
@@ -57,6 +54,16 @@ export async function renameItem(
   item: Item,
   newName: string,
 ): Promise<void> {
+  // The old-row-is-gone assertion below is a substring match, so a new name CONTAINING the old one
+  // (`Widget` -> `Widget (renamed)`) can never satisfy it. Fail loudly here rather than leaving a
+  // caller to debug an assertion that was unsatisfiable from the start.
+  if (newName.includes(item.name)) {
+    throw new Error(
+      `renameItem: "${newName}" contains the old name "${item.name}". Rows match by substring, so ` +
+        `the old row would still match after the rename. Use a name that is not a superstring.`,
+    )
+  }
+
   await locate(row(page, app, item), app, 'editButton').click()
   await locate(page, app, 'itemNameField').fill(newName)
   await locate(page, app, 'saveButton').click()

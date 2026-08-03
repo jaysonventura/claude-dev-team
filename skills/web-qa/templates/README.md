@@ -14,6 +14,16 @@ cp .env.qa.example .env.qa      # then fill in the URLs and QA credentials
 Requires Node >= 20.12. The app under test must already be serving on its
 `baseURL` — start it with the app repo's own automation (`make up-dev`, etc.).
 
+## Target safety
+
+Each app reads its base URL from its own env var (see `apps/<id>.ts`). The harness **throws at config
+load** unless that URL is loopback — this suite deletes records and runs payment flows as an
+authenticated user, so leaving localhost must be deliberate:
+
+```bash
+CDT_QA_ALLOW_REMOTE=1 npm run test:e2e   # staging only. Never production.
+```
+
 ## Run
 
 ```bash
