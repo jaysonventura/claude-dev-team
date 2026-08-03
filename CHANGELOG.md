@@ -2,6 +2,35 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.66.2] — 2026-08-04
+### Fixed
+The web smoke spec now **actually passes**, verified by running it against a real Chromium and a
+conformant server — 9/9 — rather than by inspection. Three prior rounds of fixes were validated only by
+reading the code, and each one shipped a spec that could not pass. Reviewers found these by building a
+server and running the suite; that is now the bar for this harness.
+- **Every deliberately-negative test always failed.** Chromium logs a *second* line for each failing
+  request — `Failed to load resource: the server responded with a status of 401` — with no URL and no
+  `http NNN:` prefix, so no `allowedPageIssues` pattern could target it. The 1.66.1 opt-outs were
+  correct and fired; this duplicate line defeated them. It is dropped at source, since the `response`
+  handler already records the same event **with** its URL.
+- **The upload/download test always failed.** A download is an aborted navigation, and 1.66.1 had
+  promoted `requestfailed` to a hard failure — so `net::ERR_ABORTED` failed the test with no opt-out.
+  `ERR_ABORTED` is now recorded as evidence, never fatal; every other request failure still fails.
+- **CRUD could not pass on a server-rendered app.** `expectPersisted` used `page.reload()`, which on a
+  non-PRG app re-submits the create POST — a second row and a strict-mode violation, while appearing to
+  prove persistence. It now re-fetches the list with a GET. And `createItem`/`uploadFile` accepted only
+  2xx, so a PRG app's 303 was treated as failure; both now accept 2xx-or-3xx.
+- **Credential redaction leaked four shapes.** Requiring a separator (the 1.66.1 fix for prose being
+  eaten) stopped redacting `Bearer <jwt>`, `token <jwt>`, `Authorization Bearer <jwt>` and
+  URL-embedded tokens; `\S+` also stopped at the first space, so `Cookie: a=1; session=<jwt>` leaked the
+  second pair; and `\btoken\b` could not match inside `access_token`. Now two branches — separator
+  always redacts, whitespace/slash redacts only before a credential-shaped value — with a keyword
+  prefix allowed and the value run stopping at `;`/`,`. 14/14 cases correct, prose still untouched.
+- `fileURLToPath` instead of `URL.pathname` for the upload fixture, which percent-encodes any path
+  containing a space.
+- Two e2e assertions asserted `doctor` had *started*, matching its own banner; they now require its
+  tally line. Removed an orphaned comment in `hooks/web-qa.sh`.
+
 ## [1.66.1] — 2026-08-03
 ### Fixed
 Two fixes in 1.66.0 were wrong in the same way the bug they replaced was wrong: they made the shipped

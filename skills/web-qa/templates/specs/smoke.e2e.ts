@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url'
+
 import { currentApp } from '../apps/index.js'
 import { expectAdminAreaRefused, expectAdminAreaVisible, expectSignInRejected } from '../flows/auth.js'
 import {
@@ -85,7 +87,7 @@ test.describe('as a standard user', () => {
 
   test('uploads a file and downloads it back', async ({ page }) => {
     // A real file from the harness itself — no fixture to keep in sync.
-    await uploadFile(page, app, new URL('../package.json', import.meta.url).pathname)
+    await uploadFile(page, app, fileURLToPath(new URL('../package.json', import.meta.url)))
     const name = await downloadFile(page, app)
     expect(name.length, 'the download had no filename').toBeGreaterThan(0)
   })

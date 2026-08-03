@@ -34,17 +34,25 @@ export async function createItem(page: Page, app: AppConfig, item: Item): Promis
   )
   await locate(page, app, 'saveButton').click()
   const response = await saved
-  expect(response.ok(), `create returned ${response.status()}`).toBe(true)
+  // 2xx OR 3xx. A server-rendered app following Post/Redirect/Get answers the create with a 303,
+  // which `response.ok()` (200-299 only) rejects — that alone made this unable to pass on any PRG app.
+  expect(
+    response.status() >= 200 && response.status() < 400,
+    `create returned ${response.status()}`,
+  ).toBe(true)
 
   await expect(row(page, app, item)).toBeVisible()
 }
 
 /**
- * Frontend state is not backend truth. A reload discards every bit of client state, so what survives
- * it genuinely persisted — this is what separates "the row appeared" from "the record exists".
+ * Frontend state is not backend truth: re-fetch from the server and see if the record is still there.
+ *
+ * Deliberately a fresh GET of the list, NOT `page.reload()`. On a non-PRG app the last navigation is
+ * the create POST, so reloading RE-SUBMITS it — you get a second row and a strict-mode violation,
+ * while appearing to "prove persistence".
  */
 export async function expectPersisted(page: Page, app: AppConfig, item: Item): Promise<void> {
-  await page.reload()
+  await openItemList(page, app)
   await expect(row(page, app, item)).toBeVisible()
 }
 
