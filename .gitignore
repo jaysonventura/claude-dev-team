@@ -26,6 +26,10 @@ __pycache__/
 # Git worktrees created by cdt-worktree / claude --worktree (parallel isolation)
 .claude/worktrees/
 
+# Mobile QA captures from cdt-mobile-qa (screenshots, screen recordings, logcat).
+# These routinely contain session tokens, OTPs and PII — they must never be committed.
+**/.claude/mobile-qa/
+
 # Ephemeral CDT runtime + per-prompt artifacts (regenerated each session; never tracked).
 # `**/` so they're ignored at any depth (root AND nested subdirs like menubar/.claude/).
 # NOTE: .claude/specs/ is intentionally NOT ignored — cited requirement sets are often committed.

@@ -2,6 +2,70 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.65.0] — 2026-08-03
+### Added
+- **Autonomous mobile QA.** CDT can now drive a real Android device or emulator the way a QA engineer
+  does: install and launch the app, run a user scenario end to end, and — on failure — capture the
+  screenshot, video, and logcat, name the root cause, fix, and re-run until green. It plugs into the
+  existing Task Loop, so a mobile "pass" is held to the same evidence gate as every other claim.
+  - **`mobile-qa` skill** — the loop, the control-plane precedence (a wired mobile **MCP** first, then
+    `cdt-mobile-qa`, then raw `adb`), and playbooks for the eight flows that actually break: login/logout,
+    form submission, navigation, CRUD, API errors, payment, offline, and permissions. Auto-applies — it is
+    in the orchestrator's skill-routing table and in the `qa-engineer` / `mobile-engineer` contracts, so
+    device work routes to it without being asked.
+  - **`cdt-mobile-qa` CLI** — `doctor` · `devices` · `install` · `launch` · `stop` · `reset` · `shot` ·
+    `record` · `ui` · `logcat` · `net` · `perm` · `artifacts` · `appium` · `scaffold`. Thin wrappers over
+    `adb`; `doctor` runs first and reports honestly when no device is attached, rather than inventing a pass.
+  - **Shared Appium + UiAutomator2 harness** (`cdt-mobile-qa scaffold`) — one WebdriverIO framework that
+    serves many apps: shared flows stay app-agnostic and each app contributes a config with its own test
+    ids. React Native and Ionic Capacitor are both handled, including the WebView context switch Capacitor
+    needs. Selectors bind to accessibility ids / `resource-id` / `content-desc`; XPath only as a documented
+    last resort.
+  - No new MCP server was written — the existing `appium-mcp-server` and `@mobilenext/mobile-mcp` are
+    registered and routed to, and the ADB CLI is the fallback when neither is wired.
+  - Guardrails that are not optional: credentials from env only, payment flows against **sandbox only**,
+    and artifacts gitignored (screenshots and logcat carry PII and tokens).
+
+### Security
+Found by the security review before release; each is reproduced by a test in `scripts/e2e.sh`, and every
+guard below was mutation-tested (remove it, the suite goes red) so the tests cannot pass vacuously.
+- **`scaffold` refuses a project root, even with `--force`.** Scaffolding onto a repo root overwrote the
+  app's own `package.json` and `.gitignore` — and replacing the `.gitignore` un-ignored the app's real
+  `.env`, staging live secrets for commit. The harness owns a subdirectory: `scaffold --dir <repo>/qa`.
+- **`artifacts --clean` can no longer delete outside the artifacts root.** It matched `*/mobile-qa/*` as a
+  substring, so any project directory with a `mobile-qa` path segment was `rm -rf`-able. Now a real
+  containment check against the resolved root.
+- **Package, permission and activity names are charset-validated before reaching `adb shell`.** `adb`
+  joins argv into one string that the device's `sh` re-parses, so local quoting was not enough — a name
+  like `com.x;rm -rf /sdcard` would have run both halves on the device. Validation runs *before* device
+  resolution, so it is enforced (and testable) whether or not a device is attached.
+- **The artifacts directory now ignores itself.** `artifacts_dir()` writes a `.gitignore` containing `*`
+  into the artifacts root on creation, so captures are uncommittable in **any** repo — including one that
+  was never scaffolded, and a custom `CDT_MQA_ARTIFACTS` pointing outside the repo. A repo-level rule
+  (`**/.claude/mobile-qa/`, also added here) cannot cover those cases on its own.
+  **Caveat:** this does not retroactively untrack captures already committed by an earlier run — if you
+  ran a pre-1.65.0 build, check `git log` for `.claude/mobile-qa/` and purge as needed.
+- **`scaffold` identifies a harness by fingerprint, not by sniffing for project markers.** Checking for
+  `.git`/`package.json` was whack-a-mole and blind to the primary target: a Gradle Android module inside a
+  monorepo has neither, so `--force` there destroyed the module and replaced its `.gitignore`, exposing
+  `local.properties` (keystore password). `--force` now requires the target to *be* a harness
+  (`wdio.conf.ts` + `apps/types.ts`) — which also keeps `--force` working after onboarding, where the app's
+  own `apps/<id>.ts` and `.env.qa` are expected rather than foreign.
+- **An existing `.gitignore` is never overwritten — including under `--force`.** Losing the harness's
+  ignore rules is recoverable; leaking a key is not.
+- **Templates are unlinked before copying.** `cp` follows a symlink and writes *through* it, so a link
+  named like a template could clobber a file outside the target directory.
+- **`scaffold` fails loudly on a partial copy** instead of printing a success line and exiting 0, and
+  `install`/`reset` parse `Success` from adb's output rather than trusting an exit code that has
+  historically been 0 on failure.
+- **`ui` clears the previous dump before capturing** and verifies it is non-empty — a stale UI tree read
+  as fact is a fabricated observation. **`logcat --pkg`** no longer hides an adb failure behind a
+  pipeline's exit status on the app-crashed path. **`appium stop`** kills the process group and verifies
+  the server actually died, rather than killing `npx` and claiming success.
+- **MCP servers are pinned, not `@latest`.** An MCP server has code execution in your session *and* full
+  device control; `npx -y ...@latest` re-resolves from the registry every launch, so a hijacked publish
+  would run automatically. The skill now pins both versions and states the third-party risk.
+
 ## [1.64.2] — 2026-08-02
 ### Fixed
 - **The mirror of 1.64.1: a stale `failed` status survived a PASSED verdict.** After the fix landed and

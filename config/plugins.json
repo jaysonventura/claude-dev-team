@@ -556,6 +556,61 @@
       "needsAuth": false,
       "securityLevel": "local-cdt-integration",
       "fallbackBehavior": "always-available"
+    },
+    {
+      "id": "mobile-qa",
+      "displayName": "Mobile QA (CDT local skill + cdt-mobile-qa CLI)",
+      "type": "cdt-skill",
+      "marketplace": null,
+      "installIdentifier": null,
+      "enabledByDefault": true,
+      "required": false,
+      "scope": "user",
+      "categories": [
+        "testing",
+        "e2e",
+        "mobile",
+        "android"
+      ],
+      "dependencies": {
+        "cli": [
+          "adb",
+          "node"
+        ],
+        "binaries": [
+          "adb (Android platform-tools — device control, install, logcat, screenshots)",
+          "appium + appium-uiautomator2-driver (durable E2E runs; `cdt-mobile-qa doctor` reports both)"
+        ]
+      },
+      "activationRules": {
+        "repoSignals": [
+          "capacitor.config.ts",
+          "capacitor.config.json",
+          "app.json",
+          "android/build.gradle",
+          "android/app/build.gradle",
+          "wdio.conf.ts",
+          "qa/apps"
+        ],
+        "taskKeywords": [
+          "mobile qa",
+          "android",
+          "appium",
+          "uiautomator2",
+          "emulator",
+          "apk",
+          "adb",
+          "logcat",
+          "device test",
+          "e2e mobile",
+          "capacitor",
+          "react native"
+        ]
+      },
+      "conflicts": [],
+      "needsAuth": false,
+      "securityLevel": "local-cdt-integration",
+      "fallbackBehavior": "always-available"
     }
   ]
 }
