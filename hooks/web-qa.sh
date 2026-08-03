@@ -370,7 +370,6 @@ cmd_scaffold() {
     # A DIRECTORY where a file belongs is not ours to delete, and `cp` would cheerfully land the
     # template INSIDE it — leaving the harness silently missing that file while we print "wrote".
     # Count it as a copy failure so the run dies instead of reporting a harness that isn't there.
-    if [ -d "$dst" ]; then echo "  FAILED $dst (a directory is in the way)" >&2; failed=$((failed+1)); continue; fi
     # Unlink first: `cp` FOLLOWS a symlink and writes THROUGH it, so a pre-planted link named like a
     # template would clobber a file outside $out (and `find -type f` never lists it).
     rm -f "$dst" 2>/dev/null

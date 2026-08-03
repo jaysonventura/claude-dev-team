@@ -37,8 +37,10 @@ const CLIENT_ERROR_STATUS = 400
  */
 const redact = (line: string): string =>
   line.replace(
-    /\b(authorization|bearer|token|api[-_]?key|cookie|set-cookie)\b\s*[:=]?\s*(bearer\s+|basic\s+)?\S+/gi,
-    '$1 <redacted>',
+    // The separator is REQUIRED. With `[:=]?` optional this ate ordinary prose —
+    // "token expired, please sign in" became "token <redacted> please sign in".
+    /\b(authorization|bearer|token|api[-_]?key|cookie|set-cookie)\b\s*[:=]\s*(bearer\s+|basic\s+)?\S+/gi,
+    '$1: <redacted>',
   )
 
 export const test = base.extend<PageIssueOptions & { failOnPageIssues: void }>({

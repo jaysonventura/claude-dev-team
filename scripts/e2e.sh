@@ -566,9 +566,16 @@ has "$(cat "$REPO/skills/mobile-qa/SKILL.md")" "qa-shared" "mobile-qa defers to 
 WQVIC2="$SBX/webclean/qa/src"; mkdir -p "$WQVIC2"; echo "src" > "$WQVIC2/real.ts"
 CDT_QA_ARTIFACTS="$WQVIC2" "$BIN/cdt-web-qa" artifacts --clean >/dev/null 2>&1
 [ -f "$WQVIC2/real.ts" ] && ok "web artifacts --clean refuses a path outside the artifacts root" || no "web artifacts --clean destroyed a lookalike path"
-# `test` must propagate playwright's real exit code — a swallowed failure is a fake pass.
-WQNOH="$SBX/noharness"; mkdir -p "$WQNOH"
-( cd "$WQNOH" && "$BIN/cdt-web-qa" test >/dev/null 2>&1 ); [ $? -ne 0 ] && ok "web test exits non-zero when it cannot run (never a false pass)" || no "web test exit code propagation"
+# `test` must propagate playwright's REAL exit code. Running where no harness exists only proves the
+# `die` fires — `exit $?` could be `exit 0` and still pass. Assert on the forwarded code instead, via
+# a stub `playwright` that exits 3, so the number itself has to survive the wrapper.
+WQEXIT="$SBX/exitprop"; mkdir -p "$WQEXIT/bin" "$WQEXIT/h/apps"
+printf '#!/bin/sh\nexit 3\n' > "$WQEXIT/bin/playwright"; chmod +x "$WQEXIT/bin/playwright"
+: > "$WQEXIT/h/playwright.config.ts"; : > "$WQEXIT/h/apps/types.ts"
+( cd "$WQEXIT/h" && PATH="$WQEXIT/bin:$PATH" CDT_WQA_DIR="$WQEXIT/h" "$BIN/cdt-web-qa" test >/dev/null 2>&1 )
+WQRC=$?
+[ "$WQRC" -eq 3 ] && ok "web test forwards playwright's exact exit code (3), never a swallowed failure" \
+  || no "web test exit-code propagation (got $WQRC, wanted 3)"
 has "$(cat "$REPO/agents/qa-engineer.md")" "web-qa" "qa-engineer auto-applies web-qa"
 has "$(cat "$REPO/skills/orchestration/SKILL.md")" "web-qa" "orchestration routes browser testing to web-qa"
 

@@ -2,6 +2,32 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.66.1] — 2026-08-03
+### Fixed
+Two fixes in 1.66.0 were wrong in the same way the bug they replaced was wrong: they made the shipped
+smoke spec unable to pass. Found by re-review after release.
+- **The item-row locator could never match.** 1.66.0 anchored it (`^name$`) to stop a renamed row
+  matching its own old name. But a row is a *container* — the flows scope the Edit/Delete buttons
+  inside it, so its text content is `My itemEditDelete` and an anchored pattern matches nothing.
+  Reverted to a substring match; `renameItem` now **throws** if the new name contains the old one,
+  which is the actual precondition, and the smoke spec renames to a non-superstring.
+- **Failing on any `>=400` broke three deliberately-negative tests.** A rejected sign-in (401), a
+  refused admin route (403 — which `scenarios.md` tells you to *assert*) and a rejected form
+  (400/422) are correct behaviour, not defects. The `>=400` rule stays, because it is the stronger
+  check; the three tests now opt out narrowly via `allowedPageIssues` in their own `describe`, which
+  is also the worked example of how to do that.
+- **Console redaction ate ordinary diagnostics.** The separator was optional, so
+  `token expired, please sign in` became `token <redacted> please sign in`. It is now required —
+  `Authorization: Bearer <jwt>` still redacts the JWT.
+- **`flows/files.ts` and `expectPersisted()` were dead code** while their `routes.files` and four
+  `SelectorName` entries were mandatory, so an already-onboarded app config had to satisfy an
+  interface nothing exercised. Both are now used by the smoke spec (23 tests, up from 20).
+- `CDT_QA_ALLOW_REMOTE` is documented in `templates/README.md` and `.env.qa.example` — the files
+  someone onboarding actually opens — not only in the skill.
+- The e2e exit-code assertion ran where no harness existed, so it proved only that the guard fired;
+  `exit 0` would have passed it. It now runs against a stub that exits 3 and asserts the 3 survives.
+- Removed a dead duplicate directory-in-the-way check in `hooks/web-qa.sh`.
+
 ## [1.66.0] — 2026-08-03
 ### Added
 - **Autonomous web QA — one QA engineer, two surfaces.** CDT can now drive a real browser the way it
