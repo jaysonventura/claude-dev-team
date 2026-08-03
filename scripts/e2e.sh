@@ -339,7 +339,7 @@ else
   [ "$MQD_RC" -ne 0 ] && ok "doctor exits non-zero with no usable device (never a false pass)" || no "doctor exit non-zero without a device"
   case "$MQD" in *"[FAIL]"*) ok "doctor prints an explicit FAIL line" ;; *) no "doctor prints a FAIL line" ;; esac
 fi
-has "$("$BIN/cdt-mobile-qa" artifacts --dir 2>&1)" "mobile-qa" "artifacts --dir resolves a run dir"
+has "$("$BIN/cdt-mobile-qa" artifacts --dir 2>&1)" "/.claude/qa/mobile/" "artifacts --dir resolves under the UNIFIED qa root"
 # Device subcommands must refuse, not fabricate, when there is nothing to talk to.
 if ! command -v adb >/dev/null 2>&1; then
   "$BIN/cdt-mobile-qa" shot probe >/dev/null 2>&1 && no "shot must fail without adb" || ok "shot fails honestly without adb"
@@ -360,7 +360,10 @@ MQREPO="$SBX/mqa-ignore"; mkdir -p "$MQREPO"
 MQART="$( cd "$MQREPO" && "$BIN/cdt-mobile-qa" artifacts --dir 2>/dev/null )"
 if [ -n "$MQART" ] && [ -d "$MQART" ]; then
   echo "session-token" > "$MQART/logcat.log"
-  if ( cd "$MQREPO" && git status --porcelain --untracked-files=all 2>/dev/null | grep -q "mobile-qa" ); then
+  # Assert on the RESOLVED path, not a hardcoded string: the artifacts root moved to .claude/qa/<platform>/
+  # in 1.66.0, and a grep for the old literal would have passed vacuously by matching nothing.
+  MQREL="${MQART#"$MQREPO"/}"
+  if ( cd "$MQREPO" && git status --porcelain --untracked-files=all 2>/dev/null | grep -qF "$MQREL" ); then
     no "captures are gitignored at the resolved artifact path"
   else
     ok "captures are gitignored at the resolved artifact path"
@@ -452,6 +455,122 @@ has "$(cat "$REPO/skills/mobile-qa/references/selectors.md")" "Last resort" "sel
 has "$(cat "$REPO/skills/mobile-qa/SKILL.md")" "cdt-verify" "mobile-qa loops through the verify gate"
 has "$(cat "$REPO/agents/qa-engineer.md")" "mobile-qa" "qa-engineer auto-applies mobile-qa"
 has "$(cat "$REPO/skills/orchestration/SKILL.md")" "mobile-qa" "orchestration routes device testing to mobile-qa"
+
+echo "== 4m. web QA (cdt-web-qa: browser control plane + Playwright harness) =="
+[ -x "$BIN/cdt-web-qa" ] && ok "cdt-web-qa installed by the SessionStart hook" || no "cdt-web-qa installed"
+WQ="$("$BIN/cdt-web-qa" 2>&1)"
+has "$WQ" "doctor" "no-arg prints usage"
+has "$WQ" "chromium" "usage documents the browser engines"
+# doctor is a GATE: honest report, non-zero when the browser layer is unusable.
+WQD="$("$BIN/cdt-web-qa" doctor 2>&1)"; WQD_RC=$?
+has "$WQD" "doctor" "doctor runs to completion"
+case "$WQD" in *"[PASS]"*|*"[FAIL]"*|*"[WARN]"*) ok "doctor reports per-check status lines" ;; *) no "doctor status lines" ;; esac
+if printf '%s' "$WQD" | grep -q "\[FAIL\]"; then
+  [ "$WQD_RC" -ne 0 ] && ok "doctor exits non-zero when a check FAILS (never a false pass)" || no "doctor exit non-zero on FAIL"
+else
+  [ "$WQD_RC" -eq 0 ] && ok "doctor exits 0 when nothing FAILS" || no "doctor exit 0 with no FAIL"
+fi
+# UNIFIED artifacts root: web and mobile land side by side under .claude/qa/<platform>/.
+has "$("$BIN/cdt-web-qa" artifacts --dir 2>&1)" "/.claude/qa/web/" "artifacts --dir resolves under the UNIFIED qa root"
+WQMOB="$("$BIN/cdt-mobile-qa" artifacts --dir 2>&1)"
+case "$WQMOB" in */.claude/qa/mobile/*) ok "web and mobile artifacts share one root (.claude/qa/)" ;; *) no "artifact roots unified" ;; esac
+# Same scaffold safety the mobile CLI earned: a non-harness dir is refused even with --force.
+WQVIC="$SBX/webvictim"; mkdir -p "$WQVIC"
+printf 'android { }\n' > "$WQVIC/build.gradle"; printf 'SECRET=live\n' > "$WQVIC/.env"; printf '.env\n' > "$WQVIC/.gitignore"
+if CDT_WQA_TEMPLATES="$REPO/skills/web-qa/templates" "$BIN/cdt-web-qa" scaffold --dir "$WQVIC" --force >/dev/null 2>&1; then
+  no "web scaffold --force refuses a non-harness directory"
+else
+  ok "web scaffold --force refuses a non-harness directory"
+fi
+has "$(cat "$WQVIC/.gitignore" 2>/dev/null)" ".env" "the target project's own gitignore rules survive"
+# BYPASS CLASS: the harness fingerprint must not be SELF-ESTABLISHING. Gating it on --force let a plain
+# scaffold plant playwright.config.ts + apps/types.ts, after which --force passed the gate and destroyed
+# the package. Single-step tests pass while this two-step sequence is open, so test the sequence.
+for _p in web mobile; do
+  case "$_p" in web) _cli="$BIN/cdt-web-qa"; _tv="CDT_WQA_TEMPLATES=$REPO/skills/web-qa/templates" ;;
+                mobile) _cli="$BIN/cdt-mobile-qa"; _tv="CDT_MQA_TEMPLATES=$REPO/skills/mobile-qa/templates" ;; esac
+  _v="$SBX/twostep-$_p"; mkdir -p "$_v"
+  printf '{"name":"@acme/victim","version":"9.9.9"}\n' > "$_v/package.json"
+  env "$_tv" "$_cli" scaffold --dir "$_v" >/dev/null 2>&1
+  env "$_tv" "$_cli" scaffold --dir "$_v" --force >/dev/null 2>&1
+  if grep -q '@acme/victim' "$_v/package.json" 2>/dev/null; then
+    ok "$_p scaffold: two-step (plain then --force) cannot destroy a package"
+  else
+    no "$_p scaffold: two-step bypass destroyed the victim package.json"
+  fi
+  # ...while a pre-made dir holding only .gitignore is still ours to write into (no UX regression).
+  _g="$SBX/gitonly-$_p"; mkdir -p "$_g"; printf 'node_modules/\n' > "$_g/.gitignore"
+  env "$_tv" "$_cli" scaffold --dir "$_g" >/dev/null 2>&1 \
+    && ok "$_p scaffold: a dir holding only .gitignore still scaffolds" \
+    || no "$_p scaffold: refused a dir holding only .gitignore"
+done
+# storageState holds LIVE session cookies; the preserved-gitignore NOTE must name .auth/ or a user who
+# follows it verbatim stages an admin session token.
+WQNOTE="$SBX/wqnote"; mkdir -p "$WQNOTE"; printf 'node_modules/\n' > "$WQNOTE/.gitignore"
+has "$(CDT_WQA_TEMPLATES="$REPO/skills/web-qa/templates" "$BIN/cdt-web-qa" scaffold --dir "$WQNOTE" 2>&1)" ".auth/" \
+  "the preserved-gitignore NOTE names .auth/ (live session cookies)"
+has "$(cat "$REPO/skills/web-qa/templates/.gitignore")" ".auth/" "the shipped harness gitignores .auth/"
+# A refused artifacts --clean must not create (and self-ignore) the path it just refused.
+WQNC="$SBX/nocreate/run1"
+CDT_QA_ARTIFACTS="$WQNC" "$BIN/cdt-web-qa" artifacts --clean >/dev/null 2>&1
+[ -d "$WQNC" ] && no "a refused artifacts --clean must not create the directory" || ok "a refused artifacts --clean does not create the directory"
+# Production-target safety must be an enforced throw, not prose — and the phantom env var must be gone.
+has "$(cat "$REPO/skills/web-qa/templates/support/env.ts")" "CDT_QA_ALLOW_REMOTE" "the harness gates non-loopback targets behind an explicit opt-in"
+has "$(cat "$REPO/skills/web-qa/templates/apps/index.ts")" "assertSafeTarget" "the target check runs at the single chokepoint every spec routes through"
+if grep -rq "CDT_WQA_BASE_URL" "$REPO/skills" "$REPO/commands" "$REPO/hooks" 2>/dev/null; then
+  no "no phantom base-URL variable is documented (nothing reads CDT_WQA_BASE_URL)"
+else
+  ok "no phantom base-URL variable is documented (a control nothing reads is worse than none)"
+fi
+# The harness itself lands, and the selector policy is actually written down.
+if [ -d "$REPO/skills/web-qa/templates" ] && [ -n "$(ls -A "$REPO/skills/web-qa/templates" 2>/dev/null)" ]; then
+  WQSCF="$SBX/webqa"
+  CDT_WQA_TEMPLATES="$REPO/skills/web-qa/templates" "$BIN/cdt-web-qa" scaffold --dir "$WQSCF" >/dev/null 2>&1
+  { [ -f "$WQSCF/playwright.config.ts" ] && [ -f "$WQSCF/apps/types.ts" ]; } \
+    && ok "web scaffold lays down the Playwright harness" || no "web scaffold lays down the harness"
+  # Assert git ACTUALLY ignores the resolved paths, not that a substring appears in a file.
+  # (".env.qa" is matched by a bare ".env" rule, so the old string check proved nothing.)
+  ( cd "$WQSCF" && git init -q . ) >/dev/null 2>&1
+  printf 'QA_USERNAME=x\n' > "$WQSCF/.env.qa"; mkdir -p "$WQSCF/.auth"; printf '{"cookies":[]}\n' > "$WQSCF/.auth/app-admin.json"
+  ( cd "$WQSCF" && git check-ignore -q .env.qa ) && ok "git actually ignores .env.qa in a scaffolded harness" || no "git ignores .env.qa"
+  ( cd "$WQSCF" && git check-ignore -q .auth/app-admin.json ) && ok "git actually ignores .auth/ storageState (live session cookies)" || no "git ignores .auth/"
+  grep -rqi "password['\"]*: *['\"][a-z0-9]" "$WQSCF/apps" 2>/dev/null && no "no hardcoded creds in web app configs" || ok "no hardcoded creds in web app configs"
+  # The upload/download and backend-verification capabilities must EXIST, not just be documented.
+  [ -f "$WQSCF/flows/files.ts" ] && ok "the harness implements file upload/download" || no "harness implements upload/download"
+  has "$(cat "$WQSCF/flows/files.ts" 2>/dev/null)" "waitForEvent('download')" "download binds the listener before the click"
+  has "$(cat "$WQSCF/flows/crud.ts" 2>/dev/null)" "waitForResponse" "CRUD verifies the backend response, not just the rendered row"
+  has "$(cat "$WQSCF/flows/crud.ts" 2>/dev/null)" "page.reload" "CRUD proves persistence across a reload (optimistic-UI false pass)"
+else
+  # The templates SHIP with the plugin. Absent means a broken release, so this is a failure —
+  # printing "ok" here made a missing harness look like a passing suite.
+  no "web harness templates are missing from the plugin (skills/web-qa/templates is empty)"
+fi
+# The user's explicit selector policy must be binding, not decorative.
+WQSEL="$(cat "$REPO/skills/web-qa/references/selectors.md" 2>/dev/null)"
+has "$WQSEL" "getByRole" "selector policy leads with getByRole"
+has "$WQSEL" "last resort" "selector policy makes XPath a last resort"
+# Console + network are what separate web QA from clicking around.
+WQSK="$(cat "$REPO/skills/web-qa/SKILL.md" 2>/dev/null)"
+has "$WQSK" "browser_console_messages" "web-qa checks the JS console every scenario"
+has "$WQSK" "browser_network_requests" "web-qa checks network requests every scenario"
+has "$WQSK" "browser_snapshot" "web-qa asserts the accessibility tree, not screenshots"
+# The unification: one shared contract, referenced by both platform skills.
+QSH="$(cat "$REPO/skills/qa-shared/SKILL.md" 2>/dev/null)"
+has "$QSH" "cdt-verify" "qa-shared binds both surfaces to the verify gate"
+# Assert the RULE, not the word: "sandbox" alone also matches the unrelated Reporting line.
+has "$QSH" "Never run payment flows against production" "qa-shared carries the sandbox-only payment rule for both surfaces"
+has "$QSH" "refuse and report" "qa-shared makes prod-only payment creds a hard refusal, not a suggestion"
+has "$WQSK" "qa-shared" "web-qa defers to the shared QA contract"
+has "$(cat "$REPO/skills/mobile-qa/SKILL.md")" "qa-shared" "mobile-qa defers to the same shared contract"
+# Web coverage of the two properties the mobile side tests but the web side did not.
+WQVIC2="$SBX/webclean/qa/src"; mkdir -p "$WQVIC2"; echo "src" > "$WQVIC2/real.ts"
+CDT_QA_ARTIFACTS="$WQVIC2" "$BIN/cdt-web-qa" artifacts --clean >/dev/null 2>&1
+[ -f "$WQVIC2/real.ts" ] && ok "web artifacts --clean refuses a path outside the artifacts root" || no "web artifacts --clean destroyed a lookalike path"
+# `test` must propagate playwright's real exit code — a swallowed failure is a fake pass.
+WQNOH="$SBX/noharness"; mkdir -p "$WQNOH"
+( cd "$WQNOH" && "$BIN/cdt-web-qa" test >/dev/null 2>&1 ); [ $? -ne 0 ] && ok "web test exits non-zero when it cannot run (never a false pass)" || no "web test exit code propagation"
+has "$(cat "$REPO/agents/qa-engineer.md")" "web-qa" "qa-engineer auto-applies web-qa"
+has "$(cat "$REPO/skills/orchestration/SKILL.md")" "web-qa" "orchestration routes browser testing to web-qa"
 
 echo "== 5. statusline -> budget (eco conserves when weekly is high) =="
 SL_JSON='{"model":{"display_name":"Opus"},"effort":{"level":"xhigh"},"rate_limits":{"seven_day":{"used_percentage":90},"five_hour":{"used_percentage":10}}}'

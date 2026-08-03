@@ -1,0 +1,22 @@
+{
+  "name": "web-qa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Playwright E2E harness — one config per app, shared flows, cross-browser.",
+  "scripts": {
+    "test:e2e": "playwright test --project=chromium",
+    "test:e2e:all": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report",
+    "browsers": "playwright install --with-deps chromium firefox webkit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/node": "26.1.2",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=20.12.0"
+  }
+}

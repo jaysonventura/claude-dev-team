@@ -76,11 +76,13 @@ _adb() { resolve_device; adb -s "$SERIAL" "$@"; }
 # existing run, start a fresh one with `artifacts --clean` or by exporting CDT_MQA_RUNID.
 artifacts_dir() {
   local root dir run
-  if [ -n "${CDT_MQA_ARTIFACTS:-}" ]; then
+  if [ -n "${CDT_QA_ARTIFACTS:-}" ]; then
+    dir="$CDT_QA_ARTIFACTS"
+  elif [ -n "${CDT_MQA_ARTIFACTS:-}" ]; then
     dir="$CDT_MQA_ARTIFACTS"
   else
     root="$(git rev-parse --show-toplevel 2>/dev/null)"; [ -n "$root" ] || root="$PWD"
-    root="$root/.claude/mobile-qa"
+    root="$root/.claude/qa/mobile"
     if [ -n "${CDT_MQA_RUNID:-}" ]; then
       run="$CDT_MQA_RUNID"; safe_name "$run"
     else
@@ -403,7 +405,7 @@ cmd_artifacts() {
     # so `CDT_MQA_ARTIFACTS=<proj>/mobile-qa/src artifacts --clean` rm -rf'd real source.
     # Only a run dir DIRECTLY under this repo's own artifacts root may be deleted.
     root="$(git rev-parse --show-toplevel 2>/dev/null)"; [ -n "$root" ] || root="$PWD"
-    root="$root/.claude/mobile-qa"
+    root="$root/.claude/qa/mobile"
     [ -d "$root" ] && root="$(cd "$root" && pwd -P)"
     case "$dir" in
       "$root"|"$root"/*) ;;
@@ -466,7 +468,7 @@ cmd_appium() {
 # The script runs from BOTH ~/.claude/bin and the repo, so the templates dir is resolved through a
 # candidate list (override -> beside the script -> user copy -> newest versioned plugin cache).
 cmd_scaffold() {
-  local out="" force=0 tdir="" c f dst files wrote=0 failed=0
+  local out="" force=0 tdir="" c f dst files out_phys="" _dstdir="" wrote=0 failed=0
   while [ $# -gt 0 ]; do
     case "$1" in
       --dir)   out="${2:-}"; [ -n "$out" ] || die "--dir needs a path"
@@ -499,14 +501,20 @@ cmd_scaffold() {
   # this tool's primary target repo. But "holds a foreign file" is also wrong: after the documented
   # onboarding a real harness holds apps/<id>.ts and .env.qa, which would make --force refuse forever.
   # The actual question is "is $out a harness?", so ask that directly.
-  if [ "$force" = 1 ] && [ -d "$out" ] && [ -n "$(ls -A "$out" 2>/dev/null)" ]; then
+  # Checked on BOTH paths. Gating it on --force made the fingerprint SELF-ESTABLISHING: a plain
+  # scaffold plants wdio.conf.ts + apps/types.ts into someone's package, and a second run with
+  # --force then passes the gate and overwrites their package.json/tsconfig.json.
+  # `.gitignore` is excluded from the emptiness test because we never overwrite it, so a pre-made
+  # dir holding only that is still ours to write into.
+  if [ -d "$out" ] && [ -n "$(find "$out" -mindepth 1 -maxdepth 1 ! -name '.gitignore' 2>/dev/null | head -1)" ]; then
     if ! { [ -f "$out/wdio.conf.ts" ] && [ -f "$out/apps/types.ts" ]; }; then
-      die "refusing --force in '$out' — it is not a mobile-qa harness (no wdio.conf.ts + apps/types.ts),
-       so this would overwrite someone else's project. The harness owns a subdirectory:
-       $PROG scaffold --dir $out/qa"
+      die "refusing to scaffold into '$out' — it is not empty and is not a mobile-qa harness
+       (no wdio.conf.ts + apps/types.ts), so this would write into someone else's project.
+       The harness owns its own subdirectory: $PROG scaffold --dir $out/qa"
     fi
   fi
   mkdir -p "$out" 2>/dev/null || die "cannot create $out"
+  out_phys="$(cd "$out" 2>/dev/null && pwd -P)" || die "cannot resolve $out"
   while IFS= read -r f; do
     [ -n "$f" ] || continue
     dst="$out/$f"
@@ -515,11 +523,20 @@ cmd_scaffold() {
     # live secrets for commit. Losing our rules is recoverable; leaking a key is not.
     if [ "$f" = ".gitignore" ] && [ -e "$dst" ]; then
       echo "  skip (never overwritten) $dst"
-      note "NOTE: $dst already existed — add these yourself if missing: .env.qa, .claude/mobile-qa/"
+      note "NOTE: $dst already existed — add these yourself if missing: .env.qa, .claude/qa/"
       continue
     fi
     if [ -e "$dst" ] && [ "$force" != 1 ]; then echo "  skip (exists) $dst"; continue; fi
     mkdir -p "$(dirname "$dst")" 2>/dev/null
+    # The file-level unlink below stops a symlinked FILE being written through, but a symlinked
+    # PARENT DIRECTORY (e.g. apps/ -> /elsewhere) escapes it: the destination resolves outside $out
+    # and we clobber someone else's file. Compare PHYSICAL paths and refuse anything that leaves.
+    _dstdir="$(cd "$(dirname "$dst")" 2>/dev/null && pwd -P)"
+    case "$_dstdir" in
+      "$out_phys"|"$out_phys"/*) ;;
+      *) echo "  FAILED $dst (resolves outside $out — a symlinked directory is in the path)" >&2
+         failed=$((failed+1)); continue ;;
+    esac
     # Unlink first: `cp` FOLLOWS a symlink and writes THROUGH it, so a pre-planted link named like a
     # template would clobber a file outside $out (and `find -type f` never lists it).
     rm -f "$dst" 2>/dev/null
@@ -564,7 +581,8 @@ $PROG — drive a real Android device/emulator for autonomous QA. Every capture 
 
 Environment:
   CDT_MQA_DEVICE     adb serial to target. Required when more than one device is attached.
-  CDT_MQA_ARTIFACTS  artifacts dir. Default <repo-or-cwd>/.claude/mobile-qa/<runid>.
+  CDT_QA_ARTIFACTS   artifacts dir (shared with cdt-web-qa). Default <repo>/.claude/qa/mobile/<runid>.
+                     CDT_MQA_ARTIFACTS is still honoured for back-compat.
   CDT_MQA_RUNID      pin the run id. Otherwise the newest existing run is reused ('artifacts --clean'
                      or a new CDT_MQA_RUNID starts a fresh one).
   CDT_MQA_TEMPLATES  override the scaffold templates dir.

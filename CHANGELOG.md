@@ -2,6 +2,40 @@
 
 All notable changes to claude-dev-team. Versions follow semver.
 
+## [1.66.0] — 2026-08-03
+### Added
+- **Autonomous web QA — one QA engineer, two surfaces.** CDT can now drive a real browser the way it
+  drives a device: open the app, run a complete user journey, assert the accessibility tree, and on
+  failure capture the trace, video and screenshot, name the root cause, fix, and re-run until green.
+  - **`qa-shared` skill — the unification.** The autonomous loop, the `cdt-verify` evidence gate, the
+    artifact layout, the failure-analysis format, the report shape, and the credential / payment / PII
+    rules are now defined **once** and shared by web and mobile. `web-qa` and `mobile-qa` carry only what
+    is genuinely platform-specific — `mobile-qa` was deduplicated against it in the same change, not
+    just pointed at it, so there is one copy of each rule rather than two that drift apart.
+  - **`web-qa` skill** — Playwright control-plane precedence (MCP → `cdt-web-qa` → raw `npx playwright`),
+    cross-browser guidance, and playbooks for the eleven flows that actually break: authentication,
+    role-based access, forms, CRUD, search/filter/sort, upload/download, payment, API errors, responsive,
+    cross-browser, and session/permission. Auto-applies from the orchestrator's routing table and the
+    `qa-engineer` / `frontend-engineer` contracts.
+  - **`cdt-web-qa` CLI** — `doctor` · `browsers` · `artifacts` · `scaffold` · `test` · `trace`. Thin
+    wrappers over `npx playwright`; `doctor` gates first and reports honestly when no browser engine is
+    installed rather than inventing a pass.
+  - **Shared Playwright harness** (`cdt-web-qa scaffold`) — one framework serving many apps, with
+    chromium/firefox/webkit projects, `storageState` role reuse, and per-app config. Same shape as the
+    Appium harness: shared flows stay app-agnostic and an incomplete app config fails to compile.
+  - **Assertions are DOM- and accessibility-based, never image-based.** Locators follow
+    `getByRole()` → `getByLabel()` → `getByText()` → `data-testid`; XPath and coordinate clicks are a
+    documented last resort. Screenshots are evidence for humans, not a validation method.
+  - **Console and network are first-class signals.** A page that renders correctly but logged a JS error
+    or a failed/5xx request is a **failure**, not a pass — checked every scenario.
+  - No new MCP server: **Playwright MCP was already a CDT plugin dependency**, so browser control needed
+    no new plumbing — only the QA brain that drives it.
+
+### Changed
+- **Artifacts are unified at `<repo>/.claude/qa/<platform>/<runid>`** with `CDT_QA_ARTIFACTS` honoured by
+  both CLIs, so a web run and a device run land side by side under one reporting root.
+  `CDT_MQA_ARTIFACTS` is still honoured for back-compat, and `.gitignore` now covers `**/.claude/qa/`.
+
 ## [1.65.0] — 2026-08-03
 ### Added
 - **Autonomous mobile QA.** CDT can now drive a real Android device or emulator the way a QA engineer

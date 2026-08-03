@@ -1,0 +1,13 @@
+node_modules/
+
+# Credentials — never commit.
+.env.qa
+
+# Signed-in browser state: session cookies and tokens.
+.auth/
+
+# Traces, videos, screenshots, results.json.
+.claude/qa/web/
+
+# The HTML report embeds those same captures.
+playwright-report/

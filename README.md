@@ -8,7 +8,7 @@
 > writes per-agent **contracts**, dispatches **specialist subagents** in parallel, runs a **quality-gate
 > chain**, gets **independent review**, then **ships** — and remembers what it learned.
 
-![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.65.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
+![license](https://img.shields.io/badge/license-MIT-blue) ![version](https://img.shields.io/badge/version-1.66.0-green) ![claude code](https://img.shields.io/badge/Claude%20Code-plugin-7C3AED) [![validate](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml/badge.svg)](https://github.com/jaysonventura/claude-dev-team/actions/workflows/ci.yml) [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](CONTRIBUTING.md)
 
 It is built to be **cost-effective on Claude Max while staying high quality**: cheap work stays cheap
 (most tasks need no team), and the expensive machinery only engages when complexity or risk demands it.
@@ -231,6 +231,8 @@ still advise Opus vs Sonnet by difficulty.
 | `web-design-guidelines` | UI fundamentals + a11y |
 | `ui-ux-pro-max` | polish, motion, micro-interactions |
 | `technical-writing` | accurate, scannable, current docs — READMEs, guides, release notes, ADRs |
+| `qa-shared` | the QA contract shared by web and mobile — one loop, one artifact layout, one failure-analysis format, one set of safety rules |
+| `web-qa` | drive a real browser like a QA engineer — Playwright + MCP, cross-browser, DOM/a11y assertions (never image comparison), console + network checked every scenario |
 | `mobile-qa` | drive a real Android device/emulator like a QA engineer — Appium + UiAutomator2 + ADB, evidence on every failure |
 
 Reused official plugins: `superpowers`, `code-review`, `frontend-design`, `context7` — these
@@ -256,6 +258,7 @@ session; the bare `/command` form won't match).
 | `/cdt:doctor` | health-check the install (hooks, CLIs, DB, gh, menu bar, deps) |
 | `/cdt:deps [--install]` | check / install system prerequisites (python3, git, curl, sqlite3, gh) |
 | `/cdt:worktree [new\|list\|rm\|...]` | git-worktree isolation for parallel work (interops with `claude --worktree`) |
+| `/cdt:web-qa <scenario>` | autonomous web QA in a real browser — navigate, run the journey, assert the accessibility tree, catch JS/network errors, capture trace+video on failure, re-run until green |
 | `/cdt:mobile-qa <scenario>` | autonomous mobile QA on a device/emulator — install, run the flow, capture screenshot/video/logcat on failure, explain the cause, re-run until green |
 | `/cdt:auto [status\|gate\|explain\|off\|assist\|auto]` | the autonomous mode router + cost governor (BOUNDED / DEPTH / BREADTH) |
 | `/cdt:budget` | show usage % + the Eco (conserve-when-low) recommendation |
