@@ -35,13 +35,33 @@ const CLIENT_ERROR_STATUS = 400
  * The scheme word must be consumed too. `authorization[=:\s]+\S+` matched only "Bearer" in
  * `Authorization: Bearer eyJ…`, so the redaction ate the harmless word and published the JWT.
  */
+// The optional prefix matters: `\btoken\b` cannot match inside `access_token` (an underscore is a
+// word character), so `?access_token=<jwt>` sailed through un-redacted.
+const CREDENTIAL_KEY = /\b((?:[A-Za-z0-9]+[_-])?(?:authorization|bearer|token|api[-_]?key|cookie|set-cookie))\b/
+const CREDENTIAL_VALUE = /[A-Za-z0-9._~+/=-]{16,}/
+
+/**
+ * Two branches, because credentials appear in two shapes and an earlier single-branch attempt broke
+ * one while fixing the other:
+ *  - `key: value` / `key=value` — always redact, whatever the value looks like.
+ *  - `key value` / `key/value`  — redact ONLY when the value is credential-shaped (>=16 chars of
+ *    token alphabet). Without that guard, "token expired, please sign in" gets eaten.
+ * The value run stops at whitespace, `;` or `,`, so `Cookie: a=1; session=SECRET` redacts BOTH pairs
+ * rather than only the first.
+ */
 const redact = (line: string): string =>
   line.replace(
-    // The separator is REQUIRED. With `[:=]?` optional this ate ordinary prose —
-    // "token expired, please sign in" became "token <redacted> please sign in".
-    /\b(authorization|bearer|token|api[-_]?key|cookie|set-cookie)\b\s*[:=]\s*(bearer\s+|basic\s+)?\S+/gi,
+    new RegExp(
+      CREDENTIAL_KEY.source +
+        '(?:\\s*[:=]\\s*|[\\s/]+(?=(?:bearer\\s+|basic\\s+)?' +
+        CREDENTIAL_VALUE.source +
+        '))(?:bearer\\s+|basic\\s+)?[^\\s;,]+',
+      'gi',
+    ),
     '$1: <redacted>',
   )
+    // Remaining `k=v` pairs inside a cookie/query string, so only the first pair is not redacted.
+    .replace(/([;&]\s*)[A-Za-z0-9._-]+=[A-Za-z0-9._~+/=-]{16,}/g, '$1<redacted>')
 
 export const test = base.extend<PageIssueOptions & { failOnPageIssues: void }>({
   allowedPageIssues: [[], { option: true }],
@@ -53,7 +73,7 @@ export const test = base.extend<PageIssueOptions & { failOnPageIssues: void }>({
 
       /** Fails the test. */
       const failures: string[] = []
-      /** Reported as evidence but never fails: aborted and cancelled requests are routine. */
+      /** Reported as evidence but never fails. */
       const notes: string[] = []
 
       const record = (into: string[], line: string): void => {
@@ -62,7 +82,15 @@ export const test = base.extend<PageIssueOptions & { failOnPageIssues: void }>({
       }
 
       page.on('console', (message) => {
-        if (message.type() === 'error') record(failures, `console.error: ${message.text()}`)
+        if (message.type() !== 'error') return
+        const text = message.text()
+        // Chromium logs a SECOND line for every failing request — "Failed to load resource: the
+        // server responded with a status of 401" — carrying no URL and no `http NNN:` prefix. The
+        // `response` handler below already records that exact event WITH its URL, so this line is a
+        // duplicate that no `allowedPageIssues` pattern can target. Keeping it made every deliberate
+        // 4xx test unconditionally fail.
+        if (/^Failed to load resource:/.test(text)) return
+        record(failures, `console.error: ${text}`)
       })
       page.on('pageerror', (error) => {
         record(failures, `pageerror: ${error.message}`)
@@ -73,10 +101,15 @@ export const test = base.extend<PageIssueOptions & { failOnPageIssues: void }>({
         }
       })
       page.on('requestfailed', (request) => {
-        // A request that never completed is a failure, not a note: the UI may render a cached or
-        // empty state and look correct while its data call died. `allowedPageIssues` covers the
-        // deliberate offline/abort scenarios.
-        record(failures, `request failed: ${request.url()} (${request.failure()?.errorText ?? 'unknown'})`)
+        const reason = request.failure()?.errorText ?? 'unknown'
+        const line = `request failed: ${request.url()} (${reason})`
+        // A request that never completed is normally a failure: the UI can render a cached or empty
+        // state and look correct while its data call died.
+        //
+        // ERR_ABORTED is the exception, and it is not rare. Every DOWNLOAD is an aborted navigation,
+        // so failing on it made the download test unconditionally fail. The same code covers a
+        // navigation the user cancelled by clicking away. Recorded as evidence, never fatal.
+        record(reason.includes('ERR_ABORTED') ? notes : failures, line)
       })
 
       await use()

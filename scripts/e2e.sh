@@ -331,7 +331,7 @@ has "$MQ" "CDT_MQA_DEVICE" "usage documents the device-targeting env var"
 # doctor must be a GATE: it reports honestly and exits non-zero when the device layer is not usable.
 # CI has no adb, so this also proves it degrades without crashing.
 MQD="$("$BIN/cdt-mobile-qa" doctor 2>&1)"; MQD_RC=$?
-has "$MQD" "doctor" "doctor runs to completion"
+has "$MQD" "check(s)" "doctor runs to completion (reaches its tally line)"
 if command -v adb >/dev/null 2>&1 && [ -n "$(adb devices 2>/dev/null | awk 'NR>1 && $2=="device"')" ]; then
   ok "device attached — doctor exit code not asserted"
 else
@@ -463,7 +463,7 @@ has "$WQ" "doctor" "no-arg prints usage"
 has "$WQ" "chromium" "usage documents the browser engines"
 # doctor is a GATE: honest report, non-zero when the browser layer is unusable.
 WQD="$("$BIN/cdt-web-qa" doctor 2>&1)"; WQD_RC=$?
-has "$WQD" "doctor" "doctor runs to completion"
+has "$WQD" "check(s)" "doctor runs to completion (reaches its tally line)"
 case "$WQD" in *"[PASS]"*|*"[FAIL]"*|*"[WARN]"*) ok "doctor reports per-check status lines" ;; *) no "doctor status lines" ;; esac
 if printf '%s' "$WQD" | grep -q "\[FAIL\]"; then
   [ "$WQD_RC" -ne 0 ] && ok "doctor exits non-zero when a check FAILS (never a false pass)" || no "doctor exit non-zero on FAIL"

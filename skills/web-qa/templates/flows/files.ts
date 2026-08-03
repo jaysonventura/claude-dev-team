@@ -21,7 +21,12 @@ export async function uploadFile(page: Page, app: AppConfig, filePath: string): 
   )
   await locate(page, app, 'uploadButton').click()
   const response = await uploaded
-  expect(response.ok(), `upload POST returned ${response.status()}`).toBe(true)
+  // 2xx OR 3xx — same reason as createItem: a server-rendered app answers an upload with a 303
+  // redirect, which `response.ok()` (200-299) rejects.
+  expect(
+    response.status() >= 200 && response.status() < 400,
+    `upload POST returned ${response.status()}`,
+  ).toBe(true)
 
   await expect(locate(page, app, 'uploadedFileMarker')).toBeVisible()
 }
