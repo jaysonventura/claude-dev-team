@@ -26,8 +26,9 @@ __pycache__/
 # Git worktrees created by cdt-worktree / claude --worktree (parallel isolation)
 .claude/worktrees/
 
-# Mobile QA captures from cdt-mobile-qa (screenshots, screen recordings, logcat).
+# QA captures from cdt-web-qa / cdt-mobile-qa (screenshots, video, traces, logcat).
 # These routinely contain session tokens, OTPs and PII — they must never be committed.
+**/.claude/qa/
 **/.claude/mobile-qa/
 
 # Ephemeral CDT runtime + per-prompt artifacts (regenerated each session; never tracked).

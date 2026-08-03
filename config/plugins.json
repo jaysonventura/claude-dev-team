@@ -2,7 +2,7 @@
   "$schema": "https://claude-dev-team/plugins-registry.schema.json",
   "version": 1,
   "meta": {
-    "note": "Shipped read-only defaults — the single source of truth for CDT plugin detection, validation, health, and routing. Per-plugin user overrides live in ~/.claude/.cdt/plugins-state.json and survive plugin updates. Identifiers verified against the local marketplace catalogs and the `claude plugin` CLI (Claude Code 2.1.220). Every installable row is auto-installed with CDT: official rows via plugin.json `dependencies`, community-third-party rows (their marketplaces are NOT auto-added by Claude Code) via the SessionStart bootstrap in hooks/plugins.sh. All rows are therefore enabledByDefault:true.",
+    "note": "Shipped read-only defaults \u2014 the single source of truth for CDT plugin detection, validation, health, and routing. Per-plugin user overrides live in ~/.claude/.cdt/plugins-state.json and survive plugin updates. Identifiers verified against the local marketplace catalogs and the `claude plugin` CLI (Claude Code 2.1.220). Every installable row is auto-installed with CDT: official rows via plugin.json `dependencies`, community-third-party rows (their marketplaces are NOT auto-added by Claude Code) via the SessionStart bootstrap in hooks/plugins.sh. All rows are therefore enabledByDefault:true.",
     "marketplace": "claude-plugins-official"
   },
   "plugins": [
@@ -501,7 +501,7 @@
           "node"
         ],
         "binaries": [
-          "bun (required; installed by CDT bootstrap — claude-mem does NOT self-install it)",
+          "bun (required; installed by CDT bootstrap \u2014 claude-mem does NOT self-install it)",
           "uv"
         ]
       },
@@ -578,7 +578,7 @@
           "node"
         ],
         "binaries": [
-          "adb (Android platform-tools — device control, install, logcat, screenshots)",
+          "adb (Android platform-tools \u2014 device control, install, logcat, screenshots)",
           "appium + appium-uiautomator2-driver (durable E2E runs; `cdt-mobile-qa doctor` reports both)"
         ]
       },
@@ -605,6 +605,93 @@
           "e2e mobile",
           "capacitor",
           "react native"
+        ]
+      },
+      "conflicts": [],
+      "needsAuth": false,
+      "securityLevel": "local-cdt-integration",
+      "fallbackBehavior": "always-available"
+    },
+    {
+      "id": "qa-shared",
+      "displayName": "QA Shared Contract (CDT local skill)",
+      "type": "cdt-skill",
+      "marketplace": null,
+      "installIdentifier": null,
+      "enabledByDefault": true,
+      "required": false,
+      "scope": "user",
+      "categories": [
+        "testing",
+        "e2e",
+        "quality"
+      ],
+      "dependencies": {
+        "cli": [],
+        "binaries": []
+      },
+      "activationRules": {
+        "repoSignals": [],
+        "taskKeywords": [
+          "qa",
+          "e2e",
+          "test failure",
+          "flaky",
+          "regression",
+          "test report",
+          "root cause"
+        ]
+      },
+      "conflicts": [],
+      "needsAuth": false,
+      "securityLevel": "local-cdt-integration",
+      "fallbackBehavior": "always-available"
+    },
+    {
+      "id": "web-qa",
+      "displayName": "Web QA (CDT local skill + cdt-web-qa CLI)",
+      "type": "cdt-skill",
+      "marketplace": null,
+      "installIdentifier": null,
+      "enabledByDefault": true,
+      "required": false,
+      "scope": "user",
+      "categories": [
+        "testing",
+        "e2e",
+        "web",
+        "browser"
+      ],
+      "dependencies": {
+        "cli": [
+          "node",
+          "npx"
+        ],
+        "binaries": [
+          "playwright browsers (npx playwright install \u2014 cdt-web-qa doctor reports which engines are present)",
+          "Playwright MCP (ships as a CDT plugin dependency; no separate install)"
+        ]
+      },
+      "activationRules": {
+        "repoSignals": [
+          "playwright.config.ts",
+          "playwright.config.js",
+          "package.json",
+          "qa-web/apps"
+        ],
+        "taskKeywords": [
+          "web qa",
+          "playwright",
+          "browser test",
+          "e2e web",
+          "cross-browser",
+          "chromium",
+          "firefox",
+          "webkit",
+          "console error",
+          "network request",
+          "responsive",
+          "trace"
         ]
       },
       "conflicts": [],
