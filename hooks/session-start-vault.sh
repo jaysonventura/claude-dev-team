@@ -51,6 +51,7 @@ cp "$HOOKS_DIR/context.sh"   "$BIN/cdt-context"  2>/dev/null && chmod +x "$BIN/c
 cp "$HOOKS_DIR/route.sh"     "$BIN/cdt-route"    2>/dev/null && chmod +x "$BIN/cdt-route"    2>/dev/null
 cp "$HOOKS_DIR/obsidian.sh"  "$BIN/cdt-obsidian" 2>/dev/null && chmod +x "$BIN/cdt-obsidian" 2>/dev/null
 cp "$HOOKS_DIR/attribution.sh" "$BIN/cdt-attribution" 2>/dev/null && chmod +x "$BIN/cdt-attribution" 2>/dev/null
+cp "$HOOKS_DIR/mobile-qa.sh"   "$BIN/cdt-mobile-qa" 2>/dev/null && chmod +x "$BIN/cdt-mobile-qa" 2>/dev/null
 cp "$HOOKS_DIR/obsidian_recall.py" "$BIN/obsidian_recall.py" 2>/dev/null  # BM25 read-back ranker (must sit beside cdt-obsidian in $BIN)
 # Advisory plugin subsystem: the plugins CLI, its sourced library, and the advisory router.
 cp "$HOOKS_DIR/plugins.sh"      "$BIN/cdt-plugins"        2>/dev/null && chmod +x "$BIN/cdt-plugins"      2>/dev/null

@@ -356,6 +356,7 @@ come from the auto-installed companions. Don't make the user request them.
 | **Docs / release notes / CHANGELOG / PR description / ADR** | `technical-writer` + the `technical-writing` skill |
 | Web UI / components / styling | `ui-ux-engineer` (UX/design + a11y) with `web-design-guidelines` → `ui-ux-pro-max` (+ `frontend-design`); `frontend-engineer` builds |
 | Mobile UI | `ui-ux-engineer` + `ui-ux-pro-max` + platform conventions; `mobile-engineer` builds |
+| **Testing a mobile app on a device/emulator** (Android E2E, APK, Appium, logcat, a flaky mobile test) | `mobile-qa` — `qa-engineer` drives the autonomous loop via `cdt-mobile-qa` + a mobile MCP; stable selectors, evidence on every failure |
 | TypeScript / JavaScript | `clean-code-typescript` |
 | A simplify / refactor / cleanup step | `karpathy-guidelines` + `code-splitting` + `gauge-improvements` |
 | A perf change or any "this is better" claim | `gauge-improvements` (measure before/after) |

@@ -1,0 +1,7 @@
+node_modules/
+
+# Credentials — never commit.
+.env.qa
+
+# Screenshots, logcat and Appium server logs.
+.claude/mobile-qa/

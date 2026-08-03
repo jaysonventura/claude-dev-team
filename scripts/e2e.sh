@@ -323,6 +323,136 @@ done
 has "$(cat "$REPO/agents/code-reviewer.md")" "Automation usage" "code-reviewer flags manual-command usage"
 has "$(cat "$REPO/skills/orchestration/SKILL.md")" "automation-first" "orchestration skill routes to automation-first"
 
+echo "== 4l. mobile QA (cdt-mobile-qa: device control plane + scaffolded harness) =="
+[ -x "$BIN/cdt-mobile-qa" ] && ok "cdt-mobile-qa installed by the SessionStart hook" || no "cdt-mobile-qa installed"
+MQ="$("$BIN/cdt-mobile-qa" 2>&1)"
+has "$MQ" "doctor" "no-arg prints usage"
+has "$MQ" "CDT_MQA_DEVICE" "usage documents the device-targeting env var"
+# doctor must be a GATE: it reports honestly and exits non-zero when the device layer is not usable.
+# CI has no adb, so this also proves it degrades without crashing.
+MQD="$("$BIN/cdt-mobile-qa" doctor 2>&1)"; MQD_RC=$?
+has "$MQD" "doctor" "doctor runs to completion"
+if command -v adb >/dev/null 2>&1 && [ -n "$(adb devices 2>/dev/null | awk 'NR>1 && $2=="device"')" ]; then
+  ok "device attached — doctor exit code not asserted"
+else
+  # THE point of this feature: no device must never read as a pass.
+  [ "$MQD_RC" -ne 0 ] && ok "doctor exits non-zero with no usable device (never a false pass)" || no "doctor exit non-zero without a device"
+  case "$MQD" in *"[FAIL]"*) ok "doctor prints an explicit FAIL line" ;; *) no "doctor prints a FAIL line" ;; esac
+fi
+has "$("$BIN/cdt-mobile-qa" artifacts --dir 2>&1)" "mobile-qa" "artifacts --dir resolves a run dir"
+# Device subcommands must refuse, not fabricate, when there is nothing to talk to.
+if ! command -v adb >/dev/null 2>&1; then
+  "$BIN/cdt-mobile-qa" shot probe >/dev/null 2>&1 && no "shot must fail without adb" || ok "shot fails honestly without adb"
+fi
+# Path-traversal refusal (same posture as cdt-worktree).
+"$BIN/cdt-mobile-qa" shot "../escape" >/dev/null 2>&1 && no "traversal name rejected" || ok "traversal artifact name rejected"
+# scaffold: the sandbox has no plugin cache, so point it at the repo templates via the documented override.
+SCF="$SBX/scaffolded"
+CDT_MQA_TEMPLATES="$REPO/skills/mobile-qa/templates" "$BIN/cdt-mobile-qa" scaffold --dir "$SCF" >/dev/null 2>&1
+[ -f "$SCF/wdio.conf.ts" ] && [ -f "$SCF/apps/types.ts" ] && ok "scaffold lays down the harness" || no "scaffold lays down the harness"
+# Security: the harness must ship its own gitignore covering creds.
+has "$(cat "$SCF/.gitignore" 2>/dev/null)" ".env.qa" "scaffolded harness gitignores .env.qa"
+# The artifacts guarantee must be asserted on the RESOLVED capture path, not by grepping for a string.
+# A qa/.gitignore rule is anchored to qa/ and does NOT cover the CLI's repo-root capture dir — that
+# false-assurance bug is exactly what this asserts against now. Uses a throwaway repo, no device needed.
+MQREPO="$SBX/mqa-ignore"; mkdir -p "$MQREPO"
+( cd "$MQREPO" && git init -q . && git -c user.email=t@t -c user.name=t commit -qm init --allow-empty ) >/dev/null 2>&1
+MQART="$( cd "$MQREPO" && "$BIN/cdt-mobile-qa" artifacts --dir 2>/dev/null )"
+if [ -n "$MQART" ] && [ -d "$MQART" ]; then
+  echo "session-token" > "$MQART/logcat.log"
+  if ( cd "$MQREPO" && git status --porcelain --untracked-files=all 2>/dev/null | grep -q "mobile-qa" ); then
+    no "captures are gitignored at the resolved artifact path"
+  else
+    ok "captures are gitignored at the resolved artifact path"
+  fi
+else
+  no "artifacts dir resolves inside a git repo"
+fi
+# scaffold must refuse a project root: overwriting the app's .gitignore un-ignores its real .env.
+( cd "$MQREPO" && printf '{"name":"real-app"}\n' > package.json )
+if CDT_MQA_TEMPLATES="$REPO/skills/mobile-qa/templates" "$BIN/cdt-mobile-qa" scaffold --dir "$MQREPO" --force >/dev/null 2>&1; then
+  no "scaffold refuses a project root even with --force"
+else
+  ok "scaffold refuses a project root even with --force"
+fi
+has "$(cat "$MQREPO/package.json")" "real-app" "scaffold left the app's package.json intact"
+# Negative fixture per BYPASS CLASS, not just per guard: a Gradle module in a monorepo has NO .git and
+# NO package.json, so a marker-sniffing guard passes its own mutation test while being blind to it.
+MQGRADLE="$SBX/mono/apps/androidapp"; mkdir -p "$MQGRADLE"
+( cd "$SBX/mono" && git init -q . ) >/dev/null 2>&1
+printf 'android { }\n' > "$MQGRADLE/build.gradle"
+printf 'KEYSTORE_PASSWORD=secret\n' > "$MQGRADLE/local.properties"
+printf 'local.properties\n' > "$MQGRADLE/.gitignore"
+if CDT_MQA_TEMPLATES="$REPO/skills/mobile-qa/templates" "$BIN/cdt-mobile-qa" scaffold --dir "$MQGRADLE" --force >/dev/null 2>&1; then
+  no "scaffold --force refuses a Gradle module (no .git, no package.json)"
+else
+  ok "scaffold --force refuses a Gradle module (no .git, no package.json)"
+fi
+if ( cd "$SBX/mono" && git check-ignore -q apps/androidapp/local.properties ); then
+  ok "the app's own gitignore rules survive a scaffold attempt (secret stays ignored)"
+else
+  no "app gitignore rules survived — secret is exposed"
+fi
+# An existing .gitignore is never overwritten, even with --force, in a dir the harness DOES own.
+MQOWN="$SBX/ownqa"
+CDT_MQA_TEMPLATES="$REPO/skills/mobile-qa/templates" "$BIN/cdt-mobile-qa" scaffold --dir "$MQOWN" >/dev/null 2>&1
+printf 'USER-RULE\n' > "$MQOWN/.gitignore"
+CDT_MQA_TEMPLATES="$REPO/skills/mobile-qa/templates" "$BIN/cdt-mobile-qa" scaffold --dir "$MQOWN" --force >/dev/null 2>&1
+has "$(cat "$MQOWN/.gitignore" 2>/dev/null)" "USER-RULE" "an existing .gitignore is never overwritten, even with --force"
+# A partial copy must fail loudly rather than report a complete harness.
+MQRO="$SBX/roqa"; mkdir -p "$MQRO/apps"; chmod 500 "$MQRO/apps" 2>/dev/null
+if CDT_MQA_TEMPLATES="$REPO/skills/mobile-qa/templates" "$BIN/cdt-mobile-qa" scaffold --dir "$MQRO" >/dev/null 2>&1; then
+  no "a partial scaffold exits non-zero instead of claiming success"
+else
+  ok "a partial scaffold exits non-zero instead of claiming success"
+fi
+chmod 700 "$MQRO/apps" 2>/dev/null
+# BYPASS CLASS: a symlink named like a template is invisible to a file listing but `cp` writes THROUGH
+# it, clobbering a file outside $out. Assert the canary is byte-identical afterwards.
+MQSYM="$SBX/symqa"; mkdir -p "$MQSYM/apps" "$SBX/symtarget"
+printf 'IMPORTANT USER DATA\n' > "$SBX/symtarget/precious.ts"
+MQSUM_BEFORE="$(cksum < "$SBX/symtarget/precious.ts")"
+ln -s "$SBX/symtarget/precious.ts" "$MQSYM/wdio.conf.ts" 2>/dev/null
+CDT_MQA_TEMPLATES="$REPO/skills/mobile-qa/templates" "$BIN/cdt-mobile-qa" scaffold --dir "$MQSYM" --force >/dev/null 2>&1
+[ "$(cksum < "$SBX/symtarget/precious.ts")" = "$MQSUM_BEFORE" ] \
+  && ok "a symlinked template name cannot clobber a file outside the harness dir" \
+  || no "symlink write-through destroyed a file outside the harness dir"
+# --force must still WORK on a real onboarded harness (app config + .env.qa are expected, not foreign).
+MQON="$SBX/onboarded"
+CDT_MQA_TEMPLATES="$REPO/skills/mobile-qa/templates" "$BIN/cdt-mobile-qa" scaffold --dir "$MQON" >/dev/null 2>&1
+printf 'export default {}\n' > "$MQON/apps/myapp.ts"; printf 'QA_USERNAME=x\n' > "$MQON/.env.qa"
+if CDT_MQA_TEMPLATES="$REPO/skills/mobile-qa/templates" "$BIN/cdt-mobile-qa" scaffold --dir "$MQON" --force >/dev/null 2>&1; then
+  ok "--force still refreshes a real onboarded harness"
+else
+  no "--force refuses a real onboarded harness (dead on arrival)"
+fi
+{ [ -f "$MQON/apps/myapp.ts" ] && [ -f "$MQON/.env.qa" ]; } \
+  && ok "refresh left the user's app config and .env.qa untouched" \
+  || no "refresh destroyed the user's app config or .env.qa"
+# artifacts_dir must not write '*' into a pre-existing dir — that would hide the user's real source.
+MQSRC="$SBX/realsrc"; mkdir -p "$MQSRC"; echo "code" > "$MQSRC/app.ts"
+CDT_MQA_ARTIFACTS="$MQSRC" "$BIN/cdt-mobile-qa" artifacts --dir >/dev/null 2>&1
+[ -f "$MQSRC/.gitignore" ] && no "artifacts dir never hides a pre-existing directory's contents" || ok "artifacts dir never hides a pre-existing directory's contents"
+# artifacts --clean must not rm -rf a lookalike path (substring match was a real rm -rf bug).
+VICT="$SBX/victim/mobile-qa/src"; mkdir -p "$VICT"; echo "src" > "$VICT/real.ts"
+CDT_MQA_ARTIFACTS="$VICT" "$BIN/cdt-mobile-qa" artifacts --clean >/dev/null 2>&1
+[ -f "$VICT/real.ts" ] && ok "artifacts --clean refuses a path outside the artifacts root" || no "artifacts --clean destroyed a lookalike path"
+# Device-bound identifiers are charset-checked before adb re-parses them on the device.
+# Assert the SPECIFIC rejection, not merely a non-zero exit: with no device attached the command also
+# fails with "no device online", so an exit-code-only check passes even with the guard removed.
+has "$("$BIN/cdt-mobile-qa" reset 'com.x;rm -rf /sdcard' 2>&1)" "invalid identifier" "package names with shell metacharacters are rejected"
+has "$("$BIN/cdt-mobile-qa" perm grant 'com.x;id' android.permission.CAMERA 2>&1)" "invalid identifier" "perm package names are validated"
+grep -rqi "password['\"]*: *['\"][a-z0-9]" "$SCF/apps" 2>/dev/null && no "no hardcoded creds in app configs" || ok "no hardcoded creds in app configs"
+# Idempotency: a second scaffold must not clobber a user's edited harness.
+echo "// user edit" >> "$SCF/wdio.conf.ts"
+CDT_MQA_TEMPLATES="$REPO/skills/mobile-qa/templates" "$BIN/cdt-mobile-qa" scaffold --dir "$SCF" >/dev/null 2>&1
+has "$(cat "$SCF/wdio.conf.ts")" "user edit" "re-scaffold skips existing files (no clobber)"
+# Selector policy is the feature's core discipline — assert it is actually written down.
+has "$(cat "$REPO/skills/mobile-qa/references/selectors.md")" "Last resort" "selector policy makes XPath a last resort"
+has "$(cat "$REPO/skills/mobile-qa/SKILL.md")" "cdt-verify" "mobile-qa loops through the verify gate"
+has "$(cat "$REPO/agents/qa-engineer.md")" "mobile-qa" "qa-engineer auto-applies mobile-qa"
+has "$(cat "$REPO/skills/orchestration/SKILL.md")" "mobile-qa" "orchestration routes device testing to mobile-qa"
+
 echo "== 5. statusline -> budget (eco conserves when weekly is high) =="
 SL_JSON='{"model":{"display_name":"Opus"},"effort":{"level":"xhigh"},"rate_limits":{"seven_day":{"used_percentage":90},"five_hour":{"used_percentage":10}}}'
 has "$(printf '%s' "$SL_JSON" | "$BIN/cdt-statusline" 2>&1)" "weekly" "statusline renders usage"
